@@ -23,7 +23,7 @@ function FloatingNavbar() {
           </span>
           <div className="hidden flex-col sm:flex">
             <span className="text-sm font-semibold text-purple-950">Mulher Viva</span>
-            <span className="text-xs text-purple-700">Dr. Luciana Lopes</span>
+            <span className="text-xs text-purple-700">Dra. Luciana Lopes</span>
           </div>
         </div>
 
@@ -48,7 +48,7 @@ function FloatingNavbar() {
           </a>
           <a
             href="#contato"
-            className="rounded-full bg-[#5e2f52] px-5 py-2 text-sm font-semibold text-black shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            className="rounded-full bg-[#5e2f52] px-5 py-2 text-sm font-semibold text-white !text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
           >
             Agendar Consulta
           </a>
@@ -93,7 +93,7 @@ function FloatingNavbar() {
             </a>
             <a
               href="#contato"
-              className="rounded-full bg-[#b6ff00] px-4 py-2 text-sm font-semibold text-black shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              className="rounded-full bg-[#b6ff00] px-4 py-2 text-sm font-semibold text-white !text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
               onClick={() => setIsOpen(false)}
             >
               Agendar Consulta

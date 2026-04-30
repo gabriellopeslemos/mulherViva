@@ -239,6 +239,83 @@ p {
   gap: 24px;
 }
 
+.specialties-interactive {
+  display: grid;
+  gap: 28px;
+}
+
+.specialties-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.specialty-tab {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 12px 20px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  min-width: 160px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease,
+    border-color 0.3s ease, background 0.3s ease;
+}
+
+.specialty-tab__title {
+  display: block;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.specialty-tab:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+}
+
+.specialty-tab.is-active {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+  box-shadow: var(--shadow-lg);
+}
+
+.specialty-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.specialty-panel {
+  display: grid;
+}
+
+.specialty-panel-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 32px;
+  align-items: center;
+  animation: specialtyFade 360ms ease;
+}
+
+.specialty-panel-content {
+  display: grid;
+  gap: 12px;
+}
+
+.specialty-panel-media img {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  aspect-ratio: 4 / 3;
+  display: block;
+}
+
 .stat-card,
 .specialty-card,
 .content-card,
@@ -616,6 +693,17 @@ p {
   }
 }
 
+@keyframes specialtyFade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 980px) {
   .hero-grid {
     grid-template-columns: 1fr;
@@ -627,6 +715,10 @@ p {
 
   .approach-body {
     grid-template-columns: 24px 1fr;
+  }
+
+  .specialty-panel-card {
+    grid-template-columns: 1fr;
   }
 
   .cta-card {
@@ -662,6 +754,10 @@ p {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .specialty-panel-card {
+    animation: none;
   }
 
   .carousel-track {

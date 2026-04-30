@@ -1,24 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import FloatingNavbar from './components/FloatingNavbar'
-
-const heroImage = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns='http://www.w3.org/2000/svg' width='720' height='860' viewBox='0 0 720 860'>
-  <defs>
-    <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
-      <stop offset='0%' stop-color='#f6eff6'/>
-      <stop offset='55%' stop-color='#ecdff0'/>
-      <stop offset='100%' stop-color='#e2d2e6'/>
-    </linearGradient>
-    <radialGradient id='r' cx='0.82' cy='0.18' r='0.6'>
-      <stop offset='0%' stop-color='#ffffff' stop-opacity='0.9'/>
-      <stop offset='100%' stop-color='#ffffff' stop-opacity='0'/>
-    </radialGradient>
-  </defs>
-  <rect width='720' height='860' fill='url(#g)'/>
-  <circle cx='540' cy='190' r='240' fill='url(#r)'/>
-  <path d='M-40 720 C 120 620 240 760 380 700 C 520 640 620 760 760 700 L 760 900 L -40 900 Z' fill='#efe6f0'/>
-</svg>
-`)}`
+import heroImage from '../images/m.jpg'
+import gynImage from '../images/exam.jpg'
+import obstImage from '../images/hug.jpg'
+import homeoImage from '../images/m.jpg'
 
 const aboutCards = [
   {
@@ -62,14 +47,20 @@ const specialties = [
   {
     title: 'Ginecologia',
     text: 'Ginecologia natural, integrativa, preventiva, baseada no olhar integral da mulher. A historia, sinais, sintomas, exame fisico e, quando necessario, exames complementares sao cuidadosamente avaliados.',
+    image: gynImage,
+    imageAlt: 'Foto de ginecologia',
   },
   {
     title: 'Obstetricia',
     text: 'Com o minimo de intervencoes possivel, atendo gestantes e suas familias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistencia.',
+    image: obstImage,
+    imageAlt: 'Foto de obstetricia',
   },
   {
     title: 'Homeopatia',
     text: 'A homeopatia e uma especialidade medica que busca restabelecer o equilibrio da saude fisica, emocional, mental e energetica do ser. Adota uma abordagem holistica, considerando o paciente, sua historia e relacoes como um todo.',
+    image: homeoImage,
+    imageAlt: 'Foto de homeopatia',
   },
 ]
 
@@ -139,6 +130,8 @@ const educationTopics = [
 ]
 
 function App() {
+  const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
+
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -203,6 +196,7 @@ function App() {
   }, [])
 
   const year = new Date().getFullYear()
+  const activeSpecialty = specialties[activeSpecialtyIndex]
 
   return (
     <div className="page">
@@ -241,9 +235,7 @@ function App() {
                   role="img"
                   aria-label="Luz natural em consultorio acolhedor"
                 />
-                <div className="hero-media__overlay">
-                  <p>Ambiente calmo, reservado e iluminado.</p>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -317,19 +309,57 @@ function App() {
                 sensibilidade feminina.
               </p>
             </div>
-            <div className="card-grid specialties-grid">
-              {specialties.map((item, index) => (
+            <div className="specialties-interactive" data-reveal>
+              <div
+                className="specialties-tabs"
+                role="tablist"
+                aria-label="Especialidades medicas"
+              >
+                {specialties.map((item, index) => {
+                  const isActive = index === activeSpecialtyIndex
+
+                  return (
+                    <button
+                      key={item.title}
+                      type="button"
+                      className={`specialty-tab${isActive ? ' is-active' : ''}`}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-controls={`specialty-panel-${index}`}
+                      id={`specialty-tab-${index}`}
+                      onClick={() => setActiveSpecialtyIndex(index)}
+                    >
+                      <span className="specialty-tab__title">{item.title}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div
+                className="specialty-panel"
+                role="tabpanel"
+                id={`specialty-panel-${activeSpecialtyIndex}`}
+                aria-labelledby={`specialty-tab-${activeSpecialtyIndex}`}
+              >
                 <article
-                  key={item.title}
-                  className="specialty-card"
-                  data-reveal
-                  style={{ '--delay': `${index * 90}ms` }}
+                  key={activeSpecialty.title}
+                  className="specialty-card specialty-panel-card"
                 >
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
-                  <span className="card-link">Saiba mais</span>
+                  <div className="specialty-panel-content">
+                    <h3>{activeSpecialty.title}</h3>
+                    <p>{activeSpecialty.text}</p>
+                    <a className="card-link" href="#agendamento">
+                      Agendar Consulta &rarr;
+                    </a>
+                  </div>
+                  <div className="specialty-panel-media">
+                    <img
+                      src={activeSpecialty.image}
+                      alt={activeSpecialty.imageAlt}
+                      loading="lazy"
+                    />
+                  </div>
                 </article>
-              ))}
+              </div>
             </div>
           </div>
         </section>
