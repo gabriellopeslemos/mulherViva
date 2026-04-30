@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import FloatingNavbar from './components/FloatingNavbar'
 
 const heroImage = `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns='http://www.w3.org/2000/svg' width='720' height='860' viewBox='0 0 720 860'>
@@ -59,20 +60,16 @@ const approachSteps = [
 
 const specialties = [
   {
-    title: 'Ginecologia integrativa',
-    text: 'Equilibrio hormonal, prevencao e acompanhamento continuo.',
+    title: 'Ginecologia',
+    text: 'Ginecologia natural, integrativa, preventiva, baseada no olhar integral da mulher. A historia, sinais, sintomas, exame fisico e, quando necessario, exames complementares sao cuidadosamente avaliados.',
   },
   {
-    title: 'Obstetricia humanizada',
-    text: 'Gestacao segura com autonomia, acolhimento e respeito.',
+    title: 'Obstetricia',
+    text: 'Com o minimo de intervencoes possivel, atendo gestantes e suas familias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistencia.',
   },
   {
-    title: 'Saude hormonal',
-    text: 'Investigacao profunda com foco em vitalidade e bem-estar.',
-  },
-  {
-    title: 'Terapias complementares',
-    text: 'Praticas integradas para fortalecer corpo e emocao.',
+    title: 'Homeopatia',
+    text: 'A homeopatia e uma especialidade medica que busca restabelecer o equilibrio da saude fisica, emocional, mental e energetica do ser. Adota uma abordagem holistica, considerando o paciente, sua historia e relacoes como um todo.',
   },
 ]
 
@@ -98,6 +95,27 @@ const testimonials = [
     name: 'Patricia A.',
     text: 'Um encontro entre ciencia e sensibilidade que transformou meu olhar.',
     tone: '#e9d4e6',
+  },
+]
+
+const blogPosts = [
+  {
+    title: 'Equilibrio hormonal no dia a dia',
+    text: 'Ajustes simples de sono, alimentacao e rotina para reduzir oscilacoes.',
+    date: 'Abril 2026',
+    tag: 'Saude hormonal',
+  },
+  {
+    title: 'Menopausa com clareza e suporte',
+    text: 'Sinais, cuidados integrativos e escolhas conscientes para cada fase.',
+    date: 'Marco 2026',
+    tag: 'Menopausa',
+  },
+  {
+    title: 'Autocuidado emocional feminino',
+    text: 'Praticas para regular estresse, ansiedade e fortalecer a vitalidade.',
+    date: 'Fevereiro 2026',
+    tag: 'Bem-estar',
   },
 ]
 
@@ -166,7 +184,10 @@ function App() {
           1,
           Math.max(0, (viewHeight - rect.top) / total),
         )
-        approachSection.style.setProperty('--approach-progress', progress.toFixed(3))
+        approachSection.style.setProperty(
+          '--approach-progress',
+          progress.toFixed(3),
+        )
       }
     }
 
@@ -185,34 +206,7 @@ function App() {
 
   return (
     <div className="page">
-      <header className="site-header">
-        <div className="container header-inner">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden="true">
-              MV
-            </span>
-            <div>
-              <p className="brand-name">Dra. Clara Mendes</p>
-              <p className="brand-role">
-                Saude da mulher, ginecologia integrativa
-              </p>
-            </div>
-          </div>
-          <nav className="nav-links" aria-label="Navegacao principal">
-            <a href="#sobre">Sobre</a>
-            <a href="#abordagem">Abordagem</a>
-            <a href="#especialidades">Especialidades</a>
-            <a href="#diferenciais">Diferenciais</a>
-            <a href="#depoimentos">Depoimentos</a>
-            <a href="#conteudo">Conteudo</a>
-          </nav>
-          <div className="nav-cta">
-            <a className="btn btn-primary" href="#contato">
-              Agendar consulta
-            </a>
-          </div>
-        </div>
-      </header>
+      <FloatingNavbar />
 
       <main>
         <section className="hero" id="inicio">
@@ -422,6 +416,79 @@ function App() {
                   <span className="card-link">Ver artigos</span>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="blog">
+          <div className="container">
+            <div className="section-header" data-reveal>
+              <p className="eyebrow">Blog</p>
+              <h2>Posts recentes para apoiar sua jornada.</h2>
+              <p>
+                Espaco reservado para novos artigos, reflexoes e orientacoes
+                clinicas.
+              </p>
+            </div>
+            <div className="card-grid blog-grid">
+              {blogPosts.map((post, index) => (
+                <article
+                  key={post.title}
+                  className="blog-card"
+                  data-reveal
+                  style={{ '--delay': `${index * 90}ms` }}
+                >
+                  <div className="blog-meta">
+                    <span className="blog-tag">{post.tag}</span>
+                    <span className="blog-date">{post.date}</span>
+                  </div>
+                  <h3>{post.title}</h3>
+                  <p>{post.text}</p>
+                  <span className="card-link">Ler post</span>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section alt" id="endereco">
+          <div className="container">
+            <div className="section-header" data-reveal>
+              <p className="eyebrow">Endereco</p>
+              <h2>Um consultorio pensado para acolher com calma.</h2>
+              <p>
+                Use este espaco para compartilhar localizacao, horarios e
+                facilidades do atendimento.
+              </p>
+            </div>
+            <div className="address-grid">
+              <div className="address-card" data-reveal>
+                <h3>Consultorio Mulher Viva</h3>
+                <p className="address-line">Rua Exemplo, 123 - Bairro Jardim</p>
+                <p className="address-line">Sao Paulo - SP, 00000-000</p>
+                <div className="address-divider" aria-hidden="true" />
+                <ul className="address-list">
+                  <li>Segunda a sexta, 08h as 18h</li>
+                  <li>Atendimento presencial e telemedicina</li>
+                  <li>Estacionamento proximo e acessibilidade</li>
+                </ul>
+              </div>
+              <div className="map-card" data-reveal style={{ '--delay': '120ms' }}>
+                <div
+                  className="map-frame"
+                  role="img"
+                  aria-label="Mapa do consultorio"
+                >
+                  <div className="map-pin" aria-hidden="true">
+                    MV
+                  </div>
+                  <p>Mapa e rotas em breve</p>
+                </div>
+                <p className="map-note">
+                  Reserve este espaco para inserir o mapa interativo quando
+                  estiver pronto.
+                </p>
+              </div>
             </div>
           </div>
         </section>
