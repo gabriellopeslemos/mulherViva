@@ -480,6 +480,52 @@ function App() {
                   Atendimento individualizado para mulheres que desejam clareza,
                   equilibrio e vitalidade.
                 </p>
+                <div className="contact-info">
+                  <p>
+                    <span className="contact-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="img" focusable="false">
+                        <path
+                          d="M12 3.5a8.5 8.5 0 0 1 7.3 12.9L20 20l-3.8-1.3A8.5 8.5 0 1 1 12 3.5z"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M9.2 8.8c.2-.3.4-.3.6-.2l1.4.7c.2.1.3.3.3.6l-.2 1c-.1.2 0 .4.2.6.6.7 1.3 1.3 2.1 1.8.2.1.4.1.6 0l.9-.4c.2-.1.4 0 .6.1l1.2 1c.2.1.2.4.1.6-.4.8-1.3 1.3-2.3 1.2-1.5-.1-3.2-1-4.7-2.4-1.4-1.3-2.4-2.9-2.6-4.3-.1-.9.4-1.8 1.2-2.3z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </span>
+                    <span className="contact-label">WhatsApp</span>
+                    (11) 00000-0000
+                  </p>
+                  <p>
+                    <span className="contact-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="img" focusable="false">
+                        <rect
+                          x="3"
+                          y="5"
+                          width="18"
+                          height="14"
+                          rx="2"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                        />
+                        <path
+                          d="M4 6.5l8 6 8-6"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <span className="contact-label">Email</span>
+                    contato@mulherviva.com
+                  </p>
+                </div>
               </div>
               <div className="cta-actions">
                 <a className="btn btn-primary" href="#contato">
