@@ -1,4 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  motion,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
 import heroImage from '../images/m.jpg'
 import gynImage from '../images/exam.jpg'
@@ -131,31 +138,47 @@ const educationTopics = [
 
 function App() {
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
+  const specialtiesScrollRef = useRef(null)
+  const prefersReducedMotion = useReducedMotion()
+  const { scrollYProgress } = useScroll({
+    target: specialtiesScrollRef,
+    offset: ['start start', 'end end'],
+  })
+  const entryHold = 0.12
+  const exitHold = 0.08
+  const storyProgress = useTransform(
+    scrollYProgress,
+    [0, entryHold, 1 - exitHold, 1],
+    [0, 0, 1, 1],
+  )
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia(
+    const prefersReducedMotionSetting = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches
     const revealElements = Array.from(document.querySelectorAll('[data-reveal]'))
 
-    if (prefersReducedMotion) {
+    if (prefersReducedMotionSetting) {
       revealElements.forEach((element) => element.classList.add('is-visible'))
-      return undefined
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible')
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      { threshold: 0.2 },
-    )
+    const observer = prefersReducedMotionSetting
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible')
+                observer.unobserve(entry.target)
+              }
+            })
+          },
+          { threshold: 0.2 },
+        )
 
-    revealElements.forEach((element) => observer.observe(element))
+    if (observer) {
+      revealElements.forEach((element) => observer.observe(element))
+    }
 
     const parallaxElements = Array.from(
       document.querySelectorAll('[data-parallax]'),
@@ -189,14 +212,21 @@ function App() {
     window.addEventListener('resize', handleScroll)
 
     return () => {
-      observer.disconnect()
+      if (observer) {
+        observer.disconnect()
+      }
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
   }, [])
 
+  useMotionValueEvent(storyProgress, 'change', (value) => {
+    const steps = specialties.length
+    const nextIndex = Math.min(steps - 1, Math.max(0, Math.floor(value * steps)))
+    setActiveSpecialtyIndex(nextIndex)
+  })
+
   const year = new Date().getFullYear()
-  const activeSpecialty = specialties[activeSpecialtyIndex]
 
   return (
     <div className="page">
@@ -299,66 +329,66 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="especialidades">
-          <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Especialidades</p>
-              <h2>Cuidado especializado para cada fase da vida.</h2>
-              <p>
-                Protocolos personalizados com base clinica, ciencia e
-                sensibilidade feminina.
-              </p>
-            </div>
-            <div className="specialties-interactive" data-reveal>
-              <div
-                className="specialties-tabs"
-                role="tablist"
-                aria-label="Especialidades medicas"
-              >
+        <section className="section alt specialties-section" id="especialidades">
+          <div
+            className="specialties-scroll"
+            style={{ '--specialty-steps': specialties.length }}
+            ref={specialtiesScrollRef}
+          >
+            <div className="specialties-sticky">
+              <div className="container specialties-stage">
                 {specialties.map((item, index) => {
+                  const steps = specialties.length
+                  const stepSize = 1 / steps
+                  const start = index * stepSize
+                  const end = start + stepSize
+                  const fadeWindow = stepSize * 0.22
+                  const holdStart = start + fadeWindow
+                  const holdEnd = end - fadeWindow
+                  const startOpacity = index === 0 ? 1 : 0
+                  const endOpacity = index === steps - 1 ? 1 : 0
+                  const opacity = useTransform(
+                    storyProgress,
+                    [start, holdStart, holdEnd, end],
+                    [startOpacity, 1, 1, endOpacity],
+                  )
+                  const translateY = useTransform(
+                    storyProgress,
+                    [start, holdStart, holdEnd, end],
+                    [prefersReducedMotion ? 0 : 24, 0, 0, prefersReducedMotion ? 0 : -24],
+                  )
+                  const mediaScale = useTransform(
+                    storyProgress,
+                    [start, holdStart, holdEnd, end],
+                    [0.98, 1, 1, 0.98],
+                  )
                   const isActive = index === activeSpecialtyIndex
 
                   return (
-                    <button
+                    <motion.div
                       key={item.title}
-                      type="button"
-                      className={`specialty-tab${isActive ? ' is-active' : ''}`}
-                      role="tab"
-                      aria-selected={isActive}
-                      aria-controls={`specialty-panel-${index}`}
-                      id={`specialty-tab-${index}`}
-                      onClick={() => setActiveSpecialtyIndex(index)}
+                      className={`specialty-layer${isActive ? ' is-active' : ''}`}
+                      aria-hidden={!isActive}
+                      style={{ opacity, zIndex: isActive ? 2 : 1 }}
                     >
-                      <span className="specialty-tab__title">{item.title}</span>
-                    </button>
+                      <motion.div className="specialty-layer__content" style={{ y: translateY }}>
+                        <p className="eyebrow">0{index + 1}</p>
+                        <h3>{item.title}</h3>
+                        <p>{item.text}</p>
+                        <a className="card-link" href="#agendamento">
+                          Agendar Consulta &rarr;
+                        </a>
+                      </motion.div>
+                      <motion.div className="specialty-layer__media" style={{ scale: mediaScale }}>
+                        <img
+                          src={item.image}
+                          alt={item.imageAlt}
+                          loading="lazy"
+                        />
+                      </motion.div>
+                    </motion.div>
                   )
                 })}
-              </div>
-              <div
-                className="specialty-panel"
-                role="tabpanel"
-                id={`specialty-panel-${activeSpecialtyIndex}`}
-                aria-labelledby={`specialty-tab-${activeSpecialtyIndex}`}
-              >
-                <article
-                  key={activeSpecialty.title}
-                  className="specialty-card specialty-panel-card"
-                >
-                  <div className="specialty-panel-content">
-                    <h3>{activeSpecialty.title}</h3>
-                    <p>{activeSpecialty.text}</p>
-                    <a className="card-link" href="#agendamento">
-                      Agendar Consulta &rarr;
-                    </a>
-                  </div>
-                  <div className="specialty-panel-media">
-                    <img
-                      src={activeSpecialty.image}
-                      alt={activeSpecialty.imageAlt}
-                      loading="lazy"
-                    />
-                  </div>
-                </article>
               </div>
             </div>
           </div>
