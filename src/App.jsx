@@ -7,7 +7,7 @@ import {
   useTransform,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
-import heroImage from '../images/m.jpg'
+import heroImage from '../images/luciana-jaleco.jpeg'
 import gynImage from '../images/exam.jpg'
 import obstImage from '../images/hug.jpg'
 import homeoImage from '../images/m.jpg'
@@ -247,14 +247,10 @@ function App() {
                 <a className="btn btn-primary" href="#contato">
                   Agendar consulta
                 </a>
-                <a className="btn btn-outline" href="#abordagem">
-                  Conhecer abordagem
-                </a>
               </div>
               <div className="hero-meta">
                 <div className="meta-card">CRM 000000 | RQE 00000</div>
                 <div className="meta-card">Atendimento presencial e online</div>
-                <div className="meta-card">Consultorio com luz natural</div>
               </div>
             </div>
             <div className="hero-media" data-reveal style={{ '--delay': '220ms' }}>
@@ -342,7 +338,7 @@ function App() {
                   const stepSize = 1 / steps
                   const start = index * stepSize
                   const end = start + stepSize
-                  const fadeWindow = stepSize * 0.22
+                  const fadeWindow = stepSize * 0.34
                   const holdStart = start + fadeWindow
                   const holdEnd = end - fadeWindow
                   const startOpacity = index === 0 ? 1 : 0

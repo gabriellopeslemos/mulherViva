@@ -190,7 +190,7 @@ p {
 }
 
 .hero-media__image {
-  height: 420px;
+  height: 580px;
   border-radius: var(--radius-lg);
   background-size: cover;
   background-position: center;
