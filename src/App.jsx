@@ -241,7 +241,7 @@ function App() {
           </div>
         </section>
 
-        <section className="section" id="sobre">
+        <section className="section alt" id="sobre">
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Sobre a medica</p>
@@ -267,7 +267,7 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="abordagem" data-approach>
+        <section className="section" id="abordagem" data-approach>
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Abordagem</p>
@@ -299,7 +299,7 @@ function App() {
           </div>
         </section>
 
-        <section className="section" id="especialidades">
+        <section className="section alt" id="especialidades">
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Especialidades</p>
@@ -364,32 +364,6 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="diferenciais">
-          <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Diferenciais</p>
-              <h2>O cuidado que respeita a sua historia.</h2>
-              <p>
-                Uma experiencia clinica que equilibra tecnica, presencia e
-                integracao emocional.
-              </p>
-            </div>
-            <div className="differentials-grid">
-              {differentials.map((item, index) => (
-                <div
-                  key={item}
-                  className="differential-card"
-                  data-reveal
-                  style={{ '--delay': `${index * 90}ms` }}
-                >
-                  <span className="differential-mark">+</span>
-                  <p>{item}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="section" id="depoimentos">
           <div className="container">
             <div className="section-header" data-reveal>
@@ -423,34 +397,7 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="conteudo">
-          <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Conteudo e educacao</p>
-              <h2>Conhecimento que empodera escolhas conscientes.</h2>
-              <p>
-                Temas essenciais para voce compreender seu ciclo e cuidar da
-                sua energia vital.
-              </p>
-            </div>
-            <div className="card-grid content-grid">
-              {educationTopics.map((topic, index) => (
-                <article
-                  key={topic.title}
-                  className="content-card"
-                  data-reveal
-                  style={{ '--delay': `${index * 90}ms` }}
-                >
-                  <h3>{topic.title}</h3>
-                  <p>{topic.text}</p>
-                  <span className="card-link">Ver artigos</span>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="blog">
+        <section className="section alt" id="blog">
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Blog</p>
@@ -481,7 +428,7 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="endereco">
+        <section className="section" id="endereco">
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Endereco</p>
@@ -523,7 +470,7 @@ function App() {
           </div>
         </section>
 
-        <section className="section" id="contato">
+        <section className="section alt" id="contato">
           <div className="container">
             <div className="cta-card" data-reveal>
               <div>

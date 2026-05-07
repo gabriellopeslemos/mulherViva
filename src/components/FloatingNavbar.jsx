@@ -4,9 +4,7 @@ const navLinks = [
   { label: 'Sobre', href: '#sobre' },
   { label: 'Abordagem', href: '#abordagem' },
   { label: 'Especialidades', href: '#especialidades' },
-  { label: 'Diferenciais', href: '#diferenciais' },
   { label: 'Depoimentos', href: '#depoimentos' },
-  { label: 'Conteudo', href: '#conteudo' },
   { label: 'Blog', href: '#blog' },
   { label: 'Endereco', href: '#endereco' },
 ]
