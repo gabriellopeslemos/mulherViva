@@ -14,22 +14,95 @@ import gynImage from '../images/exam.jpg'
 import obstImage from '../images/hug.jpg'
 import homeoImage from '../images/m.jpg'
 
+const IconGraduation = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M3 8l9-4 9 4-9 4-9-4z" />
+    <path d="M7 11v4c0 1.7 3 3 5 3s5-1.3 5-3v-4" />
+    <path d="M21 10v5" />
+  </svg>
+)
+
+const IconMedical = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 9v6" />
+    <path d="M9 12h6" />
+  </svg>
+)
+
+const IconClock = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 8v4l3 2" />
+  </svg>
+)
+
+const IconLink = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M10 13a5 5 0 0 1 0-7l2-2a5 5 0 0 1 7 7l-1 1" />
+    <path d="M14 11a5 5 0 0 1 0 7l-2 2a5 5 0 0 1-7-7l1-1" />
+  </svg>
+)
+
+const aboutIcons = {
+  graduation: IconGraduation,
+  medical: IconMedical,
+  clock: IconClock,
+  link: IconLink,
+}
+
 const aboutCards = [
   {
     title: 'Formacao em Medicina',
     text: 'Base clinica solida e atualizada para um cuidado seguro.',
+    icon: 'graduation',
   },
   {
     title: 'Especializacao em Ginecologia e Obstetricia',
     text: 'Atendimento preciso para cada fase da vida feminina.',
+    icon: 'medical',
   },
   {
     title: '12+ anos de experiencia clinica',
     text: 'Historias de cuidado profundo e acompanhamento continuo.',
+    icon: 'clock',
   },
   {
     title: 'Abordagem integrativa',
     text: 'Ciencia, mente e espiritualidade com equilibrio e evidencias.',
+    icon: 'link',
   },
 ]
 
@@ -144,6 +217,7 @@ function App() {
   const prefersReducedMotion = useReducedMotion()
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
+  const { scrollYProgress: pageScrollProgress } = useScroll()
   const heroTiltXSpring = useSpring(heroTiltX, {
     stiffness: 120,
     damping: 18,
@@ -157,6 +231,11 @@ function App() {
   const { scrollYProgress } = useScroll({
     target: specialtiesScrollRef,
     offset: ['start start', 'end end'],
+  })
+  const pageProgressSpring = useSpring(pageScrollProgress, {
+    stiffness: 140,
+    damping: 24,
+    mass: 0.25,
   })
   const entryHold = 0.12
   const exitHold = 0.08
@@ -266,6 +345,11 @@ function App() {
 
   return (
     <div className="page">
+      <motion.div
+        className="scroll-progress"
+        style={{ scaleX: pageProgressSpring }}
+        aria-hidden="true"
+      />
       <FloatingNavbar />
 
       <main>
@@ -325,17 +409,25 @@ function App() {
               </p>
             </div>
             <div className="card-grid">
-              {aboutCards.map((card, index) => (
-                <article
-                  key={card.title}
-                  className="stat-card"
-                  data-reveal
-                  style={{ '--delay': `${index * 80}ms` }}
-                >
-                  <h3>{card.title}</h3>
-                  <p>{card.text}</p>
-                </article>
-              ))}
+              {aboutCards.map((card, index) => {
+                const Icon = aboutIcons[card.icon]
+                return (
+                  <article
+                    key={card.title}
+                    className="stat-card"
+                    data-reveal
+                    style={{ '--delay': `${index * 80}ms` }}
+                  >
+                    {Icon ? (
+                      <div className="stat-card__icon" aria-hidden="true">
+                        <Icon />
+                      </div>
+                    ) : null}
+                    <h3>{card.title}</h3>
+                    <p>{card.text}</p>
+                  </article>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -547,19 +639,20 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="contato">
+        <section className="section appointment-section" id="contato">
           <div className="container">
-            <div className="cta-card" data-reveal>
-              <div>
-                <p className="eyebrow">Comece agora</p>
-                <h2>Comece seu cuidado com mais consciencia e profundidade.</h2>
-                <p>
-                  Atendimento individualizado para mulheres que desejam clareza,
-                  equilibrio e vitalidade.
+            <div className="appointment-card" data-reveal>
+              <aside className="appointment-aside">
+                <p className="appointment-label">Agendamento</p>
+                <h2>Vamos conversar?</h2>
+                <p className="appointment-copy">
+                  Preencha o formulario e nossa equipe entrara em contato para
+                  confirmar o melhor horario.
                 </p>
-                <div className="contact-info">
-                  <p>
-                    <span className="contact-icon" aria-hidden="true">
+                <div className="appointment-divider" aria-hidden="true" />
+                <div className="appointment-contacts">
+                  <div className="appointment-contact">
+                    <span className="appointment-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" role="img" focusable="false">
                         <path
                           d="M12 3.5a8.5 8.5 0 0 1 7.3 12.9L20 20l-3.8-1.3A8.5 8.5 0 1 1 12 3.5z"
@@ -568,17 +661,30 @@ function App() {
                           strokeWidth="1.6"
                           strokeLinejoin="round"
                         />
+                        <circle cx="12" cy="11" r="3" fill="currentColor" />
+                      </svg>
+                    </span>
+                    <div>
+                      <strong>Consultorio Rio de Janeiro</strong>
+                      <span>Atendimento presencial e online</span>
+                    </div>
+                  </div>
+                  <div className="appointment-contact">
+                    <span className="appointment-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="img" focusable="false">
                         <path
-                          d="M9.2 8.8c.2-.3.4-.3.6-.2l1.4.7c.2.1.3.3.3.6l-.2 1c-.1.2 0 .4.2.6.6.7 1.3 1.3 2.1 1.8.2.1.4.1.6 0l.9-.4c.2-.1.4 0 .6.1l1.2 1c.2.1.2.4.1.6-.4.8-1.3 1.3-2.3 1.2-1.5-.1-3.2-1-4.7-2.4-1.4-1.3-2.4-2.9-2.6-4.3-.1-.9.4-1.8 1.2-2.3z"
+                          d="M6.4 5.6c.3-.4.8-.6 1.3-.4l3 1.2c.4.2.7.6.7 1.1v2c0 .4-.2.8-.6 1l-1.5.9c.8 1.6 2.1 2.9 3.7 3.7l.9-1.5c.2-.4.6-.6 1-.6h2c.5 0 .9.3 1.1.7l1.2 3c.2.5 0 1-.4 1.3-.9.7-2 1.1-3.2 1-2.8-.3-5.4-1.8-7.6-4-2.2-2.2-3.7-4.8-4-7.6-.1-1.2.3-2.3 1-3.2z"
                           fill="currentColor"
                         />
                       </svg>
                     </span>
-                    <span className="contact-label">WhatsApp</span>
-                    (11) 00000-0000
-                  </p>
-                  <p>
-                    <span className="contact-icon" aria-hidden="true">
+                    <div>
+                      <strong>+55 21 99999-0000</strong>
+                      <span>Atendimento das 8h as 18h</span>
+                    </div>
+                  </div>
+                  <div className="appointment-contact">
+                    <span className="appointment-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" role="img" focusable="false">
                         <rect
                           x="3"
@@ -591,7 +697,7 @@ function App() {
                           strokeWidth="1.6"
                         />
                         <path
-                          d="M4 6.5l8 6 8-6"
+                          d="M4 7l8 6 8-6"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="1.6"
@@ -599,23 +705,79 @@ function App() {
                         />
                       </svg>
                     </span>
-                    <span className="contact-label">Email</span>
-                    contato@mulherviva.com
-                  </p>
+                    <div>
+                      <strong>contato@mulherviva.org</strong>
+                      <span>Respondemos em ate 24h</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="cta-actions">
-                <a className="btn btn-primary" href="#contato">
-                  Agendar consulta
-                </a>
-                <a
-                  className="btn btn-outline"
-                  href="https://wa.me/5500000000000"
-                  rel="noreferrer"
-                >
-                  Falar no WhatsApp
-                </a>
-              </div>
+              </aside>
+              <form className="appointment-form">
+                <div className="appointment-grid">
+                  <label className="field" htmlFor="nome">
+                    <span>Nome</span>
+                    <input id="nome" name="nome" type="text" placeholder="Seu nome" />
+                  </label>
+                  <label className="field" htmlFor="telefone">
+                    <span>Telefone</span>
+                    <input
+                      id="telefone"
+                      name="telefone"
+                      type="tel"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </label>
+                  <label className="field span-2" htmlFor="email">
+                    <span>E-mail</span>
+                    <input id="email" name="email" type="email" placeholder="Seu e-mail" />
+                  </label>
+                  <label className="field" htmlFor="data">
+                    <span>Data preferida</span>
+                    <input id="data" name="data" type="text" placeholder="dd/mm/aaaa" />
+                  </label>
+                  <label className="field" htmlFor="especialidade">
+                    <span>Especialidade</span>
+                    <select id="especialidade" name="especialidade">
+                      <option>Ginecologia Integrativa</option>
+                      <option>Obstetricia Humanizada</option>
+                      <option>Homeopatia</option>
+                      <option>Consulta Integrativa</option>
+                    </select>
+                  </label>
+                  <label className="field span-2" htmlFor="mensagem">
+                    <span>Mensagem (opcional)</span>
+                    <textarea
+                      id="mensagem"
+                      name="mensagem"
+                      placeholder="Conte um pouco sobre o que voce precisa"
+                    />
+                  </label>
+                </div>
+                <div className="appointment-actions">
+                  <button className="appointment-submit" type="submit">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect
+                        x="3"
+                        y="5"
+                        width="18"
+                        height="16"
+                        rx="2"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                      />
+                      <path
+                        d="M8 3v4M16 3v4M3 10h18"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Solicitar agendamento
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </section>
