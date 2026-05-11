@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   motion,
+  useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
@@ -140,6 +142,18 @@ function App() {
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
   const specialtiesScrollRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
+  const heroTiltX = useMotionValue(0)
+  const heroTiltY = useMotionValue(0)
+  const heroTiltXSpring = useSpring(heroTiltX, {
+    stiffness: 120,
+    damping: 18,
+    mass: 0.35,
+  })
+  const heroTiltYSpring = useSpring(heroTiltY, {
+    stiffness: 120,
+    damping: 18,
+    mass: 0.35,
+  })
   const { scrollYProgress } = useScroll({
     target: specialtiesScrollRef,
     offset: ['start start', 'end end'],
@@ -226,6 +240,28 @@ function App() {
     setActiveSpecialtyIndex(nextIndex)
   })
 
+  const handleHeroPointerMove = (event) => {
+    if (prefersReducedMotion) {
+      return
+    }
+    if (event.pointerType && event.pointerType !== 'mouse' && event.pointerType !== 'pen') {
+      return
+    }
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const xProgress = x / rect.width
+    const yProgress = y / rect.height
+    const maxTilt = 4
+    heroTiltX.set((yProgress - 0.5) * -maxTilt)
+    heroTiltY.set((xProgress - 0.5) * maxTilt)
+  }
+
+  const resetHeroTilt = () => {
+    heroTiltX.set(0)
+    heroTiltY.set(0)
+  }
+
   const year = new Date().getFullYear()
 
   return (
@@ -254,14 +290,25 @@ function App() {
               </div>
             </div>
             <div className="hero-media" data-reveal style={{ '--delay': '220ms' }}>
-              <div className="hero-media__frame">
-                <div
-                  className="hero-media__image"
-                  style={{ backgroundImage: `url(${heroImage})` }}
-                  role="img"
-                  aria-label="Luz natural em consultorio acolhedor"
-                />
-                
+              <div
+                className="hero-tilt"
+                onPointerMove={handleHeroPointerMove}
+                onPointerLeave={resetHeroTilt}
+                onPointerCancel={resetHeroTilt}
+              >
+                <motion.div
+                  className="hero-tilt__inner"
+                  style={{ rotateX: heroTiltXSpring, rotateY: heroTiltYSpring }}
+                >
+                  <div className="hero-media__frame">
+                    <div
+                      className="hero-media__image"
+                      style={{ backgroundImage: `url(${heroImage})` }}
+                      role="img"
+                      aria-label="Luz natural em consultorio acolhedor"
+                    />
+                  </div>
+                </motion.div>
               </div>
             </div>
           </div>

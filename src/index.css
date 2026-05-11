@@ -181,12 +181,23 @@ p {
   color: var(--text-soft);
 }
 
+.hero-tilt {
+  perspective: 1200px;
+}
+
+.hero-tilt__inner {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
 .hero-media__frame {
   position: relative;
   background: var(--surface);
   padding: 18px;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
+  transform-style: preserve-3d;
+  overflow: hidden;
 }
 
 .hero-media__image {
@@ -194,6 +205,8 @@ p {
   border-radius: var(--radius-lg);
   background-size: cover;
   background-position: center;
+  transform: translateZ(18px);
+  backface-visibility: hidden;
 }
 
 .hero-media__overlay {
