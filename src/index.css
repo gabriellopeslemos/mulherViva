@@ -2,7 +2,7 @@
 
 :root {
   --bg: #f6eff6;
-  --bg-alt: #efe6f0;
+  --bg-alt: linear-gradient(135deg, #f2e7fb 0%, #e3cef8 45%, #d0b2f0 100%);
   --surface: #ffffff;
   --surface-soft: #fbf7fb;
   --text: #2d202b;
@@ -543,12 +543,18 @@ p {
   place-items: center;
   font-weight: 600;
   color: var(--text);
-  background: radial-gradient(
-    circle at 30% 30%,
-    #ffffff 0%,
-    var(--avatar-tone, #e9d9e7) 70%,
-    #cdb7c9 100%
+  background: var(
+    --avatar-image,
+    radial-gradient(
+      circle at 30% 30%,
+      #ffffff 0%,
+      var(--avatar-tone, #e9d9e7) 70%,
+      #cdb7c9 100%
+    )
   );
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .content-grid .content-card {

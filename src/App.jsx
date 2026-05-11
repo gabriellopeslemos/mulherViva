@@ -13,6 +13,9 @@ import heroImage from '../images/luciana-jaleco.jpeg'
 import gynImage from '../images/exam.jpg'
 import obstImage from '../images/hug.jpg'
 import homeoImage from '../images/m.jpg'
+import testimonialRandomOne from '../images/mulherRandom.jpg'
+import testimonialRandomTwo from '../images/mulherRandom2.jpg'
+import testimonialRandomThree from '../images/homemrandom.jpg'
 
 const IconGraduation = () => (
   <svg
@@ -158,16 +161,22 @@ const testimonials = [
     name: 'Luciana M.',
     text: 'Encontrei um cuidado profundo, sem julgamentos e com respeito real.',
     tone: '#eaddea',
+    image: testimonialRandomOne,
+    imageAlt: 'Foto de Luciana',
   },
   {
     name: 'Renata C.',
     text: 'A consulta foi serena e precisa, senti que tudo foi explicado com calma.',
     tone: '#e4d7e3',
+    image: testimonialRandomTwo,
+    imageAlt: 'Foto de Renata',
   },
   {
-    name: 'Patricia A.',
+    name: 'Pedro F.',
     text: 'Um encontro entre ciencia e sensibilidade que transformou meu olhar.',
     tone: '#e9d4e6',
+    image: testimonialRandomThree,
+    imageAlt: 'Foto de Patricia',
   },
 ]
 
@@ -219,14 +228,14 @@ function App() {
   const heroTiltY = useMotionValue(0)
   const { scrollYProgress: pageScrollProgress } = useScroll()
   const heroTiltXSpring = useSpring(heroTiltX, {
-    stiffness: 120,
-    damping: 18,
-    mass: 0.35,
+    stiffness: 90,
+    damping: 22,
+    mass: 0.6,
   })
   const heroTiltYSpring = useSpring(heroTiltY, {
-    stiffness: 120,
-    damping: 18,
-    mass: 0.35,
+    stiffness: 90,
+    damping: 22,
+    mass: 0.6,
   })
   const { scrollYProgress } = useScroll({
     target: specialtiesScrollRef,
@@ -331,7 +340,7 @@ function App() {
     const y = event.clientY - rect.top
     const xProgress = x / rect.width
     const yProgress = y / rect.height
-    const maxTilt = 4
+    const maxTilt = 20
     heroTiltX.set((yProgress - 0.5) * -maxTilt)
     heroTiltY.set((xProgress - 0.5) * maxTilt)
   }
@@ -544,13 +553,18 @@ function App() {
                   <div
                     className="avatar"
                     role="img"
-                    aria-label={`Foto de ${item.name}`}
-                    style={{ '--avatar-tone': item.tone }}
+                    aria-label={item.imageAlt || `Foto de ${item.name}`}
+                    style={{
+                      '--avatar-tone': item.tone,
+                      '--avatar-image': item.image ? `url(${item.image})` : undefined,
+                    }}
                   >
-                    {item.name
-                      .split(' ')
-                      .map((word) => word[0])
-                      .join('')}
+                    {!item.image
+                      ? item.name
+                          .split(' ')
+                          .map((word) => word[0])
+                          .join('')
+                      : null}
                   </div>
                   <div>
                     <p className="testimonial-text">"{item.text}"</p>
