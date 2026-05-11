@@ -460,37 +460,41 @@ function App() {
               <p className="eyebrow">Endereco</p>
               <h2>Um consultorio pensado para acolher com calma.</h2>
               <p>
-                Use este espaco para compartilhar localizacao, horarios e
-                facilidades do atendimento.
+                Centro Médico Lucio Costa, com facil acesso e apoio no local.
               </p>
             </div>
             <div className="address-grid">
               <div className="address-card" data-reveal>
-                <h3>Consultorio Mulher Viva</h3>
-                <p className="address-line">Rua Exemplo, 123 - Bairro Jardim</p>
-                <p className="address-line">Sao Paulo - SP, 00000-000</p>
+                <h3>Centro Médico Lucio Costa</h3>
+                <p className="address-line">SGAS 610, Bloco 2, Sala 250</p>
+                <p className="address-line">Brasilia - DF</p>
                 <div className="address-divider" aria-hidden="true" />
                 <ul className="address-list">
-                  <li>Segunda a sexta, 08h as 18h</li>
-                  <li>Atendimento presencial e telemedicina</li>
-                  <li>Estacionamento proximo e acessibilidade</li>
+                  <li>Entrada pela L3</li>
+                  <li>Estacionamento rotativo no local</li>
                 </ul>
               </div>
               <div className="map-card" data-reveal style={{ '--delay': '120ms' }}>
-                <div
-                  className="map-frame"
-                  role="img"
-                  aria-label="Mapa do consultorio"
-                >
-                  <div className="map-pin" aria-hidden="true">
-                    MV
-                  </div>
-                  <p>Mapa e rotas em breve</p>
+                <div className="map-frame">
+                  <iframe
+                    className="map-embed"
+                    title="Mapa do Centro Medico Lucio Costa"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%20Brasilia%20DF&output=embed"
+                  />
                 </div>
                 <p className="map-note">
-                  Reserve este espaco para inserir o mapa interativo quando
-                  estiver pronto.
+                  SGAS 610, Bloco 2, sala 250 - Entrada pela L3.
                 </p>
+                <a
+                  className="btn btn-outline"
+                  href="https://www.google.com/maps/dir/?api=1&destination=Centro%20Medico%20Lucio%20Costa%20Brasilia%20DF"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir rotas no Google Maps
+                </a>
               </div>
             </div>
           </div>
