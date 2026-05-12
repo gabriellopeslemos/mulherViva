@@ -223,6 +223,8 @@ const educationTopics = [
 function App() {
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
   const specialtiesScrollRef = useRef(null)
+  const addressContentRef = useRef(null)
+  const addressTitleRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
@@ -320,6 +322,24 @@ function App() {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
+  }, [])
+
+  useEffect(() => {
+    const updateAddressTitleWidth = () => {
+      if (!addressContentRef.current || !addressTitleRef.current) {
+        return
+      }
+      const { width } = addressTitleRef.current.getBoundingClientRect()
+      addressContentRef.current.style.setProperty(
+        '--address-title-width',
+        `${Math.round(width)}px`,
+      )
+    }
+
+    updateAddressTitleWidth()
+    window.addEventListener('resize', updateAddressTitleWidth)
+
+    return () => window.removeEventListener('resize', updateAddressTitleWidth)
   }, [])
 
   useMotionValueEvent(storyProgress, 'change', (value) => {
@@ -618,38 +638,78 @@ function App() {
                 Centro Médico Lucio Costa, com facil acesso e apoio no local.
               </p>
             </div>
-            <div className="address-grid">
-              <div className="address-card" data-reveal>
-                <h3>Centro Médico Lucio Costa</h3>
-                <p className="address-line">SGAS 610, Bloco 2, Sala 250</p>
-                <p className="address-line">Brasilia - DF</p>
-                <div className="address-divider" aria-hidden="true" />
-                <ul className="address-list">
-                  <li>Entrada pela L3</li>
-                  <li>Estacionamento rotativo no local</li>
-                </ul>
-              </div>
-              <div className="map-card" data-reveal style={{ '--delay': '120ms' }}>
-                <div className="map-frame">
-                  <iframe
-                    className="map-embed"
-                    title="Mapa do Centro Medico Lucio Costa"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%20Brasilia%20DF&output=embed"
-                  />
-                </div>
-                <p className="map-note">
-                  SGAS 610, Bloco 2, sala 250 - Entrada pela L3.
+            <div className="address-grid address-grid--device">
+              <div className="address-content" data-reveal ref={addressContentRef}>
+                <p className="address-eyebrow">Consultorio</p>
+                <h3 className="address-title" ref={addressTitleRef}>
+                  Centro Medico Lucio Costa
+                </h3>
+                <p className="address-lead">
+                  Um espaco sereno, discreto e preparado para consultas profundas.
                 </p>
-                <a
-                  className="btn btn-outline"
-                  href="https://www.google.com/maps/dir/?api=1&destination=Centro%20Medico%20Lucio%20Costa%20Brasilia%20DF"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <div className="address-details address-details--spread">
+                  <div className="address-item">
+                    <span className="address-label">Endereco</span>
+                    <span className="address-value">SGAS 610, Bloco 2, Sala 250</span>
+                    <span className="address-subvalue">Brasilia - DF</span>
+                  </div>
+                  <div className="address-item">
+                    <span className="address-label">Atendimento</span>
+                    <span className="address-value">Presencial e online</span>
+                  </div>
+                </div>
+                <div className="address-tags">
+                  <span className="address-tag">Entrada pela L3</span>
+                  <span className="address-tag">Recepcao</span>
+                </div>
+                <div className="address-actions">
+                  <a className="btn btn-primary" href="#contato">
+                    Agendar consulta
+                  </a>
+                </div>
+              </div>
+              <div
+                className="device-showcase__device"
+                data-reveal
+                style={{ '--delay': '120ms' }}
+              >
+                <div className="device-showcase__glow" aria-hidden="true" />
+                <div
+                  className="phone-mock"
+                  role="img"
+                  aria-label="Mockup 3D de smartphone com Google Maps"
                 >
-                  Abrir rotas no Google Maps
-                </a>
+                  <div className="phone-mock__side" aria-hidden="true" />
+                  <div className="phone-mock__speaker" aria-hidden="true" />
+                  <div className="phone-mock__glass" aria-hidden="true" />
+                  <div className="phone-mock__screen" aria-hidden="true">
+                    <div className="map-ui">
+                      <div className="map-ui__top">
+                        <span className="map-ui__chip">Consultório Mulher Viva</span>
+                        <span className="map-ui__status">
+                          <span className="map-ui__dot" aria-hidden="true" />
+                          1.2 km
+                        </span>
+                      </div>
+                      <div className="map-ui__canvas">
+                        <div className="map-ui__roads" />
+                        <div className="map-ui__route" />
+                        <div className="map-ui__pin" />
+                        <div className="map-ui__label">Consultório Mulher Viva</div>
+                      </div>
+                      <div className="map-ui__cta">
+                        <a
+                          className="map-ui__button"
+                          href="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%20Brasilia%20DF&output=embed"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Abrir no Google Maps
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
