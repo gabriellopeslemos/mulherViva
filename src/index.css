@@ -262,6 +262,26 @@ p {
   padding: var(--section-pad) 0;
 }
 
+@media (min-width: 981px) {
+  .hero,
+  .section {
+    min-height: 110vh;
+  }
+
+  .hero,
+  .section:not(.specialties-section) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+  }
+
+  .hero,
+  .section:not(.specialties-section) {
+    padding: clamp(56px, 10vh, 120px) 0;
+  }
+}
+
 .section.alt {
   background: var(--bg-alt);
   --text-strong: #ffffff;
