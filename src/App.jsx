@@ -407,72 +407,6 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="sobre">
-          <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Sobre a medica</p>
-              <h2>Autoridade clinica com presenca humana e sofisticada.</h2>
-              <p>
-                Uma medicina que une ciencia, intuicao e cuidado integrativo,
-                respeitando a historia de cada mulher com profundidade.
-              </p>
-            </div>
-            <div className="card-grid">
-              {aboutCards.map((card, index) => {
-                const Icon = aboutIcons[card.icon]
-                return (
-                  <article
-                    key={card.title}
-                    className="stat-card"
-                    data-reveal
-                    style={{ '--delay': `${index * 80}ms` }}
-                  >
-                    {Icon ? (
-                      <div className="stat-card__icon" aria-hidden="true">
-                        <Icon />
-                      </div>
-                    ) : null}
-                    <h3>{card.title}</h3>
-                    <p>{card.text}</p>
-                  </article>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="abordagem" data-approach>
-          <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Abordagem</p>
-              <h2>Um caminho claro, sensivel e cientifico.</h2>
-              <p>
-                O atendimento e conduzido com profundidade clinica e
-                espiritualidade equilibrada, sem perder o rigor tecnico.
-              </p>
-            </div>
-            <div className="approach-body">
-              <div className="approach-line" aria-hidden="true" />
-              <div className="approach-steps">
-                {approachSteps.map((step, index) => (
-                  <article
-                    key={step.title}
-                    className="approach-step"
-                    data-reveal
-                    style={{ '--delay': `${index * 120}ms` }}
-                  >
-                    <div className="step-number">0{index + 1}</div>
-                    <div>
-                      <h3>{step.title}</h3>
-                      <p>{step.text}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section className="section alt specialties-section" id="especialidades">
           <div
             className="specialties-scroll"
@@ -537,6 +471,74 @@ function App() {
             </div>
           </div>
         </section>
+
+        <section className="section" id="sobre">
+          <div className="container">
+            <div className="section-header" data-reveal>
+              <p className="eyebrow">Sobre a medica</p>
+              <h2>Autoridade clinica com presenca humana e sofisticada.</h2>
+              <p>
+                Uma medicina que une ciencia, intuicao e cuidado integrativo,
+                respeitando a historia de cada mulher com profundidade.
+              </p>
+            </div>
+            <div className="card-grid">
+              {aboutCards.map((card, index) => {
+                const Icon = aboutIcons[card.icon]
+                return (
+                  <article
+                    key={card.title}
+                    className="stat-card"
+                    data-reveal
+                    style={{ '--delay': `${index * 80}ms` }}
+                  >
+                    {Icon ? (
+                      <div className="stat-card__icon" aria-hidden="true">
+                        <Icon />
+                      </div>
+                    ) : null}
+                    <h3>{card.title}</h3>
+                    <p>{card.text}</p>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="section alt" id="abordagem" data-approach>
+          <div className="container">
+            <div className="section-header" data-reveal>
+              <p className="eyebrow">Abordagem</p>
+              <h2>Um caminho claro, sensivel e cientifico.</h2>
+              <p>
+                O atendimento e conduzido com profundidade clinica e
+                espiritualidade equilibrada, sem perder o rigor tecnico.
+              </p>
+            </div>
+            <div className="approach-body">
+              <div className="approach-line" aria-hidden="true" />
+              <div className="approach-steps">
+                {approachSteps.map((step, index) => (
+                  <article
+                    key={step.title}
+                    className="approach-step"
+                    data-reveal
+                    style={{ '--delay': `${index * 120}ms` }}
+                  >
+                    <div className="step-number">0{index + 1}</div>
+                    <div>
+                      <h3>{step.title}</h3>
+                      <p>{step.text}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        
 
         <section className="section" id="depoimentos">
           <div className="container">

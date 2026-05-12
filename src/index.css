@@ -1,18 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f6eff6;
-  --bg-alt: linear-gradient(135deg, #f2e7fb 0%, #e3cef8 45%, #d0b2f0 100%);
-  --surface: #ffffff;
-  --surface-soft: #fbf7fb;
-  --text: #2d202b;
-  --text-soft: #6a5a66;
+  --bg: #f7eef3;
+  --bg-alt: linear-gradient(135deg, #6b3c55 0%, #7a4762 45%, #5c2f4a 100%);
+  --surface: #fffafb;
+  --surface-soft: #f6edf2;
+  --text-strong: #1f1119;
+  --text: #2a1a24;
+  --text-soft: #4a3541;
+  --text-muted: #5b4552;
   --accent: #7a3e6a;
   --accent-strong: #5e2f52;
-  --accent-contrast: #fbf7fb;
-  --line: #e7d9e6;
-  --shadow-sm: 0 10px 30px rgba(74, 48, 70, 0.08);
-  --shadow-lg: 0 30px 80px rgba(74, 48, 70, 0.14);
+  --accent-contrast: #fff6fb;
+  --line: #dcc7d2;
+  --blog-card-bg: #ead9e3;
+  --blog-card-line: #d7c1ce;
+  --shadow-sm: 0 10px 30px rgba(90, 52, 78, 0.08);
+  --shadow-lg: 0 30px 80px rgba(90, 52, 78, 0.14);
   --radius-xl: 30px;
   --radius-lg: 22px;
   --radius-md: 16px;
@@ -42,14 +46,23 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(1200px 800px at 80% -10%, #ffffff 0%, transparent 60%),
-    radial-gradient(900px 900px at -10% 10%, #efe3f1 0%, transparent 55%),
+    radial-gradient(1200px 800px at 80% -10%, #fffafb 0%, transparent 60%),
+    radial-gradient(900px 900px at -10% 10%, #f1dbe6 0%, transparent 55%),
     var(--bg);
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-strong);
 }
 
 p {
@@ -72,7 +85,7 @@ p {
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #6f2f64 0%, #9b4f89 45%, #e1bfd9 100%);
+  background: linear-gradient(90deg, #6a325b 0%, #8a4b74 45%, #e3c5d6 100%);
   transform-origin: 0 50%;
   z-index: 60;
   opacity: 0.85;
@@ -206,21 +219,30 @@ p {
 
 .hero-media__frame {
   position: relative;
-  background: var(--surface);
-  padding: 18px;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
   transform-style: preserve-3d;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .hero-media__image {
+  position: relative;
   height: 580px;
-  border-radius: var(--radius-lg);
+  border-radius: 48% 52% 45% 55% / 60% 40% 60% 40%;
   background-size: cover;
   background-position: center;
   transform: translateZ(18px);
   backface-visibility: hidden;
+  box-shadow:
+    0 28px 90px rgba(152, 126, 178, 0.18),
+    0 8px 28px rgba(152, 126, 178, 0.08);
+  overflow: hidden;
+}
+
+.hero-media__image::before {
+  content: none;
 }
 
 .hero-media__overlay {
@@ -242,6 +264,11 @@ p {
 
 .section.alt {
   background: var(--bg-alt);
+  --text-strong: #ffffff;
+  --text: #fff8fc;
+  --text-soft: #f6e9f1;
+  --text-muted: #eddbe7;
+  --line: rgba(255, 248, 252, 0.55);
 }
 
 .specialties-section {
@@ -572,6 +599,20 @@ p {
   min-height: 220px;
 }
 
+#blog .blog-card {
+  --text-strong: #1f1119;
+  --text: #2a1a24;
+  --text-soft: #4a3541;
+  --text-muted: #5b4552;
+  background: var(--blog-card-bg);
+  border-color: var(--blog-card-line);
+  color: var(--text);
+}
+
+#blog .blog-card .blog-tag {
+  border-color: var(--blog-card-line);
+}
+
 .blog-meta {
   display: flex;
   flex-wrap: wrap;
@@ -579,7 +620,7 @@ p {
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-soft);
+  color: var(--text-muted);
 }
 
 .blog-tag {
@@ -722,7 +763,7 @@ p {
 }
 
 .appointment-section {
-  background: linear-gradient(135deg, #f2e7fb 0%, #e3cef8 45%, #d0b2f0 100%);
+  background: linear-gradient(135deg, #f7eef3 0%, #f1dbe6 45%, #e7c8d7 100%);
 }
 
 .appointment-card {
@@ -730,19 +771,19 @@ p {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   border-radius: 28px;
   overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 32px 90px rgba(68, 32, 96, 0.2);
+  background: var(--surface);
+  box-shadow: 0 28px 80px rgba(90, 52, 78, 0.18);
 }
 
 .appointment-aside {
   background: radial-gradient(
       120% 120% at 10% 0%,
-      rgba(122, 92, 150, 0.35) 0%,
-      rgba(44, 24, 60, 0.2) 45%,
-      rgba(35, 20, 55, 0.1) 100%
+      rgba(122, 62, 106, 0.45) 0%,
+      rgba(94, 47, 82, 0.35) 45%,
+      rgba(76, 36, 60, 0.2) 100%
     ),
-    #2e1c3d;
-  color: #f5eefb;
+    #5e2f52;
+  color: #fff6fb;
   padding: clamp(32px, 4vw, 48px);
   display: grid;
   gap: 16px;
@@ -754,7 +795,7 @@ p {
   letter-spacing: 0.32em;
   font-size: 11px;
   font-weight: 600;
-  color: #e2cfea;
+  color: #f4e6ef;
   margin: 0;
 }
 
@@ -766,14 +807,14 @@ p {
 
 .appointment-copy {
   margin: 0;
-  color: #dbcdea;
+  color: #f6e9f1;
   line-height: 1.7;
   max-width: 320px;
 }
 
 .appointment-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 246, 251, 0.28);
   margin: 6px 0 4px;
 }
 
@@ -786,7 +827,7 @@ p {
   display: grid;
   grid-template-columns: 26px 1fr;
   gap: 12px;
-  color: #efe6f6;
+  color: #f7edf3;
   font-size: 14px;
 }
 
@@ -798,7 +839,7 @@ p {
 
 .appointment-contact span {
   display: block;
-  color: #d6c7e6;
+  color: #ead5e4;
   font-size: 13px;
 }
 
@@ -807,7 +848,7 @@ p {
   height: 22px;
   display: grid;
   place-items: center;
-  color: #e4d6f2;
+  color: #f3e2ec;
 }
 
 .appointment-icon svg {
@@ -831,20 +872,20 @@ p {
   display: grid;
   gap: 8px;
   font-size: 13px;
-  color: #48344f;
+  color: var(--text-soft);
 }
 
 .field input,
 .field select,
 .field textarea {
   width: 100%;
-  border: 1px solid #e3d5ee;
-  background: #faf6fd;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
   border-radius: 999px;
   padding: 11px 14px;
   font-family: inherit;
   font-size: 14px;
-  color: #3a2742;
+  color: var(--text);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -859,8 +900,8 @@ p {
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #c7a7e2;
-  box-shadow: 0 0 0 3px rgba(199, 167, 226, 0.35);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(122, 62, 106, 0.28);
 }
 
 .field.span-2 {
@@ -881,8 +922,8 @@ p {
   padding: 14px 28px;
   font-weight: 600;
   color: #ffffff;
-  background: linear-gradient(90deg, #7b4aa8 0%, #6a46ad 45%, #845bc0 100%);
-  box-shadow: 0 18px 40px rgba(107, 70, 173, 0.35);
+  background: linear-gradient(90deg, #7a3e6a 0%, #6b355d 45%, #8a4b74 100%);
+  box-shadow: 0 18px 40px rgba(122, 62, 106, 0.32);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -894,7 +935,7 @@ p {
 
 .appointment-submit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 22px 46px rgba(107, 70, 173, 0.4);
+  box-shadow: 0 22px 46px rgba(122, 62, 106, 0.4);
 }
 
 .site-footer {
