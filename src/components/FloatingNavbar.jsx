@@ -6,6 +6,7 @@ const navLinks = [
   { label: 'Especialidades', href: '#especialidades' },
   { label: 'Depoimentos', href: '#depoimentos' },
   { label: 'Blog', href: '#blog' },
+  { label: 'Acesso', href: './acesso.html' },
   { label: 'Endereco', href: '#endereco' },
 ]
 
@@ -21,7 +22,7 @@ function FloatingNavbar() {
           </span>
           <div className="hidden flex-col sm:flex">
             <span className="text-sm font-semibold text-purple-950">Mulher Viva</span>
-            <span className="text-xs text-purple-700">Dra. Luciana Lopes</span>
+            <span className="text-xs text-purple-700">Dra. Luciana da Silva Lopes</span>
           </div>
         </div>
 

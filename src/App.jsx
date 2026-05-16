@@ -631,13 +631,7 @@ function App() {
 
         <section className="section" id="endereco">
           <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Endereco</p>
-              <h2>Um consultorio pensado para acolher com calma.</h2>
-              <p>
-                Centro Médico Lucio Costa, com facil acesso e apoio no local.
-              </p>
-            </div>
+            
             <div className="address-grid address-grid--device">
               <div className="address-content" data-reveal ref={addressContentRef}>
                 <p className="address-eyebrow">Consultorio</p>
