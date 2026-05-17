@@ -10,6 +10,7 @@ import {
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
 import heroImage from '../images/hero-nobg.png'
+import aboutImage from '../images/about.png'
 import gynImage from '../images/exam.jpg'
 import obstImage from '../images/hug.jpg'
 import homeoImage from '../images/m.jpg'
@@ -33,80 +34,11 @@ const IconGraduation = () => (
   </svg>
 )
 
-const IconMedical = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="12" cy="12" r="8" />
-    <path d="M12 9v6" />
-    <path d="M9 12h6" />
-  </svg>
-)
-
-const IconClock = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="12" cy="12" r="8" />
-    <path d="M12 8v4l3 2" />
-  </svg>
-)
-
-const IconLink = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M10 13a5 5 0 0 1 0-7l2-2a5 5 0 0 1 7 7l-1 1" />
-    <path d="M14 11a5 5 0 0 1 0 7l-2 2a5 5 0 0 1-7-7l1-1" />
-  </svg>
-)
-
-const aboutIcons = {
-  graduation: IconGraduation,
-  medical: IconMedical,
-  clock: IconClock,
-  link: IconLink,
-}
-
-const aboutCards = [
-  {
-    title: 'Formacao em Medicina',
-    text: 'Base clinica solida e atualizada para um cuidado seguro.',
-    icon: 'graduation',
-  },
-  {
-    title: 'Especializacao em Ginecologia e Obstetricia',
-    text: 'Atendimento preciso para cada fase da vida feminina.',
-    icon: 'medical',
-  },
-  {
-    title: '12+ anos de experiencia clinica',
-    text: 'Historias de cuidado profundo e acompanhamento continuo.',
-    icon: 'clock',
-  },
-  {
-    title: 'Abordagem integrativa',
-    text: 'Ciencia, mente e espiritualidade com equilibrio e evidencias.',
-    icon: 'link',
-  },
+const aboutTags = [
+  'Ginecologia integrativa',
+  'Obstetricia humanizada',
+  'Homeopatia clinica',
+  'Saude feminina',
 ]
 
 const approachSteps = [
@@ -557,34 +489,43 @@ function App() {
 
         <section className="section" id="sobre">
           <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Sobre a medica</p>
-              <h2>Autoridade clinica com presenca humana e sofisticada.</h2>
-              <p>
-                Uma medicina que une ciencia, intuicao e cuidado integrativo,
-                respeitando a historia de cada mulher com profundidade.
-              </p>
-            </div>
-            <div className="card-grid">
-              {aboutCards.map((card, index) => {
-                const Icon = aboutIcons[card.icon]
-                return (
-                  <article
-                    key={card.title}
-                    className="stat-card"
-                    data-reveal
-                    style={{ '--delay': `${index * 80}ms` }}
-                  >
-                    {Icon ? (
-                      <div className="stat-card__icon" aria-hidden="true">
-                        <Icon />
-                      </div>
-                    ) : null}
-                    <h3>{card.title}</h3>
-                    <p>{card.text}</p>
-                  </article>
-                )
-              })}
+            <div className="about-card" data-reveal>
+              <div className="about-media">
+                <div
+                  className="about-photo"
+                  role="img"
+                  aria-label="Retrato da medica"
+                  style={{ backgroundImage: `url(${aboutImage})` }}
+                />
+                <div className="about-badge">
+                  <span className="about-badge__icon" aria-hidden="true">
+                    <IconGraduation />
+                  </span>
+                  <div>
+                    <strong>20+ anos</strong>
+                    <span>Experiencia clinica</span>
+                  </div>
+                </div>
+              </div>
+              <div className="about-content">
+                <p className="about-label">Medica integrativa</p>
+                <h2>Presenca clinica com rigor e sensibilidade.</h2>
+                <p>
+                  Atendo mulheres em todas as fases da vida, com escuta profunda e
+                  condutas individualizadas que respeitam historia e contexto.
+                </p>
+                <p>
+                  A integracao entre ciencia, terapias complementares e
+                  espiritualidade consciente cria um cuidado sofisticado e humano.
+                </p>
+                <div className="about-tags">
+                  {aboutTags.map((tag) => (
+                    <span key={tag} className="about-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
