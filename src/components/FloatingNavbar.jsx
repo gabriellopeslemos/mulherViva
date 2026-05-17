@@ -6,7 +6,6 @@ const navLinks = [
   { label: 'Especialidades', href: '#especialidades' },
   { label: 'Depoimentos', href: '#depoimentos' },
   { label: 'Blog', href: '#blog' },
-  { label: 'Acesso', href: './acesso.html' },
   { label: 'Endereco', href: '#endereco' },
 ]
 
@@ -39,6 +38,12 @@ function FloatingNavbar() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
+          <button
+            type="button"
+            className="rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-semibold text-purple-900 transition-all duration-200 hover:bg-white"
+          >
+            Acesso
+          </button>
           <a
             href="#contato"
             className="rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-semibold text-purple-900 transition-all duration-200 hover:bg-white"
@@ -83,6 +88,13 @@ function FloatingNavbar() {
             ))}
           </div>
           <div className="mt-4 flex flex-col gap-3">
+            <button
+              type="button"
+              className="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-900 transition-colors duration-200 hover:bg-purple-100"
+              onClick={() => setIsOpen(false)}
+            >
+              Acesso
+            </button>
             <a
               href="#contato"
               className="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-900 transition-colors duration-200 hover:bg-purple-100"
