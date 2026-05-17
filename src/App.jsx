@@ -9,7 +9,7 @@ import {
   useTransform,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
-import heroImage from '../images/luciana-jaleco.jpeg'
+import heroImage from '../images/hero-nobg.png'
 import gynImage from '../images/exam.jpg'
 import obstImage from '../images/hug.jpg'
 import homeoImage from '../images/m.jpg'
@@ -220,11 +220,22 @@ const educationTopics = [
   },
 ]
 
+const heroBlobDefs = [
+  { color: '#cfa4bf', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
+  { color: '#b887a7', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
+  { color: '#d7b3c9', blur: 75, w: 560, h: 440, baseX: 0.85, baseY: 0.85, phase: 2.5 },
+  { color: '#c193b2', blur: 85, w: 340, h: 300, baseX: 0.78, baseY: 0.10, phase: 3.8 },
+  { color: '#e2c2d6', blur: 70, w: 460, h: 360, baseX: 0.15, baseY: 0.80, phase: 1.0 },
+  { color: '#ad7f9d', blur: 100, w: 400, h: 320, baseX: 0.45, baseY: 0.30, phase: 2.1 },
+  { color: '#c9a1bc', blur: 80, w: 300, h: 260, baseX: 0.02, baseY: 0.45, phase: 0.7 },
+]
+
 function App() {
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
   const specialtiesScrollRef = useRef(null)
   const addressContentRef = useRef(null)
   const addressTitleRef = useRef(null)
+  const heroBlobLayerRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
@@ -325,6 +336,62 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (prefersReducedMotion) {
+      return undefined
+    }
+
+    const layer = heroBlobLayerRef.current
+    if (!layer) {
+      return undefined
+    }
+
+    const blobs = heroBlobDefs.map((def) => {
+      const el = document.createElement('div')
+      el.className = 'hero-blob'
+      el.style.width = `${def.w}px`
+      el.style.height = `${def.h}px`
+      el.style.background = def.color
+      el.style.filter = `blur(${def.blur}px)`
+      el.style.opacity = '0.75'
+      layer.appendChild(el)
+      return { el, ...def, curX: def.baseX, curY: def.baseY }
+    })
+
+    const speed = 4 / 5
+    let t = 0
+    let frameId = 0
+
+    const tick = () => {
+      t += 0.012
+      const width = layer.offsetWidth
+      const height = layer.offsetHeight
+
+      blobs.forEach((blob) => {
+        const targetX =
+          blob.baseX + Math.sin(t * speed * 0.8 + blob.phase) * 0.18
+        const targetY =
+          blob.baseY + Math.cos(t * speed * 0.6 + blob.phase * 1.4) * 0.14
+
+        blob.curX += (targetX - blob.curX) * 0.03
+        blob.curY += (targetY - blob.curY) * 0.03
+
+        const px = blob.curX * width - blob.w / 2
+        const py = blob.curY * height - blob.h / 2
+        blob.el.style.transform = `translate(${px}px, ${py}px)`
+      })
+
+      frameId = window.requestAnimationFrame(tick)
+    }
+
+    frameId = window.requestAnimationFrame(tick)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      blobs.forEach((blob) => blob.el.remove())
+    }
+  }, [prefersReducedMotion])
+
+  useEffect(() => {
     const updateAddressTitleWidth = () => {
       if (!addressContentRef.current || !addressTitleRef.current) {
         return
@@ -383,7 +450,7 @@ function App() {
 
       <main>
         <section className="hero hero-bg" id="inicio">
-          <div className="hero-backdrop" data-parallax="0.08" aria-hidden="true" />
+          <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
               <p className="eyebrow">Integracao clinica e espiritualidade consciente</p>
@@ -396,10 +463,6 @@ function App() {
                 <a className="btn btn-primary" href="#contato">
                   Agendar consulta
                 </a>
-              </div>
-              <div className="hero-meta">
-                <div className="meta-card">CRM 000000 | RQE 00000</div>
-                <div className="meta-card">Atendimento presencial e online</div>
               </div>
             </div>
             <div className="hero-media" data-reveal style={{ '--delay': '220ms' }}>

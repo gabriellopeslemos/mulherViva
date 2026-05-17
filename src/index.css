@@ -248,51 +248,33 @@ p {
 
 .hero-bg {
   position: relative;
-  background: #e8e0f5;
+  background: #e8e0f0;
   overflow: hidden;
 }
 
 .hero-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      ellipse 160px 112px at 49% 79%,
-      #a890d473 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 160px 112px at 84% 34%,
-      #c0b0e073 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 160px 112px at 51% 7%,
-      #8870c073 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 160px 112px at 93% 32%,
-      #d0c4ec73 0%,
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 160px 112px at 0% 27%,
-      #9880cc73 0%,
-      transparent 70%
-    );
-  filter: blur(80px);
-  transform: scale(1.08);
-  pointer-events: none;
-  z-index: 1;
+  content: none;
 }
 
 .hero {
   position: relative;
   overflow: hidden;
+  min-height: 100vh;
   padding: var(--section-pad) 0 96px;
 }
+
+.hero-blob-layer {
+  position: absolute;
+  inset: -100px;
+  pointer-events: none;
+}
+
+.hero-blob {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+
 
 .hero-backdrop {
   position: absolute;
