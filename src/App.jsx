@@ -382,7 +382,7 @@ function App() {
       <FloatingNavbar />
 
       <main>
-        <section className="hero" id="inicio">
+        <section className="hero hero-bg" id="inicio">
           <div className="hero-backdrop" data-parallax="0.08" aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
