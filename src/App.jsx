@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   motion,
+  useInView,
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
@@ -35,10 +36,9 @@ const IconGraduation = () => (
 )
 
 const aboutTags = [
-  'Ginecologia integrativa',
+  'Medicina integrativa',
   'Obstetricia humanizada',
-  'Homeopatia clinica',
-  'Saude feminina',
+  'Homeopatia',
 ]
 
 const approachSteps = [
@@ -168,7 +168,11 @@ function App() {
   const addressContentRef = useRef(null)
   const addressTitleRef = useRef(null)
   const heroBlobLayerRef = useRef(null)
+  const aboutSectionRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
+  const [years, setYears] = useState(0)
+  const [startYearsCount, setStartYearsCount] = useState(false)
+  const isAboutInView = useInView(aboutSectionRef, { once: true, amount: 0.3 })
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
   const { scrollYProgress: pageScrollProgress } = useScroll()
@@ -198,6 +202,34 @@ function App() {
     [0, entryHold, 1 - exitHold, 1],
     [0, 0, 1, 1],
   )
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setYears(20)
+      return undefined
+    }
+    if (!startYearsCount) return undefined
+
+    let rafId = null
+    let start = null
+    const duration = 1400
+
+    const tick = (ts) => {
+      if (!start) start = ts
+      const progress = Math.min(1, (ts - start) / duration)
+      setYears(Math.floor(progress * 20))
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(tick)
+      } else {
+        setYears(20)
+      }
+    }
+    rafId = window.requestAnimationFrame(tick)
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId)
+    }
+  }, [startYearsCount, prefersReducedMotion])
 
   useEffect(() => {
     const prefersReducedMotionSetting = window.matchMedia(
@@ -487,10 +519,18 @@ function App() {
           </div>
         </section>
 
-        <section className="section" id="sobre">
+        <section className="section" id="sobre" ref={aboutSectionRef} style={{ overflow: 'hidden' }}>
           <div className="container">
             <div className="about-card" data-reveal>
-              <div className="about-media">
+              <motion.div
+                className="about-media"
+                initial={prefersReducedMotion ? false : { x: '-100vw' }}
+                animate={prefersReducedMotion ? {} : { x: isAboutInView ? 0 : '-100vw' }}
+                transition={{ type: 'spring', stiffness: 65, damping: 22, mass: 1 }}
+                onAnimationComplete={() => {
+                  if (isAboutInView && !prefersReducedMotion) setStartYearsCount(true)
+                }}
+              >
                 <div
                   className="about-photo"
                   role="img"
@@ -502,13 +542,13 @@ function App() {
                     <IconGraduation />
                   </span>
                   <div>
-                    <strong>20+ anos</strong>
-                    <span>Experiencia clinica</span>
-                  </div>
+                      <strong>{years}+ anos</strong>
+                      <span>Experiencia medica</span>
+                    </div>
                 </div>
-              </div>
+              </motion.div>
               <div className="about-content">
-                <p className="about-label">Medica integrativa</p>
+                <p className="about-label">SOBRE MIM</p>
                 <h2>Presenca clinica com rigor e sensibilidade.</h2>
                 <p>
                   Atendo mulheres em todas as fases da vida, com escuta profunda e
@@ -812,10 +852,9 @@ function App() {
                   <label className="field" htmlFor="especialidade">
                     <span>Especialidade</span>
                     <select id="especialidade" name="especialidade">
-                      <option>Ginecologia Integrativa</option>
+                      <option>Medicina Integrativa</option>
                       <option>Obstetricia Humanizada</option>
                       <option>Homeopatia</option>
-                      <option>Consulta Integrativa</option>
                     </select>
                   </label>
                   <label className="field span-2" htmlFor="mensagem">
