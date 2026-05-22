@@ -10,6 +10,7 @@ import {
   useTransform,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
+import AgendaPanel from './components/AgendaPanel'
 import heroImage from '../images/hero-nobg.png'
 import aboutImage from '../images/about.png'
 import gynImage from '../images/exam.jpg'
@@ -18,6 +19,7 @@ import homeoImage from '../images/m.jpg'
 import testimonialRandomOne from '../images/mulherRandom.jpg'
 import testimonialRandomTwo from '../images/mulherRandom2.jpg'
 import testimonialRandomThree from '../images/homemrandom.jpg'
+import iphoneMapImage from '../images/iphone17map.png'
 
 const IconGraduation = () => (
   <svg
@@ -163,6 +165,7 @@ const heroBlobDefs = [
 ]
 
 function App() {
+  const [showAgenda, setShowAgenda] = useState(false)
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
   const specialtiesScrollRef = useRef(null)
   const addressContentRef = useRef(null)
@@ -410,7 +413,9 @@ function App() {
         style={{ scaleX: pageProgressSpring }}
         aria-hidden="true"
       />
-      <FloatingNavbar />
+      <FloatingNavbar onOpenAgenda={() => setShowAgenda(true)} />
+
+      {showAgenda && <AgendaPanel onClose={() => setShowAgenda(false)} />}
 
       <main>
         <section className="hero hero-bg" id="inicio">
@@ -704,6 +709,14 @@ function App() {
                   <a className="btn btn-primary" href="#contato">
                     Agendar consulta
                   </a>
+                  <a
+                    className="btn btn-outline"
+                    href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Ver no Maps
+                  </a>
                 </div>
               </div>
               <div
@@ -711,62 +724,18 @@ function App() {
                 data-reveal
                 style={{ '--delay': '120ms' }}
               >
-                <div className="device-showcase__glow" aria-hidden="true" />
+
                 <div
-                  className="phone-mock"
+                  className="device-showcase__frame"
                   role="img"
-                  aria-label="Mockup 3D de smartphone com Google Maps"
+                  aria-label="Mapa do consultorio em um iPhone"
                 >
-                  <div className="phone-mock__side" aria-hidden="true" />
-                  <div className="phone-mock__btn phone-mock__btn--silent" aria-hidden="true" />
-                  <div className="phone-mock__btn phone-mock__btn--vol-up" aria-hidden="true" />
-                  <div className="phone-mock__btn phone-mock__btn--vol-down" aria-hidden="true" />
-                  <div className="phone-mock__island" aria-hidden="true">
-                    <div className="phone-mock__camera" aria-hidden="true" />
-                  </div>
-                  <div className="phone-mock__glass" aria-hidden="true" />
-                  <div className="phone-mock__screen" aria-hidden="true">
-                    <div className="phone-mock__status-bar" aria-hidden="true">
-                      <span className="phone-mock__time">9:41</span>
-                      <div className="phone-mock__status-icons">
-                        <div className="phone-mock__signal">
-                          <span /><span /><span /><span />
-                        </div>
-                        <div className="phone-mock__battery" />
-                      </div>
-                    </div>
-                    <div className="map-ui">
-                      <div className="map-ui__top">
-                        <span className="map-ui__chip">Consultório Mulher Viva</span>
-                        <span className="map-ui__status">
-                          <span className="map-ui__dot" aria-hidden="true" />
-                          1.2 km
-                        </span>
-                      </div>
-                      <div className="map-ui__canvas">
-                        <iframe
-                          className="map-ui__embed"
-                          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3838.4962744143354!2d-47.90539532504183!3d-15.83049312384464!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935a25fc462f223f%3A0x8a918dbc49328a36!2sCentro%20M%C3%A9dico%20L%C3%BAcio%20Costa!5e0!3m2!1spt-BR!2sus!4v1779415629042!5m2!1spt-BR!2sus"
-                          title="Mapa do Centro Medico Lucio Costa"
-                          allowFullScreen
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                        />
-                        
-                      </div>
-                      <div className="map-ui__cta">
-                        <a
-                          className="map-ui__button"
-                          href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%20Bloco%202%20Brasilia%20DF"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Abrir no Google Maps
-                        </a>
-                      </div>
-                    </div>
-                    <div className="phone-mock__home-bar" aria-hidden="true" />
-                  </div>
+                  <img
+                    className="device-showcase__image"
+                    src={iphoneMapImage}
+                    alt="Mapa do consultorio no iPhone"
+                    loading="lazy"
+                  />
                 </div>
               </div>
             </div>

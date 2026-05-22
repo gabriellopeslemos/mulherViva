@@ -9,7 +9,7 @@ const navLinks = [
   { label: 'Endereco', href: '#endereco' },
 ]
 
-function FloatingNavbar() {
+function FloatingNavbar({ onOpenAgenda }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const loginMenuRef = useRef(null)
@@ -86,7 +86,7 @@ function FloatingNavbar() {
                   : 'pointer-events-none -translate-y-2 opacity-0'
               }`}
             >
-              <button type="button" className="gsi-material-button">
+              <button type="button" className="gsi-material-button" onClick={() => { setIsLoginOpen(false); onOpenAgenda?.() }}>
                 <div className="gsi-material-button-state"></div>
                 <div className="gsi-material-button-content-wrapper">
                   <div className="gsi-material-button-icon">
