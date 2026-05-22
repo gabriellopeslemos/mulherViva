@@ -730,15 +730,20 @@ function App() {
                         </span>
                       </div>
                       <div className="map-ui__canvas">
-                        <div className="map-ui__roads" />
-                        <div className="map-ui__route" />
-                        <div className="map-ui__pin" />
-                        <div className="map-ui__label">Consultório Mulher Viva</div>
+                        <iframe
+                          className="map-ui__embed"
+                          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3838.4962744143354!2d-47.90539532504183!3d-15.83049312384464!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x935a25fc462f223f%3A0x8a918dbc49328a36!2sCentro%20M%C3%A9dico%20L%C3%BAcio%20Costa!5e0!3m2!1spt-BR!2sus!4v1779415629042!5m2!1spt-BR!2sus"
+                          title="Mapa do Centro Medico Lucio Costa"
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
+                        
                       </div>
                       <div className="map-ui__cta">
                         <a
                           className="map-ui__button"
-                          href="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%20Brasilia%20DF&output=embed"
+                          href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%20Bloco%202%20Brasilia%20DF"
                           target="_blank"
                           rel="noreferrer"
                         >
