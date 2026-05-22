@@ -718,9 +718,23 @@ function App() {
                   aria-label="Mockup 3D de smartphone com Google Maps"
                 >
                   <div className="phone-mock__side" aria-hidden="true" />
-                  <div className="phone-mock__speaker" aria-hidden="true" />
+                  <div className="phone-mock__btn phone-mock__btn--silent" aria-hidden="true" />
+                  <div className="phone-mock__btn phone-mock__btn--vol-up" aria-hidden="true" />
+                  <div className="phone-mock__btn phone-mock__btn--vol-down" aria-hidden="true" />
+                  <div className="phone-mock__island" aria-hidden="true">
+                    <div className="phone-mock__camera" aria-hidden="true" />
+                  </div>
                   <div className="phone-mock__glass" aria-hidden="true" />
                   <div className="phone-mock__screen" aria-hidden="true">
+                    <div className="phone-mock__status-bar" aria-hidden="true">
+                      <span className="phone-mock__time">9:41</span>
+                      <div className="phone-mock__status-icons">
+                        <div className="phone-mock__signal">
+                          <span /><span /><span /><span />
+                        </div>
+                        <div className="phone-mock__battery" />
+                      </div>
+                    </div>
                     <div className="map-ui">
                       <div className="map-ui__top">
                         <span className="map-ui__chip">Consultório Mulher Viva</span>
@@ -751,6 +765,7 @@ function App() {
                         </a>
                       </div>
                     </div>
+                    <div className="phone-mock__home-bar" aria-hidden="true" />
                   </div>
                 </div>
               </div>
