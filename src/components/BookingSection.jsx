@@ -43,8 +43,8 @@ export default function BookingSection() {
       .catch(() => setUnavailable(true))
   }, [])
 
-  useEffect(() => {
-    if (!specialtyId) return
+  const loadSlots = (id) => {
+    setSpecialtyId(id)
     setDays(null)
     setSelectedDate(null)
     setSelectedSlot(null)
@@ -55,12 +55,12 @@ export default function BookingSection() {
     to.setDate(to.getDate() + 13)
     api
       .get(
-        `/api/slots?specialty_id=${specialtyId}&date_from=${toIsoDate(from)}&date_to=${toIsoDate(to)}`,
+        `/api/slots?specialty_id=${id}&date_from=${toIsoDate(from)}&date_to=${toIsoDate(to)}`,
       )
       .then((data) => setDays(data.days))
       .catch(() => setError('Não foi possível carregar os horários. Tente novamente.'))
       .finally(() => setLoadingSlots(false))
-  }, [specialtyId])
+  }
 
   const selectedDay = useMemo(
     () => days?.find((d) => d.date === selectedDate) || null,
@@ -84,11 +84,8 @@ export default function BookingSection() {
       setConfirmation(booking)
     } catch (err) {
       if (err.status === 409) {
+        loadSlots(specialtyId)
         setError('Esse horário acabou de ser reservado. Escolha outro, por favor.')
-        setSelectedSlot(null)
-        const id = specialtyId
-        setSpecialtyId(null)
-        setTimeout(() => setSpecialtyId(id), 0)
       } else {
         setError(err.detail || 'Não foi possível concluir o agendamento. Tente novamente.')
       }
@@ -151,7 +148,7 @@ export default function BookingSection() {
                     key={s.id}
                     type="button"
                     className={`booking-chip${specialtyId === s.id ? ' is-selected' : ''}`}
-                    onClick={() => setSpecialtyId(s.id)}
+                    onClick={() => loadSlots(s.id)}
                   >
                     {s.name}
                   </button>

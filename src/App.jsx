@@ -86,13 +86,6 @@ const specialties = [
   },
 ]
 
-const differentials = [
-  'Atendimento sem pressa, com tempo real para voce.',
-  'Visao integral da mulher, corpo, mente e emocao.',
-  'Integracao entre evidencia clinica e cuidado sensivel.',
-  'Plano pratico com acompanhamento proximo e humano.',
-]
-
 const testimonials = [
   {
     name: 'Luciana M.',
@@ -138,25 +131,6 @@ const fallbackBlogPosts = [
   },
 ]
 
-const educationTopics = [
-  {
-    title: 'Ciclo menstrual',
-    text: 'Como ler sinais do corpo e apoiar o equilibrio hormonal.',
-  },
-  {
-    title: 'Menopausa',
-    text: 'Transicao com calma, estrategias clinicas e acolhimento.',
-  },
-  {
-    title: 'Saude emocional',
-    text: 'Relacao entre estresse, libido e vitalidade feminina.',
-  },
-  {
-    title: 'Autocuidado',
-    text: 'Rituais simples para fortalecer corpo, mente e energia.',
-  },
-]
-
 const heroBlobDefs = [
   { color: '#cfa4bf', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
   { color: '#b887a7', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
@@ -173,6 +147,56 @@ function formatPostDate(isoDate) {
     year: 'numeric',
   })
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
+function SpecialtyLayer({ item, index, steps, storyProgress, prefersReducedMotion, isActive }) {
+  const stepSize = 1 / steps
+  const start = index * stepSize
+  const end = start + stepSize
+  const fadeWindow = stepSize * 0.34
+  const holdStart = start + fadeWindow
+  const holdEnd = end - fadeWindow
+  const startOpacity = index === 0 ? 1 : 0
+  const endOpacity = index === steps - 1 ? 1 : 0
+  const opacity = useTransform(
+    storyProgress,
+    [start, holdStart, holdEnd, end],
+    [startOpacity, 1, 1, endOpacity],
+  )
+  const translateY = useTransform(
+    storyProgress,
+    [start, holdStart, holdEnd, end],
+    [prefersReducedMotion ? 0 : 24, 0, 0, prefersReducedMotion ? 0 : -24],
+  )
+  const mediaScale = useTransform(
+    storyProgress,
+    [start, holdStart, holdEnd, end],
+    [0.98, 1, 1, 0.98],
+  )
+
+  return (
+    <motion.div
+      className={`specialty-layer${isActive ? ' is-active' : ''}`}
+      aria-hidden={!isActive}
+      style={{ opacity, zIndex: isActive ? 2 : 1 }}
+    >
+      <motion.div className="specialty-layer__content" style={{ y: translateY }}>
+        <p className="eyebrow">0{index + 1}</p>
+        <h3>{item.title}</h3>
+        <p>{item.text}</p>
+        <a className="card-link" href="#agendamento">
+          Agendar Consulta &rarr;
+        </a>
+      </motion.div>
+      <motion.div className="specialty-layer__media" style={{ scale: mediaScale }}>
+        <img
+          src={item.image}
+          alt={item.imageAlt}
+          loading="lazy"
+        />
+      </motion.div>
+    </motion.div>
+  )
 }
 
 function App() {
@@ -239,11 +263,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (prefersReducedMotion) {
-      setYears(20)
-      return undefined
-    }
-    if (!startYearsCount) return undefined
+    if (prefersReducedMotion || !startYearsCount) return undefined
 
     let rafId = null
     let start = null
@@ -513,58 +533,17 @@ function App() {
           >
             <div className="specialties-sticky">
               <div className="container specialties-stage">
-                {specialties.map((item, index) => {
-                  const steps = specialties.length
-                  const stepSize = 1 / steps
-                  const start = index * stepSize
-                  const end = start + stepSize
-                  const fadeWindow = stepSize * 0.34
-                  const holdStart = start + fadeWindow
-                  const holdEnd = end - fadeWindow
-                  const startOpacity = index === 0 ? 1 : 0
-                  const endOpacity = index === steps - 1 ? 1 : 0
-                  const opacity = useTransform(
-                    storyProgress,
-                    [start, holdStart, holdEnd, end],
-                    [startOpacity, 1, 1, endOpacity],
-                  )
-                  const translateY = useTransform(
-                    storyProgress,
-                    [start, holdStart, holdEnd, end],
-                    [prefersReducedMotion ? 0 : 24, 0, 0, prefersReducedMotion ? 0 : -24],
-                  )
-                  const mediaScale = useTransform(
-                    storyProgress,
-                    [start, holdStart, holdEnd, end],
-                    [0.98, 1, 1, 0.98],
-                  )
-                  const isActive = index === activeSpecialtyIndex
-
-                  return (
-                    <motion.div
-                      key={item.title}
-                      className={`specialty-layer${isActive ? ' is-active' : ''}`}
-                      aria-hidden={!isActive}
-                      style={{ opacity, zIndex: isActive ? 2 : 1 }}
-                    >
-                      <motion.div className="specialty-layer__content" style={{ y: translateY }}>
-                        <p className="eyebrow">0{index + 1}</p>
-                        <h3>{item.title}</h3>
-                        <p>{item.text}</p>
-                        <a className="card-link" href="#agendamento">
-                          Agendar Consulta &rarr;
-                        </a>
-                      </motion.div>
-                      <motion.div className="specialty-layer__media" style={{ scale: mediaScale }}>
-                        <img
-                          src={item.image}
-                          alt={item.imageAlt}
-                          loading="lazy"
-                        />
-                      </motion.div>
-                    </motion.div>
-                  )
-                })}
+                {specialties.map((item, index) => (
+                  <SpecialtyLayer
+                    key={item.title}
+                    item={item}
+                    index={index}
+                    steps={specialties.length}
+                    storyProgress={storyProgress}
+                    prefersReducedMotion={prefersReducedMotion}
+                    isActive={index === activeSpecialtyIndex}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -593,7 +572,7 @@ function App() {
                     <IconGraduation />
                   </span>
                   <div>
-                      <strong>{years}+ anos</strong>
+                      <strong>{prefersReducedMotion ? 20 : years}+ anos</strong>
                       <span>Experiencia medica</span>
                     </div>
                 </div>
