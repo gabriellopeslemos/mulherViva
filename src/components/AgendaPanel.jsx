@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { api } from '../lib/api'
+import AvailabilityModal from './AvailabilityModal'
 
 // ── Design tokens (scoped to agenda panel) ──────────────────────────────────
 const T = {
@@ -21,39 +23,36 @@ const T = {
 const DAYS   = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex']
 const MONTHS = ['janeiro','fevereiro','março','abril','maio','junho',
                 'julho','agosto','setembro','outubro','novembro','dezembro']
-const WEEK_DATES = [
-  new Date(2026, 4, 11), new Date(2026, 4, 12), new Date(2026, 4, 13),
-  new Date(2026, 4, 14), new Date(2026, 4, 15),
-]
-const TODAY = new Date(2026, 4, 17)
 const START_HOUR = 8
 const END_HOUR = 19
 const STATUS_LABELS = { confirmed: 'Confirmado', pending: 'Aguardando', cancelled: 'Cancelado' }
 
-const INITIAL_APPOINTMENTS = [
-  { id: 1,  dayIdx: 0, start: '08:30', end: '09:30', client: 'Maria Santos',      specialty: 'Ginecologia Integrativa',  type: 'online',     status: 'confirmed', notes: 'Primeira consulta. Queixa de irregularidade menstrual e cólicas intensas.' },
-  { id: 2,  dayIdx: 0, start: '10:00', end: '11:00', client: 'Ana Paula Ferreira', specialty: 'Obstetrícia Humanizada',   type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed', notes: 'Pré-natal — 20ª semana. Exames em dia.' },
-  { id: 3,  dayIdx: 0, start: '11:30', end: '12:30', client: 'Fernanda Lima',      specialty: 'Homeopatia Clínica',       type: 'online',     status: 'pending',   notes: 'Acompanhamento. Ansiedade e distúrbios de sono.' },
-  { id: 4,  dayIdx: 0, start: '14:00', end: '15:00', client: 'Carolina Alves',     specialty: 'Ginecologia Integrativa',  type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed' },
-  { id: 5,  dayIdx: 0, start: '16:30', end: '17:30', client: 'Juliana Costa',      specialty: 'Obstetrícia Humanizada',   type: 'online',     status: 'confirmed' },
-  { id: 6,  dayIdx: 1, start: '09:00', end: '10:00', client: 'Beatriz Souza',      specialty: 'Ginecologia Integrativa',  type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed' },
-  { id: 7,  dayIdx: 1, start: '10:30', end: '11:30', client: 'Renata Oliveira',    specialty: 'Homeopatia Clínica',       type: 'online',     status: 'pending' },
-  { id: 8,  dayIdx: 1, start: '14:00', end: '15:00', client: 'Camila Rodrigues',   specialty: 'Obstetrícia Humanizada',   type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed' },
-  { id: 9,  dayIdx: 1, start: '16:00', end: '16:30', client: 'Patrícia Mendes',    specialty: 'Ginecologia Integrativa',  type: 'online',     status: 'confirmed', notes: 'Retorno — aguardando resultado de exames laboratoriais.' },
-  { id: 10, dayIdx: 2, start: '08:00', end: '09:30', client: 'Amanda Pereira',     specialty: 'Obstetrícia Humanizada',   type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed', notes: 'Pré-natal — 32ª semana. Consulta longa programada. Trazer cardiotocografia.' },
-  { id: 11, dayIdx: 2, start: '11:00', end: '12:00', client: 'Isabela Nunes',      specialty: 'Ginecologia Integrativa',  type: 'online',     status: 'confirmed' },
-  { id: 12, dayIdx: 2, start: '15:00', end: '16:00', client: 'Luciana Carvalho',   specialty: 'Homeopatia Clínica',       type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'pending' },
-  { id: 13, dayIdx: 2, start: '17:00', end: '18:00', client: 'Mariana Santos',     specialty: 'Ginecologia Integrativa',  type: 'online',     status: 'cancelled' },
-  { id: 14, dayIdx: 3, start: '09:30', end: '10:30', client: 'Thaís Gomes',        specialty: 'Ginecologia Integrativa',  type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed' },
-  { id: 15, dayIdx: 3, start: '11:00', end: '12:00', client: 'Brenda Macedo',      specialty: 'Obstetrícia Humanizada',   type: 'online',     status: 'confirmed' },
-  { id: 16, dayIdx: 3, start: '14:30', end: '15:30', client: 'Viviane Torres',     specialty: 'Homeopatia Clínica',       type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'pending' },
-  { id: 17, dayIdx: 4, start: '08:00', end: '09:00', client: 'Gabriela Lima',      specialty: 'Ginecologia Integrativa',  type: 'online',     status: 'confirmed' },
-  { id: 18, dayIdx: 4, start: '10:00', end: '11:30', client: 'Daniela Freitas',    specialty: 'Obstetrícia Humanizada',   type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed', notes: 'Pré-natal — 28ª semana. Trazer USG morfológico e hemograma.' },
-  { id: 19, dayIdx: 4, start: '13:00', end: '14:00', client: 'Karina Barbosa',     specialty: 'Ginecologia Integrativa',  type: 'online',     status: 'pending' },
-  { id: 20, dayIdx: 4, start: '15:30', end: '16:30', client: 'Mônica Pires',       specialty: 'Homeopatia Clínica',       type: 'presencial', location: 'Centro Médico Lúcio Costa', status: 'confirmed' },
-]
-
 // ── Utilities ─────────────────────────────────────────────────────────────────
+function mondayOf(date) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return d
+}
+
+function addDays(date, n) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + n)
+  return d
+}
+
+function toIsoDate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function parseIsoDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 function timeToMinutes(t) {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -151,12 +150,13 @@ const IconNavGear = () => (
 
 // ── Mini Calendar ─────────────────────────────────────────────────────────────
 function MiniCalendar({ selectedDate, onSelect, appointments }) {
-  const [viewMonth, setViewMonth] = useState(4)
-  const [viewYear, setViewYear]   = useState(2026)
+  const today = new Date()
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const [viewYear, setViewYear]   = useState(today.getFullYear())
 
   const apptDays = new Set(
     (appointments || []).map(a => {
-      const d = WEEK_DATES[a.dayIdx]
+      const d = a.date
       return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
     })
   )
@@ -202,7 +202,7 @@ function MiniCalendar({ selectedDate, onSelect, appointments }) {
           <div key={i} style={{ fontSize:9, fontWeight:700, textAlign:'center', padding:'4px 0', color:T.textMuted, textTransform:'uppercase', letterSpacing:'0.06em' }}>{d}</div>
         ))}
         {cells.map((cell, i) => {
-          const isToday    = !cell.other && cell.month === TODAY.getMonth() && cell.day === TODAY.getDate() && cell.year === TODAY.getFullYear()
+          const isToday    = !cell.other && cell.month === today.getMonth() && cell.day === today.getDate() && cell.year === today.getFullYear()
           const key        = `${cell.year}-${cell.month}-${cell.day}`
           const hasAppts   = apptDays.has(key)
           const isSelected = selectedDate && !cell.other &&
@@ -300,11 +300,12 @@ function InfoRow({ icon, label, value }) {
 }
 
 // ── Detail Panel ──────────────────────────────────────────────────────────────
-function DetailPanel({ appt, onClose }) {
-  const [localStatus, setLocalStatus] = useState(appt.status)
-  useEffect(() => { setLocalStatus(appt.status) }, [appt.id])
+function DetailPanel({ appt, onClose, onStatusChange }) {
+  const localStatus = appt.status
+  const setLocalStatus = (s) => onStatusChange(appt, s)
 
-  const dayDate  = WEEK_DATES[appt.dayIdx]
+  const dayDate  = appt.date
+  const dayIdx   = (dayDate.getDay() + 6) % 7
   const initials = appt.client.split(' ').map(n => n[0]).slice(0, 2).join('')
 
   const statusColors = {
@@ -351,7 +352,7 @@ function DetailPanel({ appt, onClose }) {
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          <InfoRow icon={<IconCalendar />} label="Data"      value={`${DAYS[appt.dayIdx]}., ${dayDate.getDate()} de ${MONTHS[dayDate.getMonth()]} de ${dayDate.getFullYear()}`} />
+          <InfoRow icon={<IconCalendar />} label="Data"      value={`${DAYS[dayIdx] || ''}., ${dayDate.getDate()} de ${MONTHS[dayDate.getMonth()]} de ${dayDate.getFullYear()}`} />
           <InfoRow icon={<IconClock />}    label="Horário"   value={`${appt.start} – ${appt.end}`} />
           <InfoRow icon={appt.type === 'online' ? <IconVideo /> : <IconPin />} label="Modalidade" value={appt.type === 'online' ? 'Videoconferência' : `Presencial — ${appt.location || 'Centro Médico Lúcio Costa'}`} />
         </div>
@@ -386,8 +387,94 @@ function DetailPanel({ appt, onClose }) {
   )
 }
 
+// ── Block Overlay ─────────────────────────────────────────────────────────────
+function BlockOverlay({ block, hourHeight, onClick }) {
+  const pos = getApptPosition(block.start, block.end, hourHeight)
+  return (
+    <div
+      onClick={() => onClick(block)}
+      title={block.reason || 'Horário bloqueado — clique para remover'}
+      style={{
+        position:'absolute', top:pos.top, height:pos.height, left:2, right:2, borderRadius:8,
+        background:'repeating-linear-gradient(45deg, rgba(91,69,82,0.06), rgba(91,69,82,0.06) 6px, rgba(91,69,82,0.13) 6px, rgba(91,69,82,0.13) 12px)',
+        border:'1px dashed rgba(91,69,82,0.4)', zIndex:3, cursor:'pointer',
+        display:'flex', alignItems:'flex-start', justifyContent:'center', paddingTop:5, userSelect:'none',
+      }}>
+      <span style={{ fontSize:8.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', color:T.textMuted }}>Bloqueado</span>
+    </div>
+  )
+}
+
+// ── Slot Action Modal ─────────────────────────────────────────────────────────
+function SlotActionModal({ date, hour, onClose, onSchedule, onBlock }) {
+  const [start, setStart] = useState(`${String(hour).padStart(2, '0')}:00`)
+  const [end, setEnd]     = useState(`${String(Math.min(hour + 1, 23)).padStart(2, '0')}:00`)
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const dayIdx = (date.getDay() + 6) % 7
+  const fieldStyle = { width:'100%', padding:'9px 13px', borderRadius:999, border:`1.5px solid ${T.line}`, background:T.surfaceSoft, fontFamily:T.sans, fontSize:12.5, color:T.text, outline:'none', boxSizing:'border-box' }
+  const labelStyle = { fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', color:T.textMuted, display:'block', marginBottom:5 }
+
+  const handleBlock = async () => {
+    if (!start || !end || end <= start) {
+      setError('Informe um intervalo válido.')
+      return
+    }
+    setError(null)
+    setSaving(true)
+    try {
+      await onBlock(start, end, reason.trim() || null)
+      onClose()
+    } catch (err) {
+      setError(err?.detail || 'Não foi possível bloquear o horário.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, animation:'agendaFadeIn 200ms ease' }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:T.surface, borderRadius:22, padding:26, width:340, boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+          <h2 style={{ fontFamily:T.serif, fontSize:16, fontWeight:600, color:T.textStrong, margin:0 }}>
+            {DAYS[dayIdx]}, {date.getDate()} de {MONTHS[date.getMonth()]}
+          </h2>
+          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:T.textMuted, padding:4, display:'flex' }}><IconX /></button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <div>
+              <label style={labelStyle}>Início</label>
+              <input style={fieldStyle} type="time" value={start} onChange={e => setStart(e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>Término</label>
+              <input style={fieldStyle} type="time" value={end} onChange={e => setEnd(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Motivo do bloqueio (opcional)</label>
+            <input style={fieldStyle} placeholder="Almoço, compromisso..." value={reason} onChange={e => setReason(e.target.value)} />
+          </div>
+          {error && <div style={{ fontSize:12, color:'#b05060', textAlign:'center' }}>{error}</div>}
+          <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:4 }}>
+            <button onClick={() => onSchedule(start, end)} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, padding:'10px 0', borderRadius:999, border:'none', background:T.accent, color:'white', fontFamily:T.sans, fontSize:13, fontWeight:700, cursor:'pointer', boxShadow:'0 6px 18px rgba(122,62,106,0.28)' }}>
+              <IconPlus /> Agendar consulta
+            </button>
+            <button onClick={handleBlock} disabled={saving} style={{ padding:'10px 0', borderRadius:999, border:'1px solid rgba(176,80,96,0.35)', background:'transparent', color:'#b05060', fontFamily:T.sans, fontSize:13, fontWeight:700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Bloqueando...' : 'Bloquear horário'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Week View ─────────────────────────────────────────────────────────────────
-function WeekView({ appointments, onApptClick, selectedDayIdx, hourHeight }) {
+function WeekView({ appointments, onApptClick, selectedDayIdx, hourHeight, weekDates, onSlotClick, blocks, onBlockClick }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
   const apptsByDay = appointments.reduce((acc, a) => {
     if (!acc[a.dayIdx]) acc[a.dayIdx] = []
@@ -399,7 +486,7 @@ function WeekView({ appointments, onApptClick, selectedDayIdx, hourHeight }) {
     <div style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column', fontFamily:T.sans }}>
       <div style={{ display:'grid', gridTemplateColumns:'52px repeat(5, 1fr)', position:'sticky', top:0, zIndex:20, background:T.surface, borderBottom:`2px solid ${T.line}`, flexShrink:0 }}>
         <div style={{ borderRight:`1px solid ${T.line}` }} />
-        {WEEK_DATES.map((date, i) => {
+        {weekDates.map((date, i) => {
           const count = (apptsByDay[i] || []).length
           const isSelected = selectedDayIdx === i
           return (
@@ -419,9 +506,14 @@ function WeekView({ appointments, onApptClick, selectedDayIdx, hourHeight }) {
             </div>
           ))}
         </div>
-        {WEEK_DATES.map((_, dayIdx) => (
+        {weekDates.map((_, dayIdx) => (
           <div key={dayIdx} style={{ borderRight:`1px solid ${T.line}`, position:'relative', background: selectedDayIdx === dayIdx ? 'rgba(122,62,106,0.018)' : 'transparent' }}>
-            {hours.map(h => <div key={h} style={{ height:hourHeight, borderBottom:'1px solid rgba(220,199,210,0.35)' }} />)}
+            {hours.map(h => (
+              <div key={h} onClick={() => onSlotClick(dayIdx, h)} style={{ height:hourHeight, borderBottom:'1px solid rgba(220,199,210,0.35)', cursor:'pointer' }} />
+            ))}
+            {(blocks || []).filter(b => b.dayIdx === dayIdx).map(b => (
+              <BlockOverlay key={b.id} block={b} hourHeight={hourHeight} onClick={onBlockClick} />
+            ))}
             {(apptsByDay[dayIdx] || []).map(appt => (
               <ApptBlock key={appt.id} appt={appt} onClick={onApptClick} hourHeight={hourHeight} />
             ))}
@@ -433,10 +525,10 @@ function WeekView({ appointments, onApptClick, selectedDayIdx, hourHeight }) {
 }
 
 // ── Day View ──────────────────────────────────────────────────────────────────
-function DayView({ dayIdx, appointments, onApptClick, hourHeight }) {
+function DayView({ dayIdx, appointments, onApptClick, hourHeight, weekDates, onSlotClick, blocks, onBlockClick }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
   const dayAppts = appointments.filter(a => a.dayIdx === dayIdx)
-  const date = WEEK_DATES[dayIdx]
+  const date = weekDates[dayIdx]
 
   const statusCounts = dayAppts.reduce((acc, a) => {
     acc[a.status] = (acc[a.status] || 0) + 1
@@ -474,7 +566,12 @@ function DayView({ dayIdx, appointments, onApptClick, hourHeight }) {
           ))}
         </div>
         <div style={{ position:'relative' }}>
-          {hours.map(h => <div key={h} style={{ height:hourHeight, borderBottom:'1px solid rgba(220,199,210,0.35)' }} />)}
+          {hours.map(h => (
+            <div key={h} onClick={() => onSlotClick(dayIdx, h)} style={{ height:hourHeight, borderBottom:'1px solid rgba(220,199,210,0.35)', cursor:'pointer' }} />
+          ))}
+          {(blocks || []).filter(b => b.dayIdx === dayIdx).map(b => (
+            <BlockOverlay key={b.id} block={b} hourHeight={hourHeight} onClick={onBlockClick} />
+          ))}
           {dayAppts.map(appt => <ApptBlock key={appt.id} appt={appt} onClick={onApptClick} hourHeight={hourHeight} />)}
         </div>
       </div>
@@ -483,11 +580,51 @@ function DayView({ dayIdx, appointments, onApptClick, hourHeight }) {
 }
 
 // ── New Appointment Modal ─────────────────────────────────────────────────────
-function NewApptModal({ onClose }) {
-  const [form, setForm] = useState({ client:'', specialty:'Ginecologia Integrativa', type:'online', date:'2026-05-11', start:'09:00', end:'10:00', notes:'' })
+function NewApptModal({ onClose, onCreate, specialties, defaultDate, defaultStart = '09:00', defaultEnd = '10:00' }) {
+  const [form, setForm] = useState({
+    client: '',
+    specialtyId: specialties[0]?.id ?? '',
+    type: 'online',
+    date: defaultDate,
+    start: defaultStart,
+    end: defaultEnd,
+    notes: '',
+  })
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const fieldStyle = { width:'100%', padding:'10px 14px', borderRadius:999, border:`1.5px solid ${T.line}`, background:T.surfaceSoft, fontFamily:T.sans, fontSize:13, color:T.text, outline:'none' }
+  const handleSave = async () => {
+    if (!form.client.trim() || !form.specialtyId || !form.date || !form.start || !form.end) {
+      setError('Preencha paciente, especialidade, data e horários.')
+      return
+    }
+    setError(null)
+    setSaving(true)
+    try {
+      await onCreate({
+        specialty_id: Number(form.specialtyId),
+        date: form.date,
+        start_time: form.start,
+        end_time: form.end,
+        client_name: form.client.trim(),
+        type: form.type,
+        status: 'confirmed',
+        notes: form.notes.trim() || null,
+      })
+      onClose()
+    } catch (err) {
+      setError(
+        err?.status === 409
+          ? 'Conflito: já existe uma consulta neste horário.'
+          : err?.detail || 'Não foi possível criar a consulta.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const fieldStyle = { width:'100%', padding:'10px 14px', borderRadius:999, border:`1.5px solid ${T.line}`, background:T.surfaceSoft, fontFamily:T.sans, fontSize:13, color:T.text, outline:'none', boxSizing:'border-box' }
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, animation:'agendaFadeIn 200ms ease' }} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -503,10 +640,10 @@ function NewApptModal({ onClose }) {
           </div>
           <div>
             <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', color:T.textMuted, display:'block', marginBottom:5 }}>Especialidade</label>
-            <select style={{ ...fieldStyle, appearance:'none', cursor:'pointer' }} value={form.specialty} onChange={e => set('specialty', e.target.value)}>
-              <option>Ginecologia Integrativa</option>
-              <option>Obstetrícia Humanizada</option>
-              <option>Homeopatia Clínica</option>
+            <select style={{ ...fieldStyle, appearance:'none', cursor:'pointer' }} value={form.specialtyId} onChange={e => set('specialtyId', e.target.value)}>
+              {specialties.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
             </select>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
@@ -536,9 +673,12 @@ function NewApptModal({ onClose }) {
             <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', color:T.textMuted, display:'block', marginBottom:5 }}>Observações</label>
             <textarea style={{ ...fieldStyle, borderRadius:14, resize:'none' }} rows={2} placeholder="Notas sobre a consulta..." value={form.notes} onChange={e => set('notes', e.target.value)} />
           </div>
+          {error && (
+            <div style={{ fontSize:12, color:'#b05060', textAlign:'center' }}>{error}</div>
+          )}
           <div style={{ display:'flex', gap:8, marginTop:4 }}>
             <button onClick={onClose} style={{ flex:1, padding:'9px 0', borderRadius:999, border:`1px solid ${T.line}`, background:T.surfaceSoft, color:T.textSoft, fontFamily:T.sans, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
-            <button onClick={onClose} style={{ flex:1, padding:'9px 0', borderRadius:999, border:'none', background:T.accent, color:'white', fontFamily:T.sans, fontSize:13, fontWeight:700, cursor:'pointer', boxShadow:'0 6px 18px rgba(122,62,106,0.28)' }}>Agendar</button>
+            <button onClick={handleSave} disabled={saving} style={{ flex:1, padding:'9px 0', borderRadius:999, border:'none', background:T.accent, color:'white', fontFamily:T.sans, fontSize:13, fontWeight:700, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.7 : 1, boxShadow:'0 6px 18px rgba(122,62,106,0.28)' }}>{saving ? 'Salvando...' : 'Agendar'}</button>
           </div>
         </div>
       </div>
@@ -547,14 +687,115 @@ function NewApptModal({ onClose }) {
 }
 
 // ── Agenda Panel (main export) ────────────────────────────────────────────────
-export default function AgendaPanel({ onClose }) {
-  const [appointments]  = useState(INITIAL_APPOINTMENTS)
-  const [view,          setView]         = useState('week')
-  const [selectedDay,   setSelectedDay]  = useState(null)
-  const [selectedAppt,  setSelectedAppt] = useState(null)
-  const [showModal,     setShowModal]    = useState(false)
-  const [miniDate,      setMiniDate]     = useState(null)
-  const [hourHeight,    setHourHeight]   = useState(80)
+export default function AgendaPanel({ onClose, onAuthExpired }) {
+  const [appointments,  setAppointments]  = useState([])
+  const [specialties,   setSpecialties]   = useState([])
+  const [weekStart,     setWeekStart]     = useState(() => mondayOf(new Date()))
+  const [view,          setView]          = useState('week')
+  const [selectedDay,   setSelectedDay]   = useState(null)
+  const [selectedAppt,  setSelectedAppt]  = useState(null)
+  const [showModal,     setShowModal]     = useState(false)
+  const [modalPrefill,  setModalPrefill]  = useState(null)
+  const [slotAction,    setSlotAction]    = useState(null)
+  const [weekBlocks,    setWeekBlocks]    = useState([])
+  const [confirmBlock,  setConfirmBlock]  = useState(null)
+  const [showAvailability, setShowAvailability] = useState(false)
+  const [miniDate,      setMiniDate]      = useState(null)
+  const [hourHeight,    setHourHeight]    = useState(80)
+  const [loadError,     setLoadError]     = useState(null)
+
+  const weekDates = useMemo(
+    () => Array.from({ length: 5 }, (_, i) => addDays(weekStart, i)),
+    [weekStart],
+  )
+
+  const specialtyNames = useMemo(
+    () => Object.fromEntries(specialties.map(s => [s.id, s.name])),
+    [specialties],
+  )
+
+  const handleApiError = useCallback(err => {
+    if (err?.status === 401) {
+      onAuthExpired?.()
+      return
+    }
+    setLoadError(err?.detail || 'Falha ao comunicar com o servidor.')
+  }, [onAuthExpired])
+
+  useEffect(() => {
+    api.get('/api/specialties').then(setSpecialties).catch(handleApiError)
+  }, [handleApiError])
+
+  const loadAppointments = useCallback(() => {
+    const from = toIsoDate(weekDates[0])
+    const to = toIsoDate(weekDates[4])
+    api
+      .get(`/api/admin/appointments?date_from=${from}&date_to=${to}`, { auth: true })
+      .then(data => {
+        setLoadError(null)
+        setAppointments(
+          data.map(a => {
+            const date = parseIsoDate(a.date)
+            return {
+              id: a.id,
+              date,
+              dayIdx: (date.getDay() + 6) % 7,
+              start: a.start_time.slice(0, 5),
+              end: a.end_time.slice(0, 5),
+              client: a.client_name,
+              contact: a.client_contact,
+              specialtyId: a.specialty_id,
+              specialty: '',
+              type: a.type,
+              status: a.status,
+              notes: a.notes,
+              source: a.source,
+            }
+          }),
+        )
+      })
+      .catch(handleApiError)
+  }, [weekDates, handleApiError])
+
+  useEffect(() => { loadAppointments() }, [loadAppointments])
+
+  const loadOverrides = useCallback(() => {
+    const from = toIsoDate(weekDates[0])
+    const to = toIsoDate(weekDates[4])
+    api
+      .get(`/api/admin/availability/overrides?date_from=${from}&date_to=${to}`, { auth: true })
+      .then(data =>
+        setWeekBlocks(
+          data
+            .filter(o => o.kind === 'block')
+            .map(o => {
+              const date = parseIsoDate(o.date)
+              return {
+                id: o.id,
+                dayIdx: (date.getDay() + 6) % 7,
+                start: o.start_time ? o.start_time.slice(0, 5) : '08:00',
+                end: o.end_time ? o.end_time.slice(0, 5) : '19:00',
+                reason: o.reason,
+              }
+            })
+            .filter(b => b.dayIdx <= 4),
+        ),
+      )
+      .catch(handleApiError)
+  }, [weekDates, handleApiError])
+
+  useEffect(() => { loadOverrides() }, [loadOverrides])
+
+  const resolvedAppointments = useMemo(
+    () =>
+      appointments.map(a => ({
+        ...a,
+        specialty: specialtyNames[a.specialtyId] || a.specialty,
+      })),
+    [appointments, specialtyNames],
+  )
+
+  const weekAppointments = resolvedAppointments.filter(a => a.dayIdx <= 4)
 
   const handleApptClick = useCallback(appt => {
     setSelectedAppt(appt)
@@ -563,18 +804,72 @@ export default function AgendaPanel({ onClose }) {
 
   const handleMiniSelect = useCallback(date => {
     setMiniDate(date)
-    const idx = WEEK_DATES.findIndex(d => d.getDate() === date.getDate() && d.getMonth() === date.getMonth())
-    if (idx !== -1) { setSelectedDay(idx); setView('day') }
+    setWeekStart(mondayOf(date))
+    const idx = (date.getDay() + 6) % 7
+    if (idx <= 4) { setSelectedDay(idx); setView('day') }
   }, [])
 
-  const total     = appointments.length
-  const confirmed = appointments.filter(a => a.status === 'confirmed').length
-  const pending   = appointments.filter(a => a.status === 'pending').length
-  const online    = appointments.filter(a => a.type === 'online').length
+  const shiftWeek = useCallback(delta => {
+    setWeekStart(w => mondayOf(addDays(w, delta * 7)))
+    setSelectedAppt(null)
+  }, [])
 
+  const goToday = useCallback(() => {
+    setWeekStart(mondayOf(new Date()))
+    setSelectedAppt(null)
+    setView('week')
+    setSelectedDay(null)
+  }, [])
+
+  const handleCreate = useCallback(async payload => {
+    await api.post('/api/admin/appointments', payload, { auth: true })
+    loadAppointments()
+  }, [loadAppointments])
+
+  const handleSlotClick = useCallback((dayIdx, hour) => {
+    setSlotAction({ date: weekDates[dayIdx], hour })
+  }, [weekDates])
+
+  const handleBlockSlot = useCallback(async (date, start, end, reason) => {
+    await api.post(
+      '/api/admin/availability/overrides',
+      { date: toIsoDate(date), start_time: start, end_time: end, kind: 'block', reason },
+      { auth: true },
+    )
+    loadOverrides()
+  }, [loadOverrides])
+
+  const handleRemoveBlock = useCallback(async block => {
+    try {
+      await api.delete(`/api/admin/availability/overrides/${block.id}`, { auth: true })
+      setWeekBlocks(list => list.filter(b => b.id !== block.id))
+    } catch (err) {
+      handleApiError(err)
+    }
+    setConfirmBlock(null)
+  }, [handleApiError])
+
+  const handleStatusChange = useCallback(async (appt, status) => {
+    try {
+      await api.patch(`/api/admin/appointments/${appt.id}`, { status }, { auth: true })
+      setAppointments(list => list.map(a => (a.id === appt.id ? { ...a, status } : a)))
+      setSelectedAppt(s => (s && s.id === appt.id ? { ...s, status } : s))
+    } catch (err) {
+      handleApiError(err)
+    }
+  }, [handleApiError])
+
+  const total     = weekAppointments.length
+  const confirmed = weekAppointments.filter(a => a.status === 'confirmed').length
+  const pending   = weekAppointments.filter(a => a.status === 'pending').length
+  const online    = weekAppointments.filter(a => a.type === 'online').length
+
+  const sameMonth = weekDates[0].getMonth() === weekDates[4].getMonth()
   const weekLabel = view === 'day' && selectedDay !== null
-    ? `${DAYS[selectedDay]}, ${WEEK_DATES[selectedDay].getDate()} de ${MONTHS[WEEK_DATES[selectedDay].getMonth()]}`
-    : '11 – 15 de maio, 2026'
+    ? `${DAYS[selectedDay]}, ${weekDates[selectedDay].getDate()} de ${MONTHS[weekDates[selectedDay].getMonth()]}`
+    : sameMonth
+      ? `${weekDates[0].getDate()} – ${weekDates[4].getDate()} de ${MONTHS[weekDates[0].getMonth()]}, ${weekDates[0].getFullYear()}`
+      : `${weekDates[0].getDate()} de ${MONTHS[weekDates[0].getMonth()]} – ${weekDates[4].getDate()} de ${MONTHS[weekDates[4].getMonth()]}, ${weekDates[4].getFullYear()}`
 
   const navLinkStyle = (active = false) => ({
     display:'flex', alignItems:'center', gap:9, padding:'8px 10px', borderRadius:9, fontSize:13, fontWeight:600,
@@ -621,13 +916,13 @@ export default function AgendaPanel({ onClose }) {
             <button style={navLinkStyle(true)}><IconCalendar />Agenda<span style={{ width:6, height:6, borderRadius:'50%', background:T.accent, marginLeft:'auto', flexShrink:0 }} /></button>
             <button style={navLinkStyle()}><IconNavPeople />Pacientes</button>
             <button style={navLinkStyle()}><IconNavChart />Relatórios</button>
-            <button style={navLinkStyle()}><IconNavGear />Configurações</button>
+            <button style={navLinkStyle()} onClick={() => setShowAvailability(true)}><IconNavGear />Disponibilidade</button>
           </div>
 
           {/* Mini calendar */}
           <div style={{ borderTop:`1px solid ${T.line}`, paddingTop:18 }}>
             <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.22em', color:T.textMuted, padding:'0 2px', marginBottom:12 }}>Calendário</div>
-            <MiniCalendar selectedDate={miniDate} onSelect={handleMiniSelect} appointments={appointments} />
+            <MiniCalendar selectedDate={miniDate} onSelect={handleMiniSelect} appointments={resolvedAppointments} />
           </div>
 
           {/* Stats */}
@@ -684,17 +979,17 @@ export default function AgendaPanel({ onClose }) {
           {/* Topbar */}
           <div style={{ height:56, flexShrink:0, borderBottom:`1px solid ${T.line}`, background:T.surface, display:'flex', alignItems:'center', padding:'0 20px', gap:14 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, flex:1 }}>
-              <button style={{ display:'flex', alignItems:'center', justifyContent:'center', width:30, height:30, border:`1px solid ${T.line}`, borderRadius:8, background:T.surfaceSoft, color:T.textMuted, cursor:'pointer', transition:'all 160ms' }}
+              <button onClick={() => shiftWeek(-1)} style={{ display:'flex', alignItems:'center', justifyContent:'center', width:30, height:30, border:`1px solid ${T.line}`, borderRadius:8, background:T.surfaceSoft, color:T.textMuted, cursor:'pointer', transition:'all 160ms' }}
                 onMouseEnter={e => { e.currentTarget.style.background = T.accent; e.currentTarget.style.color = 'white' }}
                 onMouseLeave={e => { e.currentTarget.style.background = T.surfaceSoft; e.currentTarget.style.color = T.textMuted }}>
                 <IconChevronLeft />
               </button>
-              <button style={{ display:'flex', alignItems:'center', justifyContent:'center', width:30, height:30, border:`1px solid ${T.line}`, borderRadius:8, background:T.surfaceSoft, color:T.textMuted, cursor:'pointer', transition:'all 160ms' }}
+              <button onClick={() => shiftWeek(1)} style={{ display:'flex', alignItems:'center', justifyContent:'center', width:30, height:30, border:`1px solid ${T.line}`, borderRadius:8, background:T.surfaceSoft, color:T.textMuted, cursor:'pointer', transition:'all 160ms' }}
                 onMouseEnter={e => { e.currentTarget.style.background = T.accent; e.currentTarget.style.color = 'white' }}
                 onMouseLeave={e => { e.currentTarget.style.background = T.surfaceSoft; e.currentTarget.style.color = T.textMuted }}>
                 <IconChevronRight />
               </button>
-              <button style={{ padding:'5px 13px', borderRadius:999, border:`1px solid ${T.line}`, background:T.surfaceSoft, color:T.textMuted, fontFamily:T.sans, fontSize:11.5, fontWeight:700, cursor:'pointer', transition:'all 160ms' }}>Hoje</button>
+              <button onClick={goToday} style={{ padding:'5px 13px', borderRadius:999, border:`1px solid ${T.line}`, background:T.surfaceSoft, color:T.textMuted, fontFamily:T.sans, fontSize:11.5, fontWeight:700, cursor:'pointer', transition:'all 160ms' }}>Hoje</button>
               <span style={{ fontFamily:T.serif, fontSize:15, fontWeight:600, color:T.textStrong, paddingLeft:4, whiteSpace:'nowrap' }}>{weekLabel}</span>
             </div>
 
@@ -730,22 +1025,72 @@ export default function AgendaPanel({ onClose }) {
           {/* Calendar + detail */}
           <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
             <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', minWidth:0 }}>
+              {loadError && (
+                <div style={{ padding:'8px 20px', background:'rgba(176,80,96,0.08)', borderBottom:`1px solid ${T.line}`, color:'#b05060', fontSize:12, fontWeight:600 }}>
+                  {loadError}
+                </div>
+              )}
               {view === 'week'
-                ? <WeekView appointments={appointments} onApptClick={handleApptClick} selectedDayIdx={selectedDay} hourHeight={hourHeight} />
-                : <DayView  dayIdx={selectedDay ?? 0} appointments={appointments} onApptClick={handleApptClick} hourHeight={hourHeight} />
+                ? <WeekView appointments={weekAppointments} onApptClick={handleApptClick} selectedDayIdx={selectedDay} hourHeight={hourHeight} weekDates={weekDates} onSlotClick={handleSlotClick} blocks={weekBlocks} onBlockClick={setConfirmBlock} />
+                : <DayView  dayIdx={selectedDay ?? 0} appointments={weekAppointments} onApptClick={handleApptClick} hourHeight={hourHeight} weekDates={weekDates} onSlotClick={handleSlotClick} blocks={weekBlocks} onBlockClick={setConfirmBlock} />
               }
             </div>
 
             {/* Detail panel */}
             <div style={{ overflow:'hidden', flexShrink:0, borderLeft:`1px solid ${T.line}`, background:T.surface, transition:`width 360ms ${T.ease}`, width: selectedAppt ? 290 : 0 }}>
               <div style={{ width:290, height:'100%' }}>
-                {selectedAppt && <DetailPanel appt={selectedAppt} onClose={() => setSelectedAppt(null)} />}
+                {selectedAppt && <DetailPanel appt={selectedAppt} onClose={() => setSelectedAppt(null)} onStatusChange={handleStatusChange} />}
               </div>
             </div>
           </div>
         </div>
 
-        {showModal && <NewApptModal onClose={() => setShowModal(false)} />}
+        {showModal && (
+          <NewApptModal
+            onClose={() => { setShowModal(false); setModalPrefill(null) }}
+            onCreate={handleCreate}
+            specialties={specialties}
+            defaultDate={modalPrefill?.date ?? toIsoDate(weekDates[0])}
+            defaultStart={modalPrefill?.start}
+            defaultEnd={modalPrefill?.end}
+          />
+        )}
+        {slotAction && (
+          <SlotActionModal
+            date={slotAction.date}
+            hour={slotAction.hour}
+            onClose={() => setSlotAction(null)}
+            onSchedule={(start, end) => {
+              setModalPrefill({ date: toIsoDate(slotAction.date), start, end })
+              setSlotAction(null)
+              setShowModal(true)
+            }}
+            onBlock={(start, end, reason) => handleBlockSlot(slotAction.date, start, end, reason)}
+          />
+        )}
+        {confirmBlock && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:210, animation:'agendaFadeIn 200ms ease' }} onClick={e => e.target === e.currentTarget && setConfirmBlock(null)}>
+            <div style={{ background:T.surface, borderRadius:22, padding:26, width:320, boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans, textAlign:'center' }}>
+              <h2 style={{ fontFamily:T.serif, fontSize:16, fontWeight:600, color:T.textStrong, margin:'0 0 8px' }}>Remover bloqueio?</h2>
+              <p style={{ fontSize:12.5, color:T.textSoft, margin:'0 0 18px', lineHeight:1.5 }}>
+                {confirmBlock.start} – {confirmBlock.end}
+                {confirmBlock.reason ? ` — ${confirmBlock.reason}` : ''}
+                <br />O horário voltará a ficar disponível para agendamento.
+              </p>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={() => setConfirmBlock(null)} style={{ flex:1, padding:'9px 0', borderRadius:999, border:`1px solid ${T.line}`, background:T.surfaceSoft, color:T.textSoft, fontFamily:T.sans, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+                <button onClick={() => handleRemoveBlock(confirmBlock)} style={{ flex:1, padding:'9px 0', borderRadius:999, border:'none', background:'#b05060', color:'white', fontFamily:T.sans, fontSize:12.5, fontWeight:700, cursor:'pointer' }}>Remover</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showAvailability && (
+          <AvailabilityModal
+            onClose={() => { setShowAvailability(false); loadOverrides() }}
+            specialties={specialties}
+            onAuthExpired={onAuthExpired}
+          />
+        )}
       </div>
     </>
   )

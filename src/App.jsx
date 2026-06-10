@@ -11,6 +11,9 @@ import {
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
 import AgendaPanel from './components/AgendaPanel'
+import AdminLogin from './components/AdminLogin'
+import BookingSection from './components/BookingSection'
+import { api, clearToken, getToken } from './lib/api'
 import heroImage from '../images/hero-nobg.png'
 import aboutImage from '../images/about.png'
 import gynImage from '../images/exam.jpg'
@@ -114,7 +117,7 @@ const testimonials = [
   },
 ]
 
-const blogPosts = [
+const fallbackBlogPosts = [
   {
     title: 'Equilibrio hormonal no dia a dia',
     text: 'Ajustes simples de sono, alimentacao e rotina para reduzir oscilacoes.',
@@ -164,8 +167,18 @@ const heroBlobDefs = [
   { color: '#c9a1bc', blur: 80, w: 300, h: 260, baseX: 0.02, baseY: 0.45, phase: 0.7 },
 ]
 
+function formatPostDate(isoDate) {
+  const formatted = new Date(isoDate).toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  })
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
 function App() {
   const [showAgenda, setShowAgenda] = useState(false)
+  const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
+  const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
   const specialtiesScrollRef = useRef(null)
   const addressContentRef = useRef(null)
@@ -205,6 +218,25 @@ function App() {
     [0, entryHold, 1 - exitHold, 1],
     [0, 0, 1, 1],
   )
+
+  useEffect(() => {
+    api
+      .get('/api/blog?limit=6')
+      .then((data) => {
+        if (!data.items.length) return
+        setBlogPosts(
+          data.items.map((post) => ({
+            id: post.id,
+            title: post.title,
+            text: post.excerpt,
+            date: formatPostDate(post.published_at),
+            tag: post.tag || 'Blog',
+            permalink: post.permalink,
+          })),
+        )
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (prefersReducedMotion) {
@@ -415,7 +447,21 @@ function App() {
       />
       <FloatingNavbar onOpenAgenda={() => setShowAgenda(true)} />
 
-      {showAgenda && <AgendaPanel onClose={() => setShowAgenda(false)} />}
+      {showAgenda && !isAdminAuthed && (
+        <AdminLogin
+          onSuccess={() => setIsAdminAuthed(true)}
+          onClose={() => setShowAgenda(false)}
+        />
+      )}
+      {showAgenda && isAdminAuthed && (
+        <AgendaPanel
+          onClose={() => setShowAgenda(false)}
+          onAuthExpired={() => {
+            clearToken()
+            setIsAdminAuthed(false)
+          }}
+        />
+      )}
 
       <main>
         <section className="hero hero-bg" id="inicio">
@@ -660,7 +706,7 @@ function App() {
             <div className="card-grid blog-grid">
               {blogPosts.map((post, index) => (
                 <article
-                  key={post.title}
+                  key={post.id ?? post.title}
                   className="blog-card"
                   data-reveal
                   style={{ '--delay': `${index * 90}ms` }}
@@ -671,7 +717,18 @@ function App() {
                   </div>
                   <h3>{post.title}</h3>
                   <p>{post.text}</p>
-                  <span className="card-link">Ler post</span>
+                  {post.permalink ? (
+                    <a
+                      className="card-link"
+                      href={post.permalink}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Ler post &rarr;
+                    </a>
+                  ) : (
+                    <span className="card-link">Ler post</span>
+                  )}
                 </article>
               ))}
             </div>
@@ -741,6 +798,8 @@ function App() {
             </div>
           </div>
         </section>
+
+        <BookingSection />
 
         <section className="section appointment-section" id="contato">
           <div className="container">

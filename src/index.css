@@ -1324,3 +1324,143 @@ p {
     animation: none;
   }
 }
+
+.booking-flow {
+  display: grid;
+  gap: 32px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: clamp(24px, 4vw, 44px);
+  box-shadow: var(--shadow-sm);
+}
+
+.booking-step {
+  display: grid;
+  gap: 14px;
+}
+
+.booking-step__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent-strong);
+}
+
+.booking-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.booking-chip {
+  border: 1.5px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.booking-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.booking-chip.is-selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 10px 24px rgba(122, 62, 106, 0.28);
+}
+
+.booking-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.booking-chip--day {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 18px;
+  line-height: 1.2;
+}
+
+.booking-chip__weekday {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.booking-chip__date {
+  font-size: 14px;
+}
+
+.booking-form {
+  display: grid;
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 28px;
+}
+
+.booking-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.booking-form .btn {
+  justify-self: start;
+}
+
+.booking-hint {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.booking-error {
+  color: #b05060;
+  font-size: 14px;
+  margin: 0;
+}
+
+.booking-confirmation {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: clamp(28px, 5vw, 48px);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.booking-confirmation h3 {
+  font-family: var(--serif);
+  font-size: clamp(22px, 3vw, 30px);
+  margin: 0;
+  color: var(--accent-strong);
+}
+
+.booking-confirmation p {
+  color: var(--text-soft);
+  line-height: 1.7;
+  margin: 0;
+  max-width: 560px;
+}
+
+@media (max-width: 720px) {
+  .booking-form__grid {
+    grid-template-columns: 1fr;
+  }
+}

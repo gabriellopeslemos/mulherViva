@@ -25,3 +25,10 @@ dist-ssr
 images/*
 .github/*
 *.md
+
+# Backend
+backend/.venv
+backend/.env
+backend/**/__pycache__
+backend/*.db
+.pytest_cache
