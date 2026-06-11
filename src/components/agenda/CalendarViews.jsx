@@ -310,7 +310,7 @@ export function WeekView({
   }, {})
 
   return (
-    <div style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column', fontFamily:T.sans }}>
+    <div className="agenda-scroll" style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column', fontFamily:T.sans }}>
       <div style={{ display:'grid', gridTemplateColumns:'52px repeat(7, 1fr)', position:'sticky', top:0, zIndex:20, background:T.surface, borderBottom:`2px solid ${T.line}`, flexShrink:0 }}>
         <div style={{ borderRight:`1px solid ${T.line}` }} />
         {weekDates.map((date, i) => {
@@ -356,7 +356,7 @@ export function DayView({
   }, {})
 
   return (
-    <div style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column', fontFamily:T.sans }}>
+    <div className="agenda-scroll" style={{ flex:1, overflow:'auto', display:'flex', flexDirection:'column', fontFamily:T.sans }}>
       <div style={{ position:'sticky', top:0, zIndex:20, background:T.surface, borderBottom:`2px solid ${T.line}`, padding:'14px 24px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
           <div style={{ fontSize:9.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.2em', color:T.accent, marginBottom:3 }}>{DAYS[dayIdx]}</div>

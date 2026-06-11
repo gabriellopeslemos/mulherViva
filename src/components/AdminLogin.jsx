@@ -67,8 +67,8 @@ export default function AdminLogin({ onSuccess, onClose }) {
         style={{
           background: T.surface,
           borderRadius: 22,
-          padding: 32,
-          width: 360,
+          padding: 'clamp(20px, 6vw, 32px)',
+          width: 'min(360px, calc(100vw - 32px))',
           boxShadow: '0 28px 72px rgba(90,52,78,0.18)',
           fontFamily: T.sans,
           display: 'flex',

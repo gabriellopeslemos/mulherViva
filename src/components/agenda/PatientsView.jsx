@@ -55,7 +55,7 @@ export default function PatientsView({ specialtyNames, onOpenAppointment, onApiE
   const statusDot = { confirmed: T.accent, pending: '#b09ea9', cancelled: '#c9b3be' }
 
   return (
-    <div style={{ flex:1, overflowY:'auto', padding:'24px 28px', fontFamily:T.sans }}>
+    <div className="agenda-scroll" style={{ flex:1, overflowY:'auto', padding:'20px clamp(14px,4vw,28px)', fontFamily:T.sans }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18, gap:16, flexWrap:'wrap' }}>
         <div>
           <h2 style={{ fontFamily:T.serif, fontSize:22, fontWeight:600, color:T.textStrong, margin:0 }}>Pacientes</h2>
@@ -90,21 +90,21 @@ export default function PatientsView({ specialtyNames, onOpenAppointment, onApiE
                     <div style={{ fontSize:13.5, fontWeight:700, color:T.textStrong, fontFamily:T.serif, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
                     <div style={{ fontSize:11, color:T.textMuted, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.contact || 'Sem contato registrado'}</div>
                   </div>
-                  <div style={{ display:'flex', gap:18, alignItems:'center', flexShrink:0 }}>
-                    <div style={{ textAlign:'center' }}>
+                  <div style={{ display:'flex', gap:12, alignItems:'center', flexShrink:0 }}>
+                    <div style={{ textAlign:'center', minWidth:36 }}>
                       <div style={{ fontSize:16, fontWeight:700, fontFamily:T.serif, color:T.accent, lineHeight:1 }}>{p.appts.length}</div>
-                      <div style={{ fontSize:9, color:T.textMuted, textTransform:'uppercase', letterSpacing:'0.08em', marginTop:2 }}>Consultas</div>
+                      <div style={{ fontSize:9, color:T.textMuted, textTransform:'uppercase', letterSpacing:'0.08em', marginTop:2 }}>visitas</div>
                     </div>
-                    <div style={{ minWidth:150, textAlign:'right' }}>
+                    <div style={{ minWidth:130, textAlign:'right', display:'block' }} className="patient-row-meta">
                       {p.next ? (
                         <>
                           <div style={{ fontSize:9, color:T.accent, textTransform:'uppercase', letterSpacing:'0.1em', fontWeight:700 }}>Próxima</div>
-                          <div style={{ fontSize:11.5, color:T.textSoft, marginTop:1 }}>{fmtDate(p.next.date)}, {p.next.start_time.slice(0,5)}</div>
+                          <div style={{ fontSize:11, color:T.textSoft, marginTop:1 }}>{fmtDate(p.next.date)}, {p.next.start_time.slice(0,5)}</div>
                         </>
                       ) : p.last ? (
                         <>
                           <div style={{ fontSize:9, color:T.textMuted, textTransform:'uppercase', letterSpacing:'0.1em', fontWeight:700 }}>Última</div>
-                          <div style={{ fontSize:11.5, color:T.textSoft, marginTop:1 }}>{fmtDate(p.last.date)}</div>
+                          <div style={{ fontSize:11, color:T.textSoft, marginTop:1 }}>{fmtDate(p.last.date)}</div>
                         </>
                       ) : (
                         <div style={{ fontSize:11, color:T.textMuted }}>—</div>

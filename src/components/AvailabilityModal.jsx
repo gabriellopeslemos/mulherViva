@@ -54,7 +54,7 @@ function SpecialtyRow({ specialty, onSaved, onError }) {
   }
 
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 110px auto auto', gap:8, alignItems:'center', padding:'8px 12px', borderRadius:12, background:T.surfaceSoft, border:`1px solid ${T.line}`, opacity: active ? 1 : 0.65 }}>
+    <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', padding:'8px 12px', borderRadius:12, background:T.surfaceSoft, border:`1px solid ${T.line}`, opacity: active ? 1 : 0.65 }}>
       <input style={{ ...fieldStyle, background:T.surface }} value={name} onChange={e => setName(e.target.value)} />
       <select style={{ ...fieldStyle, background:T.surface, cursor:'pointer' }} value={duration} onChange={e => setDuration(e.target.value)}>
         {DURATIONS.map(d => <option key={d} value={d}>{d} min</option>)}
@@ -308,7 +308,7 @@ export default function AvailabilityModal({ onClose, onAuthExpired }) {
       style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200 }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ background:T.surface, borderRadius:22, width:620, maxHeight:'88vh', display:'flex', flexDirection:'column', boxShadow:'0 28px 72px rgba(90,52,78,0.16)', fontFamily:T.sans, overflow:'hidden' }}>
+      <div style={{ background:T.surface, borderRadius:22, width:'min(620px,calc(100vw - 16px))', maxHeight:'92vh', display:'flex', flexDirection:'column', boxShadow:'0 28px 72px rgba(90,52,78,0.16)', fontFamily:T.sans, overflow:'hidden' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'20px 26px 14px', borderBottom:`1px solid ${T.line}` }}>
           <h2 style={{ fontFamily:T.serif, fontSize:18, fontWeight:600, color:T.textStrong, margin:0 }}>
             Disponibilidade
@@ -481,7 +481,7 @@ export default function AvailabilityModal({ onClose, onAuthExpired }) {
             <p style={sectionTitleStyle}>Exceções de agenda</p>
 
             <label style={{ ...labelStyle, marginBottom:8 }}>Bloquear dia inteiro</label>
-            <div style={{ display:'grid', gridTemplateColumns:'150px 1fr auto', gap:8, alignItems:'end', marginBottom:16 }}>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'flex-end', marginBottom:16 }}>
               <div>
                 <label style={labelStyle}>Data</label>
                 <input style={fieldStyle} type="date" value={blockForm.date} onChange={(e) => setBlockForm((f) => ({ ...f, date: e.target.value }))} />
@@ -500,7 +500,7 @@ export default function AvailabilityModal({ onClose, onAuthExpired }) {
             </div>
 
             <label style={{ ...labelStyle, marginBottom:8 }}>Abertura extra (fora do horário semanal)</label>
-            <div style={{ display:'grid', gridTemplateColumns:'140px 95px 95px 1fr auto', gap:8, alignItems:'end' }}>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'flex-end' }}>
               <div>
                 <label style={labelStyle}>Data</label>
                 <input style={fieldStyle} type="date" value={openForm.date} onChange={(e) => setOpenForm((f) => ({ ...f, date: e.target.value }))} />

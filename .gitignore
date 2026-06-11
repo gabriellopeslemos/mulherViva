@@ -32,3 +32,5 @@ backend/.env
 backend/**/__pycache__
 backend/*.db
 .pytest_cache
+
+.claude/settings.local.json

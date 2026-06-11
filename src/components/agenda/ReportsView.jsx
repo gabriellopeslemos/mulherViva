@@ -85,7 +85,7 @@ export default function ReportsView({ specialties, onApiError }) {
   const navBtnStyle = { display:'flex', alignItems:'center', justifyContent:'center', width:30, height:30, border:`1px solid ${T.line}`, borderRadius:8, background:T.surfaceSoft, color:T.textMuted, cursor:'pointer' }
 
   return (
-    <div style={{ flex:1, overflowY:'auto', padding:'24px 28px', fontFamily:T.sans }}>
+    <div className="agenda-scroll" style={{ flex:1, overflowY:'auto', padding:'20px clamp(14px,4vw,28px)', fontFamily:T.sans }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, gap:16, flexWrap:'wrap' }}>
         <div>
           <h2 style={{ fontFamily:T.serif, fontSize:22, fontWeight:600, color:T.textStrong, margin:0 }}>Relatórios</h2>

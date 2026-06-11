@@ -18,7 +18,7 @@ export default function InboxDropdown({ pending, onAction, onClose, onOpenAppt }
   return (
     <>
       <div style={{ position:'fixed', inset:0, zIndex:180 }} onClick={onClose} />
-      <div style={{ position:'absolute', top:'calc(100% + 10px)', right:-8, width:340, maxHeight:420, overflowY:'auto', background:T.surface, border:`1px solid ${T.line}`, borderRadius:16, boxShadow:'0 20px 56px rgba(90,52,78,0.18)', zIndex:190, animation:'agendaSlideUp 200ms ease', fontFamily:T.sans }}>
+      <div style={{ position:'absolute', top:'calc(100% + 10px)', right:-8, width:'min(340px, calc(100vw - 24px))', maxHeight:420, overflowY:'auto', background:T.surface, border:`1px solid ${T.line}`, borderRadius:16, boxShadow:'0 20px 56px rgba(90,52,78,0.18)', zIndex:190, animation:'agendaSlideUp 200ms ease', fontFamily:T.sans }}>
         <div style={{ padding:'14px 16px 12px', borderBottom:`1px solid ${T.line}`, position:'sticky', top:0, background:T.surface, zIndex:5 }}>
           <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.18em', color:T.textMuted }}>
             Solicitações pendentes

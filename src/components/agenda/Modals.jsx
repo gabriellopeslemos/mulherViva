@@ -137,7 +137,7 @@ export function SlotActionModal({ date, hour, onClose, onSchedule, onBlock }) {
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, animation:'agendaFadeIn 200ms ease' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:T.surface, borderRadius:22, padding:26, width:340, boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
+      <div style={{ background:T.surface, borderRadius:22, padding:'clamp(18px,4vw,26px)', width:'min(340px,calc(100vw - 24px))', boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
           <h2 style={{ fontFamily:T.serif, fontSize:16, fontWeight:600, color:T.textStrong, margin:0 }}>
             {DAYS[dayIdx]}, {date.getDate()} de {MONTHS[date.getMonth()]}
@@ -223,7 +223,7 @@ export function NewApptModal({ onClose, onCreate, specialties, defaultDate, defa
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, animation:'agendaFadeIn 200ms ease' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:T.surface, borderRadius:22, padding:28, width:400, boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
+      <div style={{ background:T.surface, borderRadius:22, padding:'clamp(18px,4vw,28px)', width:'min(400px,calc(100vw - 24px))', boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 }}>
           <h2 style={{ fontFamily:T.serif, fontSize:18, fontWeight:600, color:T.textStrong, margin:0 }}>Nova consulta</h2>
           <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:T.textMuted, padding:4, display:'flex' }}><IconX /></button>
@@ -358,7 +358,7 @@ export function EditApptModal({ appt, specialties, onClose, onSaved, onDeleted }
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(31,17,25,0.35)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, animation:'agendaFadeIn 200ms ease' }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background:T.surface, borderRadius:22, padding:28, width:420, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
+      <div style={{ background:T.surface, borderRadius:22, padding:'clamp(18px,4vw,28px)', width:'min(420px,calc(100vw - 24px))', maxHeight:'90vh', overflowY:'auto', boxShadow:'0 28px 72px rgba(90,52,78,0.14)', animation:'agendaSlideUp 260ms ease', fontFamily:T.sans }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 }}>
           <h2 style={{ fontFamily:T.serif, fontSize:18, fontWeight:600, color:T.textStrong, margin:0 }}>Editar consulta</h2>
           <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:T.textMuted, padding:4, display:'flex' }}><IconX /></button>
