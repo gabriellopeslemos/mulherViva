@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from .config import get_settings
@@ -25,3 +25,36 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def run_migrations() -> None:
+    """Lightweight, idempotent column additions for existing databases.
+
+    `Base.metadata.create_all` creates missing tables but never alters
+    existing ones, so new columns on already-created tables are added here.
+    """
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+
+    with engine.begin() as conn:
+        if "availability_rules" in tables:
+            cols = {c["name"] for c in inspector.get_columns("availability_rules")}
+            if "type" not in cols:
+                conn.execute(
+                    text(
+                        "ALTER TABLE availability_rules "
+                        "ADD COLUMN type VARCHAR(15) NOT NULL DEFAULT 'presencial'"
+                    )
+                )
+        if "availability_overrides" in tables:
+            cols = {c["name"] for c in inspector.get_columns("availability_overrides")}
+            if "type" not in cols:
+                conn.execute(
+                    text("ALTER TABLE availability_overrides ADD COLUMN type VARCHAR(15)")
+                )
+                conn.execute(
+                    text(
+                        "UPDATE availability_overrides SET type = 'presencial' "
+                        "WHERE kind = 'open' AND type IS NULL"
+                    )
+                )

@@ -38,6 +38,7 @@ class AvailabilityRule(Base):
     weekday: Mapped[int] = mapped_column(Integer)  # 0=Mon .. 6=Sun
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
+    type: Mapped[str] = mapped_column(String(15), default="presencial")  # 'online' | 'presencial'
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     specialty: Mapped[Specialty] = relationship(back_populates="rules")
@@ -54,6 +55,8 @@ class AvailabilityOverride(Base):
     start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     kind: Mapped[str] = mapped_column(String(10))  # 'open' | 'block'
+    # modality of an extra-open window ('online' | 'presencial'); NULL for blocks
+    type: Mapped[str | None] = mapped_column(String(15), nullable=True)
     reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
 

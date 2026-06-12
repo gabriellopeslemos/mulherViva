@@ -44,6 +44,7 @@ class AvailabilityRuleIn(BaseModel):
     weekday: int = Field(ge=0, le=6)
     start_time: time
     end_time: time
+    type: str = Field(pattern="^(online|presencial)$")
     active: bool = True
 
 
@@ -51,6 +52,7 @@ class AvailabilityRuleUpdate(BaseModel):
     weekday: int | None = Field(default=None, ge=0, le=6)
     start_time: time | None = None
     end_time: time | None = None
+    type: str | None = Field(default=None, pattern="^(online|presencial)$")
     active: bool | None = None
 
 
@@ -62,6 +64,7 @@ class AvailabilityRuleOut(BaseModel):
     weekday: int
     start_time: time
     end_time: time
+    type: str
     active: bool
 
 
@@ -71,6 +74,7 @@ class AvailabilityOverrideIn(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     kind: str = Field(pattern="^(open|block)$")
+    type: str | None = Field(default=None, pattern="^(online|presencial)$")
     reason: str | None = Field(default=None, max_length=300)
 
 
@@ -83,6 +87,7 @@ class AvailabilityOverrideOut(BaseModel):
     start_time: time | None
     end_time: time | None
     kind: str
+    type: str | None
     reason: str | None
 
 
@@ -91,6 +96,7 @@ class AvailabilityOverrideOut(BaseModel):
 class SlotOut(BaseModel):
     start: time
     end: time
+    type: str
 
 
 class SlotsDayOut(BaseModel):

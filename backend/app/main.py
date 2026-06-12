@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .database import Base, SessionLocal, engine
+from .database import Base, SessionLocal, engine, run_migrations
 from .routers import admin, auth, public
 from .seed import seed
 from .services.instagram import sync_instagram
@@ -36,6 +36,7 @@ async def _instagram_sync_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    run_migrations()
     with SessionLocal() as db:
         seed(db)
     task = None

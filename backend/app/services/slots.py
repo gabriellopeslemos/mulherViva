@@ -7,9 +7,11 @@ from ..config import get_settings
 from ..models import Appointment, AvailabilityOverride, AvailabilityRule, Specialty
 
 Interval = tuple[time, time]
+TypedSlot = tuple[time, time, str]
 
 MAX_RANGE_DAYS = 31
 DAY_END = time(23, 59, 59)
+MODALITIES = ("presencial", "online")
 
 
 def _merge(intervals: list[Interval]) -> list[Interval]:
@@ -73,34 +75,54 @@ def compute_day_slots(
     slot_duration_min: int,
     now: datetime | None = None,
     min_lead_hours: int = 0,
-) -> list[Interval]:
-    """Pure interval math for one day. `overrides` and `appointments` must
-    already be filtered to this date (and specialty where applicable)."""
-    windows = [(r.start_time, r.end_time) for r in weekday_rules if r.active]
-    windows += [_override_interval(o) for o in overrides if o.kind == "open"]
-    windows = _merge(windows)
+) -> list[TypedSlot]:
+    """Pure interval math for one day, computed per modality. `overrides` and
+    `appointments` must already be filtered to this date (and specialty where
+    applicable). Returns (start, end, type) triples.
 
+    Modality lives on the availability windows (rules and extra-open
+    overrides). Blocks and existing appointments remove time regardless of
+    modality, since the professional can only be in one place at a time."""
     blocks = [_override_interval(o) for o in overrides if o.kind == "block"]
-    windows = _subtract(windows, blocks)
-
-    slots = _chop(windows, slot_duration_min)
-
     busy = [
         (a.start_time, a.end_time) for a in appointments if a.status != "cancelled"
     ]
-    slots = [
-        (s, e)
-        for s, e in slots
-        if not any(s < b_end and b_start < e for b_start, b_end in busy)
-    ]
 
+    cutoff_time: time | None = None
     if now is not None:
         cutoff = now + timedelta(hours=min_lead_hours)
         if day < cutoff.date():
             return []
         if day == cutoff.date():
-            slots = [(s, e) for s, e in slots if s >= cutoff.time()]
-    return slots
+            cutoff_time = cutoff.time()
+
+    result: list[TypedSlot] = []
+    for modality in MODALITIES:
+        windows = [
+            (r.start_time, r.end_time)
+            for r in weekday_rules
+            if r.active and r.type == modality
+        ]
+        windows += [
+            _override_interval(o)
+            for o in overrides
+            if o.kind == "open" and (o.type or "presencial") == modality
+        ]
+        windows = _merge(windows)
+        windows = _subtract(windows, blocks)
+
+        slots = _chop(windows, slot_duration_min)
+        slots = [
+            (s, e)
+            for s, e in slots
+            if not any(s < b_end and b_start < e for b_start, b_end in busy)
+        ]
+        if cutoff_time is not None:
+            slots = [(s, e) for s, e in slots if s >= cutoff_time]
+        result += [(s, e, modality) for s, e in slots]
+
+    result.sort(key=lambda slot: (slot[0], slot[2]))
+    return result
 
 
 def get_available_slots(
@@ -139,7 +161,7 @@ def get_available_slots(
     )
 
     now = datetime.now()
-    result: dict[date, list[Interval]] = {}
+    result: dict[date, list[TypedSlot]] = {}
     day = date_from
     while day <= date_to:
         day_rules = [r for r in rules if r.weekday == day.weekday()]

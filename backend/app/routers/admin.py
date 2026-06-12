@@ -221,7 +221,15 @@ def create_override(body: AvailabilityOverrideIn, db: Session = Depends(get_db))
         raise HTTPException(
             status_code=422, detail="Abertura extra exige horario de inicio e fim"
         )
-    override = AvailabilityOverride(**body.model_dump())
+    if body.kind == "open" and body.type is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Abertura extra exige a modalidade (presencial ou online)",
+        )
+    data = body.model_dump()
+    if body.kind == "block":
+        data["type"] = None  # blocks apply to every modality
+    override = AvailabilityOverride(**data)
     db.add(override)
     db.commit()
     db.refresh(override)
