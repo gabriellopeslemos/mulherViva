@@ -91,7 +91,7 @@
 .ag-btn--primary {
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 8px 18px rgba(94, 47, 82, 0.28);
+  box-shadow: 0 8px 18px rgba(116, 40, 74, 0.28);
 }
 
 .ag-btn--primary:hover:not(:disabled) {
@@ -546,7 +546,7 @@
 .ag-appt--confirmed {
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 3px 10px rgba(94, 47, 82, 0.25);
+  box-shadow: 0 3px 10px rgba(116, 40, 74, 0.25);
 }
 
 .ag-appt--pending {
@@ -568,13 +568,13 @@
 }
 
 .ag-appt--ghost {
-  background: rgba(122, 62, 106, 0.22);
+  background: rgba(154, 64, 103, 0.22);
   border: 2px dashed var(--accent);
   color: var(--accent-strong);
   pointer-events: none;
   z-index: 5;
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(94, 47, 82, 0.3);
+  box-shadow: 0 12px 28px rgba(116, 40, 74, 0.3);
 }
 
 .ag-appt--ghost .ag-appt__time {
@@ -621,7 +621,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(94, 47, 82, 0.4);
+  box-shadow: 0 14px 30px rgba(116, 40, 74, 0.4);
   transition: transform 0.16s ease, background 0.16s ease;
 }
 
@@ -845,7 +845,7 @@
 .ag-field textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(122, 62, 106, 0.16);
+  box-shadow: 0 0 0 3px rgba(154, 64, 103, 0.16);
 }
 
 .ag-field-row {
@@ -1102,7 +1102,7 @@
 .ag-root input:focus-visible,
 .ag-root select:focus-visible,
 .ag-root textarea:focus-visible {
-  outline: 3px solid rgba(122, 62, 106, 0.5);
+  outline: 3px solid rgba(154, 64, 103, 0.5);
   outline-offset: 2px;
 }
 

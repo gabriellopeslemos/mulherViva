@@ -87,6 +87,7 @@ def create_appointment(body: AppointmentIn, db: Session = Depends(get_db)):
         end_time=body.end_time,
         client_name=body.client_name,
         client_contact=body.client_contact,
+        client_email=body.client_email,
         type=body.type,
         status=body.status,
         notes=body.notes,

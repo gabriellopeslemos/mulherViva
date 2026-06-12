@@ -117,6 +117,7 @@ class BookingIn(BaseModel):
     type: str = Field(pattern="^(online|presencial)$")
     client_name: str = Field(min_length=2, max_length=150)
     client_contact: str = Field(min_length=5, max_length=150)
+    client_email: str | None = Field(default=None, max_length=150)
     notes: str | None = Field(default=None, max_length=1000)
 
 
@@ -130,6 +131,7 @@ class AppointmentOut(BaseModel):
     end_time: time
     client_name: str
     client_contact: str
+    client_email: str | None
     type: str
     status: str
     notes: str | None
@@ -144,6 +146,7 @@ class AppointmentIn(BaseModel):
     end_time: time
     client_name: str = Field(min_length=2, max_length=150)
     client_contact: str = Field(default="", max_length=150)
+    client_email: str | None = Field(default=None, max_length=150)
     type: str = Field(pattern="^(online|presencial)$")
     status: str = Field(default="confirmed", pattern="^(pending|confirmed|cancelled)$")
     notes: str | None = Field(default=None, max_length=1000)
@@ -157,6 +160,7 @@ class AppointmentUpdate(BaseModel):
     end_time: time | None = None
     client_name: str | None = Field(default=None, min_length=2, max_length=150)
     client_contact: str | None = Field(default=None, max_length=150)
+    client_email: str | None = Field(default=None, max_length=150)
     type: str | None = Field(default=None, pattern="^(online|presencial)$")
     status: str | None = Field(default=None, pattern="^(pending|confirmed|cancelled)$")
     notes: str | None = Field(default=None, max_length=1000)

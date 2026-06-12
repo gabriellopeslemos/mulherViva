@@ -106,9 +106,17 @@ export function ApptDetails({ appt, specialty, busy, onStatus, onEdit, onDelete,
           </div>
           {appt.client_contact && (
             <div>
-              <dt>Contato</dt>
+              <dt>Telefone</dt>
               <dd>
                 {href ? <a href={href}>{appt.client_contact}</a> : appt.client_contact}
+              </dd>
+            </div>
+          )}
+          {appt.client_email && (
+            <div>
+              <dt>E-mail</dt>
+              <dd>
+                <a href={`mailto:${appt.client_email}`}>{appt.client_email}</a>
               </dd>
             </div>
           )}
@@ -174,6 +182,7 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
   const [form, setForm] = useState(() => ({
     client_name: initial.client_name || '',
     client_contact: initial.client_contact || '',
+    client_email: initial.client_email || '',
     specialty_id: initial.specialty_id || specialties[0]?.id || '',
     date: initial.date,
     start: fmtTime(initial.start_time),
@@ -215,6 +224,7 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
       await onSubmit({
         client_name: form.client_name.trim(),
         client_contact: form.client_contact.trim(),
+        client_email: form.client_email.trim() || null,
         specialty_id: Number(form.specialty_id),
         date: form.date,
         start_time: minToTime(timeToMin(form.start)),
@@ -248,13 +258,26 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
         </label>
         <label className="ag-field">
           <span>
-            Contato <em>(opcional)</em>
+            Telefone <em>(opcional)</em>
           </span>
           <input
-            type="text"
+            type="tel"
+            inputMode="tel"
             value={form.client_contact}
             onChange={set('client_contact')}
-            placeholder="Telefone ou e-mail"
+            placeholder="(00) 00000-0000"
+          />
+        </label>
+        <label className="ag-field">
+          <span>
+            E-mail <em>(opcional)</em>
+          </span>
+          <input
+            type="email"
+            inputMode="email"
+            value={form.client_email}
+            onChange={set('client_email')}
+            placeholder="voce@email.com"
           />
         </label>
         <label className="ag-field">

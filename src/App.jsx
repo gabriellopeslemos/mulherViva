@@ -42,47 +42,47 @@ const IconGraduation = () => (
 
 const aboutTags = [
   'Medicina integrativa',
-  'Obstetricia humanizada',
+  'Obstetrícia humanizada',
   'Homeopatia',
 ]
 
 const approachSteps = [
   {
     title: 'Escuta profunda e individualizada',
-    text: 'Tempo, presenca e dialogo para compreender a mulher inteira.',
+    text: 'Tempo de consulta de verdade: presença e diálogo para compreender a mulher inteira, não apenas o sintoma.',
   },
   {
-    title: 'Avaliacao clinica completa',
-    text: 'Exames, historico e sinais sutis alinhados ao contexto pessoal.',
+    title: 'Avaliação clínica completa',
+    text: 'Exames, histórico e sinais sutis interpretados dentro do seu contexto de vida.',
   },
   {
-    title: 'Integracao entre ciencia e terapias complementares',
-    text: 'Recursos baseados em evidencia com sensibilidade e coerencia.',
+    title: 'Integração entre ciência e terapias complementares',
+    text: 'Recursos baseados em evidência, aplicados com sensibilidade e coerência.',
   },
   {
     title: 'Plano de cuidado personalizado',
-    text: 'Caminho claro, pratico e acolhedor para cada objetivo.',
+    text: 'Um caminho claro, prático e acolhedor, construído junto com você.',
   },
 ]
 
 const specialties = [
   {
     title: 'Ginecologia',
-    text: 'Ginecologia natural, integrativa, preventiva, baseada no olhar integral da mulher. A historia, sinais, sintomas, exame fisico e, quando necessario, exames complementares sao cuidadosamente avaliados.',
+    text: 'Ginecologia natural, integrativa e preventiva, baseada no olhar integral da mulher. A história, os sinais, os sintomas, o exame físico e, quando necessário, exames complementares são cuidadosamente avaliados.',
     image: gynImage,
-    imageAlt: 'Foto de ginecologia',
+    imageAlt: 'Médica realizando atendimento ginecológico acolhedor',
   },
   {
-    title: 'Obstetricia',
-    text: 'Com o minimo de intervencoes possivel, atendo gestantes e suas familias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistencia.',
+    title: 'Obstetrícia',
+    text: 'Com o mínimo de intervenções possível, atendo gestantes e suas famílias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistência.',
     image: obstImage,
-    imageAlt: 'Foto de obstetricia',
+    imageAlt: 'Gestante sendo acolhida em consulta de obstetrícia',
   },
   {
     title: 'Homeopatia',
-    text: 'A homeopatia e uma especialidade medica que busca restabelecer o equilibrio da saude fisica, emocional, mental e energetica do ser. Adota uma abordagem holistica, considerando o paciente, sua historia e relacoes como um todo.',
+    text: 'A homeopatia é uma especialidade médica que busca restabelecer o equilíbrio da saúde física, emocional, mental e energética do ser. Adota uma abordagem holística, considerando a paciente, sua história e relações como um todo.',
     image: homeoImage,
-    imageAlt: 'Foto de homeopatia',
+    imageAlt: 'Atendimento de homeopatia em ambiente sereno',
   },
 ]
 
@@ -96,49 +96,49 @@ const testimonials = [
   },
   {
     name: 'Renata C.',
-    text: 'A consulta foi serena e precisa, senti que tudo foi explicado com calma.',
+    text: 'A consulta foi serena e precisa. Senti que tudo foi explicado com calma.',
     tone: '#e4d7e3',
     image: testimonialRandomTwo,
     imageAlt: 'Foto de Renata',
   },
   {
     name: 'Pedro F.',
-    text: 'Um encontro entre ciencia e sensibilidade que transformou meu olhar.',
+    text: 'Um encontro entre ciência e sensibilidade que transformou meu olhar.',
     tone: '#e9d4e6',
     image: testimonialRandomThree,
-    imageAlt: 'Foto de Patricia',
+    imageAlt: 'Foto de Pedro',
   },
 ]
 
 const fallbackBlogPosts = [
   {
-    title: 'Equilibrio hormonal no dia a dia',
-    text: 'Ajustes simples de sono, alimentacao e rotina para reduzir oscilacoes.',
+    title: 'Equilíbrio hormonal no dia a dia',
+    text: 'Ajustes simples de sono, alimentação e rotina para reduzir oscilações.',
     date: 'Abril 2026',
-    tag: 'Saude hormonal',
+    tag: 'Saúde hormonal',
   },
   {
     title: 'Menopausa com clareza e suporte',
     text: 'Sinais, cuidados integrativos e escolhas conscientes para cada fase.',
-    date: 'Marco 2026',
+    date: 'Março 2026',
     tag: 'Menopausa',
   },
   {
     title: 'Autocuidado emocional feminino',
-    text: 'Praticas para regular estresse, ansiedade e fortalecer a vitalidade.',
+    text: 'Práticas para regular estresse, ansiedade e fortalecer a vitalidade.',
     date: 'Fevereiro 2026',
     tag: 'Bem-estar',
   },
 ]
 
 const heroBlobDefs = [
-  { color: '#cfa4bf', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
-  { color: '#b887a7', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
-  { color: '#d7b3c9', blur: 75, w: 560, h: 440, baseX: 0.85, baseY: 0.85, phase: 2.5 },
-  { color: '#c193b2', blur: 85, w: 340, h: 300, baseX: 0.78, baseY: 0.10, phase: 3.8 },
-  { color: '#e2c2d6', blur: 70, w: 460, h: 360, baseX: 0.15, baseY: 0.80, phase: 1.0 },
-  { color: '#ad7f9d', blur: 100, w: 400, h: 320, baseX: 0.45, baseY: 0.30, phase: 2.1 },
-  { color: '#c9a1bc', blur: 80, w: 300, h: 260, baseX: 0.02, baseY: 0.45, phase: 0.7 },
+  { color: '#dfa9bf', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
+  { color: '#c98ba6', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
+  { color: '#e7bccd', blur: 75, w: 560, h: 440, baseX: 0.85, baseY: 0.85, phase: 2.5 },
+  { color: '#d295ac', blur: 85, w: 340, h: 300, baseX: 0.78, baseY: 0.10, phase: 3.8 },
+  { color: '#f0d0da', blur: 70, w: 460, h: 360, baseX: 0.15, baseY: 0.80, phase: 1.0 },
+  { color: '#bb7e96', blur: 100, w: 400, h: 320, baseX: 0.45, baseY: 0.30, phase: 2.1 },
+  { color: '#d9a4b7', blur: 80, w: 300, h: 260, baseX: 0.02, baseY: 0.45, phase: 0.7 },
 ]
 
 function formatPostDate(isoDate) {
@@ -458,6 +458,22 @@ function App() {
 
   const year = new Date().getFullYear()
 
+  const handleAppointmentSubmit = (event) => {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    const subject = `Solicitação de agendamento - ${data.get('nome') || 'Paciente'}`
+    const body = [
+      `Nome: ${data.get('nome') || ''}`,
+      `Telefone: ${data.get('telefone') || ''}`,
+      `E-mail: ${data.get('email') || ''}`,
+      `Data preferida: ${data.get('data') || ''}`,
+      `Especialidade: ${data.get('especialidade') || ''}`,
+      '',
+      data.get('mensagem') || '',
+    ].join('\n')
+    window.location.href = `mailto:contato@mulherviva.org?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
+
   return (
     <div className="page">
       <motion.div
@@ -488,17 +504,36 @@ function App() {
           <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
-              <p className="eyebrow">Integracao clinica e espiritualidade consciente</p>
-              <h1>Um novo olhar para a saude feminina - mais humano, mais completo.</h1>
+              <p className="eyebrow">Ginecologia · Obstetrícia · Homeopatia</p>
+              <h1>
+                Um novo olhar para a saúde feminina — <em>mais humano, mais completo</em>.
+              </h1>
               <p className="lead">
-                Medicina integrativa para mulheres que buscam um cuidado profundo,
-                personalizado e consciente.
+                Medicina integrativa para mulheres que buscam um cuidado
+                profundo, personalizado e consciente, em todas as fases da vida.
               </p>
               <div className="hero-actions">
-                <a className="btn btn-primary" href="#contato">
+                <a className="btn btn-primary" href="#agendamento">
                   Agendar consulta
                 </a>
+                <a className="btn btn-outline" href="#sobre">
+                  Conhecer a doutora
+                </a>
               </div>
+              <ul className="hero-trust">
+                {[
+                  '20+ anos de experiência',
+                  'Atendimento humanizado',
+                  'Presencial e online',
+                ].map((item) => (
+                  <li key={item}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M4.5 12.5 10 18 19.5 7" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
             <div className="hero-media" data-reveal style={{ '--delay': '220ms' }}>
               <div
@@ -564,7 +599,7 @@ function App() {
                 <div
                   className="about-photo"
                   role="img"
-                  aria-label="Retrato da medica"
+                  aria-label="Retrato da Dra. Luciana da Silva Lopes"
                   style={{ backgroundImage: `url(${aboutImage})` }}
                 />
                 <div className="about-badge">
@@ -573,20 +608,21 @@ function App() {
                   </span>
                   <div>
                       <strong>{prefersReducedMotion ? 20 : years}+ anos</strong>
-                      <span>Experiencia medica</span>
+                      <span>Experiência médica</span>
                     </div>
                 </div>
               </motion.div>
               <div className="about-content">
-                <p className="about-label">SOBRE MIM</p>
-                <h2>Presenca clinica com rigor e sensibilidade.</h2>
+                <p className="about-label">Sobre mim</p>
+                <h2>Presença clínica com rigor e sensibilidade.</h2>
                 <p>
-                  Atendo mulheres em todas as fases da vida, com escuta profunda e
-                  condutas individualizadas que respeitam historia e contexto.
+                  Atendo mulheres em todas as fases da vida, com escuta profunda
+                  e condutas individualizadas que respeitam história e contexto.
                 </p>
                 <p>
-                  A integracao entre ciencia, terapias complementares e
-                  espiritualidade consciente cria um cuidado sofisticado e humano.
+                  A integração entre ciência, terapias complementares e
+                  espiritualidade consciente cria um cuidado sofisticado e
+                  humano.
                 </p>
                 <div className="about-tags">
                   {aboutTags.map((tag) => (
@@ -600,14 +636,14 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="abordagem" data-approach>
+        <section className="section section--soft" id="abordagem" data-approach>
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Abordagem</p>
-              <h2>Um caminho claro, sensivel e cientifico.</h2>
+              <h2>Como é cuidar e ser cuidada por aqui.</h2>
               <p>
-                O atendimento e conduzido com profundidade clinica e
-                espiritualidade equilibrada, sem perder o rigor tecnico.
+                O atendimento é conduzido com profundidade clínica e
+                acolhimento, sem abrir mão do rigor técnico.
               </p>
             </div>
             <div className="approach-body">
@@ -638,13 +674,15 @@ function App() {
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Depoimentos</p>
-              <h2>Relatos reais de mulheres que se sentiram vistas.</h2>
-              <p>Cuidado profundo que transforma a relacao com o corpo.</p>
+              <h2>Histórias de mulheres que se sentiram ouvidas.</h2>
+              <p>Cuidado profundo transforma a relação com o próprio corpo.</p>
             </div>
           </div>
           <div className="carousel" aria-label="Depoimentos das pacientes">
             <div className="carousel-track">
-              {[...testimonials, ...testimonials].map((item, index) => (
+              {/* Two identical halves (each repeats the list enough to span the
+                  viewport) so the -50% marquee loops seamlessly and forever. */}
+              {[...testimonials, ...testimonials, ...testimonials, ...testimonials].map((item, index) => (
                 <article key={`${item.name}-${index}`} className="testimonial-card">
                   <div
                     className="avatar"
@@ -672,14 +710,14 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt" id="blog">
+        <section className="section" id="blog">
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Blog</p>
-              <h2>Posts recentes para apoiar sua jornada.</h2>
+              <h2>Conteúdo para apoiar a sua jornada.</h2>
               <p>
-                Espaco reservado para novos artigos, reflexoes e orientacoes
-                clinicas.
+                Artigos, reflexões e orientações clínicas escritas com calma —
+                para você ler no seu tempo.
               </p>
             </div>
             <div className="card-grid blog-grid">
@@ -719,18 +757,18 @@ function App() {
             
             <div className="address-grid address-grid--device">
               <div className="address-content" data-reveal ref={addressContentRef}>
-                <p className="address-eyebrow">Consultorio</p>
+                <p className="address-eyebrow">Consultório</p>
                 <h3 className="address-title" ref={addressTitleRef}>
-                  Centro Medico Lucio Costa
+                  Centro Médico Lúcio Costa
                 </h3>
                 <p className="address-lead">
-                  Um espaco sereno, discreto e preparado para consultas profundas.
+                  Um espaço sereno, discreto e preparado para consultas sem pressa.
                 </p>
                 <div className="address-details address-details--spread">
                   <div className="address-item">
-                    <span className="address-label">Endereco</span>
+                    <span className="address-label">Endereço</span>
                     <span className="address-value">SGAS 610, Bloco 2, Sala 250</span>
-                    <span className="address-subvalue">Brasilia - DF</span>
+                    <span className="address-subvalue">Brasília - DF</span>
                   </div>
                   <div className="address-item">
                     <span className="address-label">Atendimento</span>
@@ -739,10 +777,10 @@ function App() {
                 </div>
                 <div className="address-tags">
                   <span className="address-tag">Entrada pela L3</span>
-                  <span className="address-tag">Recepcao</span>
+                  <span className="address-tag">Recepção acolhedora</span>
                 </div>
                 <div className="address-actions">
-                  <a className="btn btn-primary" href="#contato">
+                  <a className="btn btn-primary" href="#agendamento">
                     Agendar consulta
                   </a>
                   <a
@@ -764,12 +802,12 @@ function App() {
                 <div
                   className="device-showcase__frame"
                   role="img"
-                  aria-label="Mapa do consultorio em um iPhone"
+                  aria-label="Mapa com a localização do consultório em um iPhone"
                 >
                   <img
                     className="device-showcase__image"
                     src={iphoneMapImage}
-                    alt="Mapa do consultorio no iPhone"
+                    alt="Mapa com a localização do consultório no iPhone"
                     loading="lazy"
                   />
                 </div>
@@ -784,11 +822,11 @@ function App() {
           <div className="container">
             <div className="appointment-card" data-reveal>
               <aside className="appointment-aside">
-                <p className="appointment-label">Agendamento</p>
+                <p className="appointment-label">Contato</p>
                 <h2>Vamos conversar?</h2>
                 <p className="appointment-copy">
-                  Preencha o formulario e nossa equipe entrara em contato para
-                  confirmar o melhor horario.
+                  Preencha o formulário e a equipe entrará em contato para
+                  confirmar o melhor horário para você.
                 </p>
                 <div className="appointment-divider" aria-hidden="true" />
                 <div className="appointment-contacts">
@@ -806,7 +844,7 @@ function App() {
                       </svg>
                     </span>
                     <div>
-                      <strong>Consultorio Rio de Janeiro</strong>
+                      <strong>Consultório · Brasília - DF</strong>
                       <span>Atendimento presencial e online</span>
                     </div>
                   </div>
@@ -820,8 +858,8 @@ function App() {
                       </svg>
                     </span>
                     <div>
-                      <strong>+55 21 99999-0000</strong>
-                      <span>Atendimento das 8h as 18h</span>
+                      <strong>+55 61 99999-0000</strong>
+                      <span>Atendimento das 8h às 18h</span>
                     </div>
                   </div>
                   <div className="appointment-contact">
@@ -848,16 +886,23 @@ function App() {
                     </span>
                     <div>
                       <strong>contato@mulherviva.org</strong>
-                      <span>Respondemos em ate 24h</span>
+                      <span>Respondemos em até 24h</span>
                     </div>
                   </div>
                 </div>
               </aside>
-              <form className="appointment-form">
+              <form className="appointment-form" onSubmit={handleAppointmentSubmit}>
                 <div className="appointment-grid">
                   <label className="field" htmlFor="nome">
                     <span>Nome</span>
-                    <input id="nome" name="nome" type="text" placeholder="Seu nome" />
+                    <input
+                      id="nome"
+                      name="nome"
+                      type="text"
+                      placeholder="Seu nome"
+                      autoComplete="name"
+                      required
+                    />
                   </label>
                   <label className="field" htmlFor="telefone">
                     <span>Telefone</span>
@@ -866,21 +911,30 @@ function App() {
                       name="telefone"
                       type="tel"
                       placeholder="(00) 00000-0000"
+                      autoComplete="tel"
+                      required
                     />
                   </label>
                   <label className="field span-2" htmlFor="email">
                     <span>E-mail</span>
-                    <input id="email" name="email" type="email" placeholder="Seu e-mail" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Seu e-mail"
+                      autoComplete="email"
+                      required
+                    />
                   </label>
                   <label className="field" htmlFor="data">
                     <span>Data preferida</span>
-                    <input id="data" name="data" type="text" placeholder="dd/mm/aaaa" />
+                    <input id="data" name="data" type="date" />
                   </label>
                   <label className="field" htmlFor="especialidade">
                     <span>Especialidade</span>
                     <select id="especialidade" name="especialidade">
                       <option>Medicina Integrativa</option>
-                      <option>Obstetricia Humanizada</option>
+                      <option>Obstetrícia Humanizada</option>
                       <option>Homeopatia</option>
                     </select>
                   </label>
@@ -889,7 +943,7 @@ function App() {
                     <textarea
                       id="mensagem"
                       name="mensagem"
-                      placeholder="Conte um pouco sobre o que voce precisa"
+                      placeholder="Conte um pouco sobre o que você precisa"
                     />
                   </label>
                 </div>
@@ -925,8 +979,8 @@ function App() {
 
       <footer className="site-footer">
         <div className="container footer-inner">
-          <p>Mulher Viva - Medicina Integrativa da Saude Feminina</p>
-          <p>Copyright {year}. Todos os direitos reservados.</p>
+          <p>Mulher Viva · Medicina Integrativa da Saúde Feminina</p>
+          <p>© {year} Dra. Luciana da Silva Lopes. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>

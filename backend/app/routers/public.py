@@ -103,6 +103,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
         end_time=end,
         client_name=body.client_name,
         client_contact=body.client_contact,
+        client_email=body.client_email,
         type=body.type,
         status="pending",
         notes=body.notes,

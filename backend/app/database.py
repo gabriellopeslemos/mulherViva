@@ -58,3 +58,9 @@ def run_migrations() -> None:
                         "WHERE kind = 'open' AND type IS NULL"
                     )
                 )
+        if "appointments" in tables:
+            cols = {c["name"] for c in inspector.get_columns("appointments")}
+            if "client_email" not in cols:
+                conn.execute(
+                    text("ALTER TABLE appointments ADD COLUMN client_email VARCHAR(150)")
+                )

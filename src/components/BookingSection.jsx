@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { api } from '../lib/api'
 import '../styles/booking.css'
@@ -52,6 +52,15 @@ function periodOf(start) {
 }
 
 const PERIOD_ORDER = ['Manhã', 'Tarde', 'Noite']
+
+// Pick a column count that splits `n` slots into evenly-filled rows: 4→2 (2×2),
+// 6→3 (2×3), 8→2 (4×2), 9→3 (3×3). Prefer 3, then 2, falling back for primes.
+function bestColumns(n) {
+  if (n <= 3) return n
+  if (n % 3 === 0) return 3
+  if (n % 2 === 0) return 2
+  return 3
+}
 
 const MODALITY_LABELS = { presencial: 'Presencial', online: 'Online' }
 
@@ -136,10 +145,13 @@ export default function BookingSection() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({ name: '', contact: '', notes: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' })
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(null)
   const [error, setError] = useState(null)
+  // Optional modality filter ('presencial' | 'online' | null) that narrows the
+  // calendar and slot list to one kind of consultation.
+  const [modalityFilter, setModalityFilter] = useState(null)
 
   useEffect(() => {
     api
@@ -185,21 +197,30 @@ export default function BookingSection() {
     [specialties, monthCache, monthPart],
   )
   const loadingMonth = specialties.length > 0 && monthMaps.length < specialties.length
-  const monthHasSlots = monthMaps.some((m) =>
+
+  // Predicate honouring the active modality filter (no filter ⇒ everything).
+  const matchesFilter = (slot) => !modalityFilter || slot.type === modalityFilter
+
+  // Filter-independent: are there ANY slots this month? Gates the filter chips.
+  const monthHasAnySlots = monthMaps.some((m) =>
     Object.values(m).some((s) => s.length > 0),
+  )
+  const monthHasSlots = monthMaps.some((m) =>
+    Object.values(m).some((s) => s.some(matchesFilter)),
   )
 
   const dayHasAvailability = (iso) =>
-    monthMaps.some((m) => (m[iso]?.length ?? 0) > 0)
+    monthMaps.some((m) => (m[iso]?.some(matchesFilter) ?? false))
 
   // Specialties that actually have an open slot on the picked date.
   const dateSpecialties = useMemo(() => {
     if (!selectedDate) return []
     const part = monthPartOf(selectedDate)
     return specialties.filter(
-      (s) => (monthCache[`${s.id}:${part}`]?.[selectedDate]?.length ?? 0) > 0,
+      (s) => monthCache[`${s.id}:${part}`]?.[selectedDate]?.some(matchesFilter) ?? false,
     )
-  }, [specialties, monthCache, selectedDate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specialties, monthCache, selectedDate, modalityFilter])
 
   // Times are the same for every specialty, so we can show them right away —
   // using the chosen specialty, or the first available one as a stand-in.
@@ -208,8 +229,9 @@ export default function BookingSection() {
   const daySlots = useMemo(() => {
     if (!selectedDate || !slotSpecialtyId) return []
     const key = `${slotSpecialtyId}:${monthPartOf(selectedDate)}`
-    return monthCache[key]?.[selectedDate] || []
-  }, [monthCache, selectedDate, slotSpecialtyId])
+    return (monthCache[key]?.[selectedDate] || []).filter(matchesFilter)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthCache, selectedDate, slotSpecialtyId, modalityFilter])
 
   const slotGroups = useMemo(() => {
     const groups = { Manhã: [], Tarde: [], Noite: [] }
@@ -225,6 +247,59 @@ export default function BookingSection() {
   const maxMonth = new Date(today.getFullYear(), today.getMonth() + MAX_MONTHS_AHEAD, 1)
   const canPrevMonth = cursor > minMonth
   const canNextMonth = cursor < maxMonth
+
+  // Land the patient on a ready-to-confirm booking: pre-select the next open
+  // date and its first time slot once the agenda finishes loading. Runs once
+  // (or rolls forward a month when the current one has nothing open).
+  const autoPickedRef = useRef(false)
+  useEffect(() => {
+    if (autoPickedRef.current || selectedDate || loadingMonth) return
+    if (specialties.length === 0) return
+
+    const part = `${cursor.getFullYear()}-${cursor.getMonth()}`
+    const slotsOf = (id, iso) =>
+      (monthCache[`${id}:${part}`]?.[iso] || []).filter(matchesFilter)
+    const hasSlots = (id, iso) => slotsOf(id, iso).length > 0
+
+    const firstIso = buildMonthMatrix(cursor)
+      .flat()
+      .filter(
+        (day) =>
+          day.getMonth() === cursor.getMonth() &&
+          day >= today &&
+          specialties.some((s) => hasSlots(s.id, toIso(day))),
+      )
+      .map((day) => toIso(day))[0]
+
+    // Intentional one-shot sync of selection from asynchronously-loaded agenda
+    // data; the ref guard keeps it from cascading.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (firstIso) {
+      const spec = specialties.find((s) => hasSlots(s.id, firstIso))
+      autoPickedRef.current = true
+      setSelectedDate(firstIso)
+      setSpecialtyId(spec.id)
+      setSelectedSlot(slotsOf(spec.id, firstIso)[0])
+      setStep(2)
+    } else if (canNextMonth) {
+      setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingMonth, monthCache, specialties, cursor, today, selectedDate, canNextMonth, modalityFilter])
+
+  // The modality chips filter the calendar. Toggling re-runs the auto-pick so
+  // the soonest matching date and time are surfaced for the chosen modality.
+  const toggleFilter = (type) => {
+    setError(null)
+    setModalityFilter((cur) => (cur === type ? null : type))
+    autoPickedRef.current = false
+    setSelectedDate(null)
+    setSpecialtyId(null)
+    setSelectedSlot(null)
+    setStep(1)
+    setCursor(() => new Date(today.getFullYear(), today.getMonth(), 1))
+  }
 
   const pickDate = (iso) => {
     // Keep the specialty if it still has slots on the new day, otherwise the
@@ -275,7 +350,7 @@ export default function BookingSection() {
     setSpecialtyId(null)
     setSelectedDate(null)
     setSelectedSlot(null)
-    setForm({ name: '', contact: '', notes: '' })
+    setForm({ name: '', phone: '', email: '', notes: '' })
     setMonthCache({})
     setError(null)
     setStep(1)
@@ -292,7 +367,8 @@ export default function BookingSection() {
         start: selectedSlot.start,
         type: selectedSlot.type,
         client_name: form.name.trim(),
-        client_contact: form.contact.trim(),
+        client_contact: form.phone.trim(),
+        client_email: form.email.trim() || null,
         notes: form.notes.trim() || null,
       })
       setConfirmation(booking)
@@ -407,6 +483,27 @@ export default function BookingSection() {
         ) : (
           <div className="bk-shell">
             <div className="bk-card bk-main">
+              {step <= 2 && monthHasAnySlots && (
+                <div className="bk-filter" role="group" aria-label="Filtrar por modalidade">
+                  <button
+                    type="button"
+                    className={`bk-filterbtn${modalityFilter === 'presencial' ? ' is-active' : ''}`}
+                    onClick={() => toggleFilter('presencial')}
+                    aria-pressed={modalityFilter === 'presencial'}
+                  >
+                    Ir para próxima consulta presencial
+                  </button>
+                  <button
+                    type="button"
+                    className={`bk-filterbtn${modalityFilter === 'online' ? ' is-active' : ''}`}
+                    onClick={() => toggleFilter('online')}
+                    aria-pressed={modalityFilter === 'online'}
+                  >
+                    Ir para próxima consulta online
+                  </button>
+                </div>
+              )}
+
               <ol className="bk-steps" aria-label="Etapas do agendamento">
                 {stepsMeta.map((s) => {
                   const state =
@@ -568,7 +665,12 @@ export default function BookingSection() {
                                     {PERIOD_ICONS[group.label]}
                                     {group.label}
                                   </span>
-                                  <div className="bk-slots">
+                                  <div
+                                    className="bk-slots"
+                                    style={{
+                                      gridTemplateColumns: `repeat(${bestColumns(group.slots.length)}, minmax(0, 1fr))`,
+                                    }}
+                                  >
                                     {group.slots.map((slot) => {
                                       const isSel =
                                         selectedSlot?.start === slot.start &&
@@ -625,7 +727,7 @@ export default function BookingSection() {
                   >
                     <h3 className="bk-step__title">Quase lá! Seus dados</h3>
                     <div className="bk-form__grid">
-                      <label className="bk-field" htmlFor="bk-name">
+                      <label className="bk-field bk-field--full" htmlFor="bk-name">
                         <span>Nome completo</span>
                         <input
                           id="bk-name"
@@ -638,18 +740,32 @@ export default function BookingSection() {
                           minLength={2}
                         />
                       </label>
-                      <label className="bk-field" htmlFor="bk-contact">
-                        <span>Telefone ou e-mail</span>
+                      <label className="bk-field" htmlFor="bk-phone">
+                        <span>Telefone / WhatsApp</span>
                         <input
-                          id="bk-contact"
-                          type="text"
-                          inputMode="email"
+                          id="bk-phone"
+                          type="tel"
+                          inputMode="tel"
                           autoComplete="tel"
                           placeholder="(00) 00000-0000"
-                          value={form.contact}
-                          onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
+                          value={form.phone}
+                          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                           required
-                          minLength={5}
+                          minLength={8}
+                        />
+                      </label>
+                      <label className="bk-field" htmlFor="bk-email">
+                        <span>
+                          E-mail <em>(opcional)</em>
+                        </span>
+                        <input
+                          id="bk-email"
+                          type="email"
+                          inputMode="email"
+                          autoComplete="email"
+                          placeholder="voce@email.com"
+                          value={form.email}
+                          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                         />
                       </label>
                       {selectedSlot && (
@@ -675,7 +791,7 @@ export default function BookingSection() {
                         />
                       </label>
                     </div>
-                    <button className="bk-btn bk-btn--primary" type="submit" disabled={submitting}>
+                    <button className="bk-btn bk-btn--primary bk-form__submit" type="submit" disabled={submitting}>
                       {submitting ? 'Enviando…' : 'Solicitar agendamento'}
                     </button>
                     <p className="bk-form__note">

@@ -70,7 +70,8 @@ class Appointment(Base):
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
     client_name: Mapped[str] = mapped_column(String(150))
-    client_contact: Mapped[str] = mapped_column(String(150))
+    client_contact: Mapped[str] = mapped_column(String(150))  # phone (primary)
+    client_email: Mapped[str | None] = mapped_column(String(150), nullable=True)
     type: Mapped[str] = mapped_column(String(15))  # 'online' | 'presencial'
     status: Mapped[str] = mapped_column(String(15), default="pending")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

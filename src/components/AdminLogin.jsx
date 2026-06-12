@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { api, setToken } from '../lib/api'
 
 const T = {
-  surface: '#fffafb',
-  surfaceSoft: '#f6edf2',
+  surface: '#fffdfc',
+  surfaceSoft: '#f6ecec',
   textStrong: '#1f1119',
   text: '#2a1a24',
   textMuted: '#5b4552',
-  accent: '#7a3e6a',
-  accentStrong: '#5e2f52',
-  line: '#dcc7d2',
+  accent: '#9a4067',
+  accentStrong: '#74284a',
+  line: '#e8d4d8',
   serif: '"Lora","Palatino Linotype",Georgia,serif',
   sans: '"Mulish","Gill Sans",system-ui,sans-serif',
 }
@@ -69,7 +69,7 @@ export default function AdminLogin({ onSuccess, onClose }) {
           borderRadius: 22,
           padding: 'clamp(20px, 6vw, 32px)',
           width: 'min(360px, calc(100vw - 32px))',
-          boxShadow: '0 28px 72px rgba(90,52,78,0.18)',
+          boxShadow: '0 28px 72px rgba(98,44,70,0.18)',
           fontFamily: T.sans,
           display: 'flex',
           flexDirection: 'column',
@@ -152,7 +152,7 @@ export default function AdminLogin({ onSuccess, onClose }) {
               fontWeight: 700,
               cursor: loading ? 'wait' : 'pointer',
               opacity: loading || !username || !password ? 0.6 : 1,
-              boxShadow: '0 6px 18px rgba(122,62,106,0.28)',
+              boxShadow: '0 6px 18px rgba(154,64,103,0.28)',
             }}
           >
             {loading ? 'Entrando...' : 'Entrar'}

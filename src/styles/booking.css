@@ -3,7 +3,7 @@
 /* Light section: the booking UI is built as light cards with dark text, so it
    must NOT inherit the dark `.section.alt` palette (white-on-white). */
 .bk-section {
-  background: linear-gradient(180deg, #faf1f7 0%, var(--bg) 60%);
+  background: linear-gradient(180deg, #fbf2f5 0%, var(--bg) 60%);
 }
 
 .bk-section .bk-header {
@@ -29,6 +29,9 @@
   min-height: 460px;
   display: flex;
   flex-direction: column;
+  /* Lets inner layouts respond to the card's real width, not the viewport. */
+  container-type: inline-size;
+  container-name: bkmain;
 }
 
 /* ---- step rail ---- */
@@ -99,13 +102,13 @@
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 0 0 4px rgba(122, 62, 106, 0.16);
+  box-shadow: 0 0 0 4px rgba(154, 64, 103, 0.16);
 }
 
 .bk-steps__item.is-done .bk-steps__dot {
   border-color: var(--accent);
   color: var(--accent);
-  background: #f6e9f1;
+  background: #f7ebf0;
 }
 
 .bk-steps__text {
@@ -165,6 +168,41 @@
   font-size: 0.95rem;
 }
 
+/* ---- modality filter (next presencial / online) ---- */
+
+.bk-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: clamp(18px, 2.6vw, 26px);
+}
+
+.bk-filterbtn {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.bk-filterbtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.bk-filterbtn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
 /* ---- specialties ---- */
 
 .bk-specialties {
@@ -202,8 +240,8 @@
 
 .bk-specialty.is-selected {
   border-color: var(--accent);
-  background: #faf1f7;
-  box-shadow: 0 0 0 3px rgba(122, 62, 106, 0.14);
+  background: #fbf2f5;
+  box-shadow: 0 0 0 3px rgba(154, 64, 103, 0.14);
 }
 
 .bk-specialty__icon {
@@ -212,7 +250,7 @@
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: #f6e9f1;
+  background: #f7ebf0;
   color: var(--accent);
 }
 
@@ -236,9 +274,17 @@
 
 .bk-schedule {
   display: grid;
-  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
-  gap: clamp(20px, 3vw, 40px);
+  grid-template-columns: 1fr;
+  gap: clamp(20px, 3vw, 36px);
   align-items: start;
+}
+
+/* Two columns only when the card itself is wide enough for both
+   the calendar and a comfortable slot grid beside it. */
+@container bkmain (min-width: 600px) {
+  .bk-schedule {
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  }
 }
 
 .bk-schedule__cal {
@@ -299,23 +345,26 @@
 }
 
 .bk-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
 .bk-chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 18px;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 18px;
   border: 1.5px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   font: inherit;
   font-weight: 600;
   color: var(--text);
+  text-align: left;
   cursor: pointer;
   transition: all 0.16s ease;
 }
@@ -336,7 +385,6 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 6px 16px rgba(94, 47, 82, 0.24);
 }
 
 .bk-chip.is-selected em {
@@ -349,26 +397,15 @@
 }
 
 .bk-schedule__next {
-  align-self: flex-start;
-  margin-top: 4px;
-}
-
-@media (max-width: 560px) {
-  .bk-schedule__next {
-    width: 100%;
-  }
-}
-
-@media (max-width: 720px) {
-  .bk-schedule {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  margin-top: 6px;
 }
 
 /* ---- calendar ---- */
 
 .bk-calendar {
-  max-width: 420px;
+  max-width: 400px;
+  margin-inline: auto;
 }
 
 .bk-calendar__nav {
@@ -459,21 +496,21 @@
 }
 
 .bk-calendar__day.is-available {
-  background: #f6e9f1;
+  background: #f7ebf0;
   color: var(--accent-strong);
   font-weight: 600;
   cursor: pointer;
 }
 
 .bk-calendar__day.is-available:hover {
-  background: #efdcea;
+  background: #f3e1e8;
   transform: scale(1.05);
 }
 
 .bk-calendar__day.is-selected {
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 8px 18px rgba(94, 47, 82, 0.3);
+  box-shadow: 0 8px 18px rgba(116, 40, 74, 0.3);
 }
 
 .bk-calendar__dot {
@@ -513,8 +550,8 @@
 }
 
 .bk-slots {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
   gap: 10px;
 }
 
@@ -522,17 +559,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  min-width: 92px;
-  min-height: 56px;
-  padding: 8px 16px;
+  min-height: 58px;
+  padding: 8px 12px;
   border: 1.5px solid var(--line);
   border-radius: 16px;
   background: var(--surface);
   font: inherit;
   color: var(--text);
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 .bk-slot__time {
@@ -569,7 +606,7 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 8px 18px rgba(94, 47, 82, 0.28);
+  box-shadow: 0 8px 18px rgba(116, 40, 74, 0.28);
 }
 
 .bk-slot.is-selected .bk-slot__mode {
@@ -605,9 +642,20 @@
 
 .bk-form__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 16px;
   margin-bottom: 22px;
+}
+
+/* Side-by-side fields only when the card is wide enough. */
+@container bkmain (min-width: 480px) {
+  .bk-form__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.bk-form__submit {
+  width: 100%;
 }
 
 .bk-field {
@@ -658,7 +706,7 @@
 .bk-field textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(122, 62, 106, 0.16);
+  box-shadow: 0 0 0 3px rgba(154, 64, 103, 0.16);
 }
 
 .bk-segment {
@@ -687,7 +735,7 @@
 .bk-segment__option.is-selected {
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 4px 12px rgba(94, 47, 82, 0.25);
+  box-shadow: 0 4px 12px rgba(116, 40, 74, 0.25);
 }
 
 .bk-form__note {
@@ -716,7 +764,7 @@
 .bk-btn--primary {
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 12px 26px rgba(94, 47, 82, 0.3);
+  box-shadow: 0 12px 26px rgba(116, 40, 74, 0.3);
 }
 
 .bk-btn--primary:hover:not(:disabled) {
@@ -736,7 +784,7 @@
 }
 
 .bk-btn--ghost:hover {
-  background: #f6e9f1;
+  background: #f7ebf0;
 }
 
 /* ---- summary rail ---- */
@@ -745,7 +793,7 @@
   position: sticky;
   top: 96px;
   padding: 26px 24px;
-  background: linear-gradient(160deg, #fffafb 0%, #f6e9f1 100%);
+  background: linear-gradient(160deg, #fffafb 0%, #f7ebf0 100%);
 }
 
 .bk-summary h4 {
@@ -817,7 +865,7 @@
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 14px 30px rgba(94, 47, 82, 0.35);
+  box-shadow: 0 14px 30px rgba(116, 40, 74, 0.35);
 }
 
 .bk-success__badge svg {
@@ -872,7 +920,7 @@
 .bk-section button:focus-visible,
 .bk-field input:focus-visible,
 .bk-field textarea:focus-visible {
-  outline: 3px solid rgba(122, 62, 106, 0.5);
+  outline: 3px solid rgba(154, 64, 103, 0.5);
   outline-offset: 2px;
 }
 
@@ -904,10 +952,6 @@
 
   .bk-steps__item button {
     justify-content: center;
-  }
-
-  .bk-form__grid {
-    grid-template-columns: 1fr;
   }
 
   .bk-success__details {
