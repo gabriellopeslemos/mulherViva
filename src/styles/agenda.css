@@ -239,9 +239,11 @@
   border-color: var(--line);
 }
 
+/* Transparent border, not accent: a border the same color as the fill leaves
+   an anti-aliasing seam inside the button (see booking.css). */
 .ag-daystrip__day.is-active {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
 }
 
 .ag-daystrip__day.is-active span,

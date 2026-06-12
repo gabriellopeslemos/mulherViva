@@ -34,110 +34,6 @@
   container-name: bkmain;
 }
 
-/* ---- step rail ---- */
-
-.bk-steps {
-  display: flex;
-  gap: 4px;
-  list-style: none;
-  margin: 0 0 clamp(22px, 3vw, 34px);
-  padding: 0 0 18px;
-  border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.bk-steps::-webkit-scrollbar {
-  display: none;
-}
-
-.bk-steps__item {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.bk-steps__item button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: none;
-  border: 0;
-  padding: 4px 6px;
-  font: inherit;
-  text-align: left;
-  color: var(--text-muted);
-  border-radius: 10px;
-  cursor: default;
-}
-
-.bk-steps__item.is-done button {
-  cursor: pointer;
-}
-
-.bk-steps__item.is-done button:hover .bk-steps__label {
-  color: var(--accent-strong);
-}
-
-.bk-steps__dot {
-  flex: none;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  font-size: 0.82rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.bk-steps__dot svg {
-  width: 14px;
-  height: 14px;
-}
-
-.bk-steps__item.is-current .bk-steps__dot {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-contrast);
-  box-shadow: 0 0 0 4px rgba(154, 64, 103, 0.16);
-}
-
-.bk-steps__item.is-done .bk-steps__dot {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: #f7ebf0;
-}
-
-.bk-steps__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.bk-steps__label {
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.bk-steps__item.is-current .bk-steps__label {
-  color: var(--accent-strong);
-  font-weight: 700;
-}
-
-.bk-steps__value {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* ---- step body ---- */
 
 .bk-step__title {
@@ -170,11 +66,29 @@
 
 /* ---- modality filter (next presencial / online) ---- */
 
+/* Quick "jump to next available slot" control, sitting under the calendar. */
+.bk-jump {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  max-width: 400px;
+  margin-inline: auto;
+}
+
+.bk-jump__label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
 .bk-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: clamp(18px, 2.6vw, 26px);
 }
 
 .bk-filterbtn {
@@ -197,77 +111,15 @@
   color: var(--accent);
 }
 
+/* Selected/filled states use `border-color: transparent`, never a border the
+   same color as the fill: the browser strokes the border and paints the fill
+   as two rounded rects, and the anti-aliasing where they meet leaves a thin
+   broken line inset inside the button. A transparent border keeps the layout
+   size and lets the background paint edge-to-edge in a single pass. */
 .bk-filterbtn.is-active {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
   color: var(--accent-contrast);
-}
-
-/* ---- specialties ---- */
-
-.bk-specialties {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
-}
-
-.bk-specialty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 18px;
-  min-height: 44px;
-  background: var(--surface);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-md);
-  font: inherit;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.bk-specialty:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-2px);
-}
-
-.bk-specialty:active {
-  transform: translateY(0) scale(0.99);
-}
-
-.bk-specialty.is-selected {
-  border-color: var(--accent);
-  background: #fbf2f5;
-  box-shadow: 0 0 0 3px rgba(154, 64, 103, 0.14);
-}
-
-.bk-specialty__icon {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: #f7ebf0;
-  color: var(--accent);
-}
-
-.bk-specialty__icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.bk-specialty__name {
-  font-weight: 600;
-  font-size: 1.02rem;
-  color: var(--text-strong);
-}
-
-.bk-specialty__meta {
-  font-size: 0.85rem;
-  color: var(--text-muted);
 }
 
 /* ---- schedule layout (calendar + side panel) ---- */
@@ -376,14 +228,17 @@
   color: var(--text-muted);
 }
 
+/* No transform on hover: lifting a sibling forces a layer repaint that exposes
+   a 1px anti-aliasing seam on the selected chip's border. Tint instead. */
 .bk-chip:hover {
   border-color: var(--accent);
-  transform: translateY(-1px);
+  background: #fbf2f5;
 }
 
+/* Transparent border, not accent: see .bk-filterbtn.is-active. */
 .bk-chip.is-selected {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
   color: var(--accent-contrast);
 }
 
@@ -504,13 +359,14 @@
 
 .bk-calendar__day.is-available:hover {
   background: #f3e1e8;
-  transform: scale(1.05);
 }
 
+/* Transparent border (overrides .is-today's gray) + no shadow: see
+   .bk-filterbtn.is-active. */
 .bk-calendar__day.is-selected {
   background: var(--accent);
+  border-color: transparent;
   color: var(--accent-contrast);
-  box-shadow: 0 8px 18px rgba(116, 40, 74, 0.3);
 }
 
 .bk-calendar__dot {
@@ -569,7 +425,7 @@
   font: inherit;
   color: var(--text);
   cursor: pointer;
-  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
 }
 
 .bk-slot__time {
@@ -593,20 +449,23 @@
   height: 12px;
 }
 
-.bk-slot:hover {
+/* Hover styling is scoped to unselected slots only: applying it to a selected
+   (filled) slot would repaint the dark time text in accent → dark-on-dark, and
+   re-tint the background. No transform/shadow on hover (see .bk-specialty). */
+.bk-slot:not(.is-selected):hover {
   border-color: var(--accent);
-  transform: translateY(-1px);
+  background: #fbf2f5;
 }
 
-.bk-slot:hover .bk-slot__time {
+.bk-slot:not(.is-selected):hover .bk-slot__time {
   color: var(--accent);
 }
 
+/* Transparent border + no shadow: see .bk-filterbtn.is-active. */
 .bk-slot.is-selected {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
   color: var(--accent-contrast);
-  box-shadow: 0 8px 18px rgba(116, 40, 74, 0.28);
 }
 
 .bk-slot.is-selected .bk-slot__mode {
@@ -707,35 +566,6 @@
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(154, 64, 103, 0.16);
-}
-
-.bk-segment {
-  display: inline-flex;
-  padding: 4px;
-  gap: 4px;
-  border: 1.5px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-soft);
-  width: fit-content;
-}
-
-.bk-segment__option {
-  min-height: 40px;
-  padding: 8px 22px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  color: var(--text-soft);
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.bk-segment__option.is-selected {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  box-shadow: 0 4px 12px rgba(116, 40, 74, 0.25);
 }
 
 .bk-form__note {
@@ -946,24 +776,8 @@
     padding: 18px 16px;
   }
 
-  .bk-steps__text {
-    display: none;
-  }
-
-  .bk-steps__item button {
-    justify-content: center;
-  }
-
   .bk-success__details {
     grid-template-columns: 1fr;
-  }
-
-  .bk-segment {
-    width: 100%;
-  }
-
-  .bk-segment__option {
-    flex: 1;
   }
 
   .bk-btn {

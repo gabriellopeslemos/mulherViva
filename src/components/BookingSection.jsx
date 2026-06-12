@@ -8,10 +8,6 @@ const MONTHS_LONG = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ]
-const MONTHS_SHORT = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez',
-]
 const WEEKDAYS_LONG = [
   'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira',
   'quinta-feira', 'sexta-feira', 'sábado',
@@ -339,12 +335,6 @@ export default function BookingSection() {
     if (specialtyId && selectedSlot) setStep(3)
   }
 
-  const goTo = (target) => {
-    if (target >= step) return
-    setError(null)
-    setStep(target)
-  }
-
   const reset = () => {
     setConfirmation(null)
     setSpecialtyId(null)
@@ -388,31 +378,16 @@ export default function BookingSection() {
 
   if (unavailable) return null
 
-  const stepsMeta = [
-    {
-      n: 1,
-      label: 'Data',
-      value: selectedDate
-        ? `${parseIso(selectedDate).getDate()} ${MONTHS_SHORT[parseIso(selectedDate).getMonth()]}`
-        : null,
-    },
-    {
-      n: 2,
-      label: 'Especialidade e horário',
-      value:
-        specialty && selectedSlot
-          ? `${specialty.name} · ${fmtTime(selectedSlot.start)}`
-          : null,
-    },
-    { n: 3, label: 'Seus dados', value: null },
-  ]
-
+  // Fade only — no `y` translate. Framer-motion leaves a lingering
+  // `transform: translateY(0px)` after a y-animation settles, which promotes the
+  // step subtree to a GPU layer rendered at a fractional pixel offset and bakes a
+  // 1px rasterization seam into filled, rounded children (selected chips/slots).
   const motionProps = reducedMotion
     ? { initial: false, animate: { opacity: 1 } }
     : {
-        initial: { opacity: 0, y: 14 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: -10 },
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
         transition: { duration: 0.26, ease: 'easeOut' },
       }
 
@@ -483,54 +458,6 @@ export default function BookingSection() {
         ) : (
           <div className="bk-shell">
             <div className="bk-card bk-main">
-              {step <= 2 && monthHasAnySlots && (
-                <div className="bk-filter" role="group" aria-label="Filtrar por modalidade">
-                  <button
-                    type="button"
-                    className={`bk-filterbtn${modalityFilter === 'presencial' ? ' is-active' : ''}`}
-                    onClick={() => toggleFilter('presencial')}
-                    aria-pressed={modalityFilter === 'presencial'}
-                  >
-                    Ir para próxima consulta presencial
-                  </button>
-                  <button
-                    type="button"
-                    className={`bk-filterbtn${modalityFilter === 'online' ? ' is-active' : ''}`}
-                    onClick={() => toggleFilter('online')}
-                    aria-pressed={modalityFilter === 'online'}
-                  >
-                    Ir para próxima consulta online
-                  </button>
-                </div>
-              )}
-
-              <ol className="bk-steps" aria-label="Etapas do agendamento">
-                {stepsMeta.map((s) => {
-                  const state =
-                    s.n === step ? 'current' : s.n < step ? 'done' : 'todo'
-                  return (
-                    <li key={s.n} className={`bk-steps__item is-${state}`}>
-                      <button
-                        type="button"
-                        onClick={() => goTo(s.n)}
-                        disabled={s.n >= step}
-                        aria-current={s.n === step ? 'step' : undefined}
-                      >
-                        <span className="bk-steps__dot">
-                          {state === 'done' ? <CheckIcon /> : s.n}
-                        </span>
-                        <span className="bk-steps__text">
-                          <span className="bk-steps__label">{s.label}</span>
-                          {s.value && state === 'done' && (
-                            <span className="bk-steps__value">{s.value}</span>
-                          )}
-                        </span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ol>
-
               <AnimatePresence mode="wait" initial={false}>
                 {step <= 2 && (
                   <motion.div key="schedule" className="bk-step bk-schedule" {...motionProps}>
@@ -612,6 +539,36 @@ export default function BookingSection() {
                           </p>
                         )}
                       </div>
+
+                      {monthHasAnySlots && (
+                        <div className="bk-jump">
+                          <span className="bk-jump__label">
+                            Ir para o próximo horário disponível:
+                          </span>
+                          <div
+                            className="bk-filter"
+                            role="group"
+                            aria-label="Ir para o próximo horário disponível por modalidade"
+                          >
+                            <button
+                              type="button"
+                              className={`bk-filterbtn${modalityFilter === 'presencial' ? ' is-active' : ''}`}
+                              onClick={() => toggleFilter('presencial')}
+                              aria-pressed={modalityFilter === 'presencial'}
+                            >
+                              Presencial
+                            </button>
+                            <button
+                              type="button"
+                              className={`bk-filterbtn${modalityFilter === 'online' ? ' is-active' : ''}`}
+                              onClick={() => toggleFilter('online')}
+                              aria-pressed={modalityFilter === 'online'}
+                            >
+                              Online
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="bk-schedule__side">
