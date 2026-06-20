@@ -5,9 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # ---- auth ----
 
-class LoginRequest(BaseModel):
-    username: str = Field(max_length=100)
-    password: str = Field(max_length=200)
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(max_length=4096)
 
 
 class TokenResponse(BaseModel):
@@ -16,7 +15,7 @@ class TokenResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
-    username: str
+    email: str
 
 
 # ---- specialties ----

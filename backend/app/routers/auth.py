@@ -1,26 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
-from ..auth import create_access_token, get_current_admin, verify_password
-from ..database import get_db
-from ..models import AdminUser
-from ..schemas import LoginRequest, MeResponse, TokenResponse
+from ..auth import create_access_token, get_current_admin, verify_google_credential
+from ..config import get_settings
+from ..schemas import GoogleLoginRequest, MeResponse, TokenResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
-    user = db.scalar(select(AdminUser).where(AdminUser.username == body.username))
-    if user is None or not verify_password(body.password, user.password_hash):
+@router.post("/google", response_model=TokenResponse)
+def google_login(body: GoogleLoginRequest):
+    email = verify_google_credential(body.credential)
+    if email not in get_settings().allowed_admin_emails_list:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario ou senha incorretos",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este e-mail nao tem acesso ao painel",
         )
-    return TokenResponse(access_token=create_access_token(user.username))
+    return TokenResponse(access_token=create_access_token(email))
 
 
 @router.get("/me", response_model=MeResponse)
-def me(admin: AdminUser = Depends(get_current_admin)):
-    return MeResponse(username=admin.username)
+def me(email: str = Depends(get_current_admin)):
+    return MeResponse(email=email)
