@@ -23,6 +23,33 @@ function formatTime(t) {
   return t.slice(0, 5)
 }
 
+function icsStamp(iso, t) {
+  return `${iso.replace(/-/g, '')}T${t.slice(0, 5).replace(':', '')}00`
+}
+
+function downloadIcs(booking, specialtyName) {
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Mulher Viva//Agendamento//PT',
+    'BEGIN:VEVENT',
+    `UID:${booking.token || booking.id}@mulherviva`,
+    `DTSTART:${icsStamp(booking.date, booking.start_time)}`,
+    `DTEND:${icsStamp(booking.date, booking.end_time)}`,
+    `SUMMARY:Consulta — ${specialtyName}`,
+    `DESCRIPTION:${booking.type === 'online' ? 'Online (videoconferência)' : 'Presencial'}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ]
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'consulta.ics'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function BookingSection() {
   const [specialties, setSpecialties] = useState([])
   const [specialtyId, setSpecialtyId] = useState(null)
@@ -30,7 +57,8 @@ export default function BookingSection() {
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
-  const [form, setForm] = useState({ name: '', contact: '', type: 'presencial', notes: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', type: 'presencial', reason: '', isFirstVisit: false, notes: '' })
+  const [waitlist, setWaitlist] = useState({ name: '', email: '', phone: '', sent: false, sending: false, error: null })
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(null)
   const [error, setError] = useState(null)
@@ -78,7 +106,10 @@ export default function BookingSection() {
         start: selectedSlot.start,
         type: form.type,
         client_name: form.name,
-        client_contact: form.contact,
+        client_email: form.email.trim(),
+        client_phone: form.phone.trim(),
+        reason: form.reason.trim() || null,
+        is_first_visit: form.isFirstVisit,
         notes: form.notes || null,
       })
       setConfirmation(booking)
@@ -94,9 +125,30 @@ export default function BookingSection() {
     }
   }
 
+  const handleWaitlist = async (event) => {
+    event.preventDefault()
+    setWaitlist((w) => ({ ...w, sending: true, error: null }))
+    try {
+      await api.post('/api/waitlist', {
+        specialty_id: specialtyId,
+        client_name: waitlist.name,
+        client_email: waitlist.email.trim(),
+        client_phone: waitlist.phone.trim() || null,
+      })
+      setWaitlist((w) => ({ ...w, sent: true, sending: false }))
+    } catch {
+      setWaitlist((w) => ({
+        ...w,
+        sending: false,
+        error: 'Não foi possível entrar na lista de espera. Tente novamente.',
+      }))
+    }
+  }
+
   if (unavailable) return null
 
   const specialty = specialties.find((s) => s.id === specialtyId)
+  const noSlots = days && days.every((d) => d.slots.length === 0)
 
   return (
     <section className="section alt booking-section" id="agendamento">
@@ -123,20 +175,30 @@ export default function BookingSection() {
                 })}
                 {` às ${formatTime(confirmation.start_time)}`}
               </strong>
-              . Entraremos em contato para confirmar.
+              . Enviamos um e-mail de confirmação e entraremos em contato em
+              breve.
             </p>
-            <button
-              className="btn btn-outline"
-              type="button"
-              onClick={() => {
-                setConfirmation(null)
-                setSpecialtyId(null)
-                setSelectedSlot(null)
-                setForm({ name: '', contact: '', type: 'presencial', notes: '' })
-              }}
-            >
-              Fazer novo agendamento
-            </button>
+            <div className="booking-confirmation__actions">
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => downloadIcs(confirmation, specialty?.name || '')}
+              >
+                Adicionar ao calendário
+              </button>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => {
+                  setConfirmation(null)
+                  setSpecialtyId(null)
+                  setSelectedSlot(null)
+                  setForm({ name: '', email: '', phone: '', type: 'presencial', reason: '', isFirstVisit: false, notes: '' })
+                }}
+              >
+                Fazer novo agendamento
+              </button>
+            </div>
           </div>
         ) : (
           <div className="booking-flow" data-reveal>
@@ -187,11 +249,41 @@ export default function BookingSection() {
                     })}
                   </div>
                 )}
-                {days && days.every((d) => d.slots.length === 0) && (
-                  <p className="booking-hint">
-                    Sem horários disponíveis nos próximos 14 dias. Entre em
-                    contato pelo formulário abaixo.
-                  </p>
+                {noSlots && (
+                  waitlist.sent ? (
+                    <div className="booking-waitlist booking-waitlist--done">
+                      <strong>Você está na lista de espera!</strong>
+                      <p>Assim que um horário abrir, avisamos por e-mail.</p>
+                    </div>
+                  ) : (
+                    <form className="booking-waitlist" onSubmit={handleWaitlist}>
+                      <p className="booking-hint">
+                        Sem horários nos próximos 14 dias. Entre na lista de
+                        espera e avisamos por e-mail quando um horário abrir.
+                      </p>
+                      <div className="booking-form__grid">
+                        <label className="field" htmlFor="wl-name">
+                          <span>Nome</span>
+                          <input id="wl-name" type="text" value={waitlist.name} required minLength={2}
+                            onChange={(e) => setWaitlist((w) => ({ ...w, name: e.target.value }))} />
+                        </label>
+                        <label className="field" htmlFor="wl-email">
+                          <span>E-mail</span>
+                          <input id="wl-email" type="email" value={waitlist.email} required
+                            onChange={(e) => setWaitlist((w) => ({ ...w, email: e.target.value }))} />
+                        </label>
+                        <label className="field" htmlFor="wl-phone">
+                          <span>Telefone (opcional)</span>
+                          <input id="wl-phone" type="tel" value={waitlist.phone}
+                            onChange={(e) => setWaitlist((w) => ({ ...w, phone: e.target.value }))} />
+                        </label>
+                      </div>
+                      <button className="btn btn-primary" type="submit" disabled={waitlist.sending}>
+                        {waitlist.sending ? 'Enviando...' : 'Entrar na lista de espera'}
+                      </button>
+                      {waitlist.error && <p className="booking-error">{waitlist.error}</p>}
+                    </form>
+                  )
                 )}
               </div>
             )}
@@ -230,16 +322,27 @@ export default function BookingSection() {
                       minLength={2}
                     />
                   </label>
-                  <label className="field" htmlFor="booking-contact">
-                    <span>Telefone ou e-mail</span>
+                  <label className="field" htmlFor="booking-email">
+                    <span>E-mail</span>
                     <input
-                      id="booking-contact"
-                      type="text"
-                      placeholder="(00) 00000-0000"
-                      value={form.contact}
-                      onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
+                      id="booking-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={form.email}
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                       required
-                      minLength={5}
+                    />
+                  </label>
+                  <label className="field" htmlFor="booking-phone">
+                    <span>Telefone / WhatsApp</span>
+                    <input
+                      id="booking-phone"
+                      type="tel"
+                      placeholder="(00) 00000-0000"
+                      value={form.phone}
+                      onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                      required
+                      minLength={8}
                     />
                   </label>
                   <label className="field" htmlFor="booking-type">
@@ -253,6 +356,16 @@ export default function BookingSection() {
                       <option value="online">Online</option>
                     </select>
                   </label>
+                  <label className="field" htmlFor="booking-reason">
+                    <span>Motivo da consulta (opcional)</span>
+                    <input
+                      id="booking-reason"
+                      type="text"
+                      placeholder="Ex.: rotina, acompanhamento, sintoma específico"
+                      value={form.reason}
+                      onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+                    />
+                  </label>
                   <label className="field" htmlFor="booking-notes">
                     <span>Mensagem (opcional)</span>
                     <input
@@ -262,6 +375,15 @@ export default function BookingSection() {
                       value={form.notes}
                       onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                     />
+                  </label>
+                  <label className="booking-checkbox span-2" htmlFor="booking-first">
+                    <input
+                      id="booking-first"
+                      type="checkbox"
+                      checked={form.isFirstVisit}
+                      onChange={(e) => setForm((f) => ({ ...f, isFirstVisit: e.target.checked }))}
+                    />
+                    <span>É a minha primeira consulta</span>
                   </label>
                 </div>
                 <button className="btn btn-primary" type="submit" disabled={submitting}>

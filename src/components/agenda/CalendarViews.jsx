@@ -99,7 +99,10 @@ function ApptBlock({ appt, hourHeight, onMouseDown, dimmed }) {
   const durationMins = timeToMinutes(appt.end) - timeToMinutes(appt.start)
   const isShort = durationMins <= 30
   const isCancelled = appt.status === 'cancelled'
+  const isNoShow = appt.status === 'no_show'
+  const isCompleted = appt.status === 'completed'
   const isPending = appt.status === 'pending'
+  const isStruck = isCancelled || isNoShow
 
   const colors = {
     online:     { bg: 'rgba(122,62,106,0.09)', hoverBg: 'rgba(122,62,106,0.15)', border: T.accent },
@@ -116,15 +119,15 @@ function ApptBlock({ appt, hourHeight, onMouseDown, dimmed }) {
         position:'absolute', top:pos.top, height:pos.height, left:5, right:5,
         borderRadius:10, padding: isShort ? '5px 8px' : '8px 10px',
         cursor:'grab', overflow:'hidden',
-        background: isCancelled ? 'rgba(220,199,210,0.22)' : hovered ? c.hoverBg : c.bg,
-        borderLeft: `3px ${isPending ? 'dashed' : 'solid'} ${isCancelled ? T.line : c.border}`,
-        opacity: dimmed ? 0.3 : isCancelled ? 0.5 : isPending ? 0.76 : 1,
+        background: isCancelled ? 'rgba(220,199,210,0.22)' : isNoShow ? 'rgba(176,80,96,0.08)' : hovered ? c.hoverBg : c.bg,
+        borderLeft: `3px ${isPending ? 'dashed' : 'solid'} ${isCancelled ? T.line : isNoShow ? T.danger : c.border}`,
+        opacity: dimmed ? 0.3 : isCancelled ? 0.5 : isNoShow ? 0.55 : isCompleted ? 0.85 : isPending ? 0.76 : 1,
         transform: hovered && !dimmed ? 'translateX(2px) scale(1.005)' : 'none',
         boxShadow: hovered && !dimmed ? '0 6px 20px rgba(90,52,78,0.12)' : 'none',
         transition: `opacity 150ms, transform 200ms ${T.ease}, box-shadow 200ms`,
         zIndex: hovered ? 10 : 5, userSelect:'none',
       }}>
-      <div style={{ fontSize:11, fontWeight:700, color: isCancelled ? T.textMuted : T.textStrong, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textDecoration: isCancelled ? 'line-through' : 'none', fontFamily:T.sans }}>
+      <div style={{ fontSize:11, fontWeight:700, color: isStruck ? T.textMuted : T.textStrong, lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textDecoration: isStruck ? 'line-through' : 'none', fontFamily:T.sans }}>
         {appt.client}
       </div>
       {!isShort && (

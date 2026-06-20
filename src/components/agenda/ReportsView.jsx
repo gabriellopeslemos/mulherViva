@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import { T } from './theme'
 import { IconChevronLeft, IconChevronRight } from './ui'
-import { MONTHS, timeToMinutes, toIsoDate, mergeIntervals } from './utils'
+import { MONTHS, STATUS_LABELS, timeToMinutes, toIsoDate, mergeIntervals } from './utils'
 
 export default function ReportsView({ specialties, onApiError }) {
   const [month, setMonth] = useState(() => {
@@ -37,6 +37,8 @@ export default function ReportsView({ specialties, onApiError }) {
     const confirmed = appointments.filter(a => a.status === 'confirmed').length
     const pending = appointments.filter(a => a.status === 'pending').length
     const cancelled = appointments.filter(a => a.status === 'cancelled').length
+    const completed = appointments.filter(a => a.status === 'completed').length
+    const noShow = appointments.filter(a => a.status === 'no_show').length
     const active = appointments.filter(a => a.status !== 'cancelled')
     const online = active.filter(a => a.type === 'online').length
     const presencial = active.filter(a => a.type === 'presencial').length
@@ -59,6 +61,8 @@ export default function ReportsView({ specialties, onApiError }) {
 
     const occupancy = availMin > 0 ? Math.min(Math.round((bookedMin / availMin) * 100), 100) : null
     const cancelRate = total > 0 ? Math.round((cancelled / total) * 100) : 0
+    const attended = completed + noShow
+    const noShowRate = attended > 0 ? Math.round((noShow / attended) * 100) : null
 
     const bySpecialty = specialties.map(s => ({
       id: s.id,
@@ -67,12 +71,44 @@ export default function ReportsView({ specialties, onApiError }) {
     }))
     const maxCount = Math.max(1, ...bySpecialty.map(b => b.count))
 
-    return { total, confirmed, pending, cancelled, online, presencial, bookedMin, availMin, occupancy, cancelRate, bySpecialty, maxCount }
+    return { total, confirmed, pending, cancelled, completed, noShow, online, presencial, bookedMin, availMin, occupancy, cancelRate, noShowRate, bySpecialty, maxCount }
   }, [appointments, rules, specialties, month, monthEnd])
 
   const shiftMonth = delta => {
     setAppointments(null)
     setMonth(m => new Date(m.getFullYear(), m.getMonth() + delta, 1))
+  }
+
+  const specialtyNames = useMemo(
+    () => Object.fromEntries(specialties.map(s => [s.id, s.name])),
+    [specialties],
+  )
+
+  const exportCsv = () => {
+    if (!appointments || !appointments.length) return
+    const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const header = ['Data', 'Início', 'Fim', 'Paciente', 'Telefone', 'E-mail', 'Especialidade', 'Modalidade', 'Status', 'Primeira consulta', 'Motivo']
+    const rows = appointments.map(a => [
+      a.date,
+      a.start_time.slice(0, 5),
+      a.end_time.slice(0, 5),
+      a.client_name,
+      a.client_phone || a.client_contact || '',
+      a.client_email || '',
+      specialtyNames[a.specialty_id] || '',
+      a.type === 'online' ? 'Online' : 'Presencial',
+      STATUS_LABELS[a.status] || a.status,
+      a.is_first_visit ? 'Sim' : 'Não',
+      a.reason || '',
+    ])
+    const csv = [header, ...rows].map(r => r.map(cell).join(';')).join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `consultas-${MONTHS[month.getMonth()]}-${month.getFullYear()}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   const fmtHours = min => {
@@ -97,6 +133,10 @@ export default function ReportsView({ specialties, onApiError }) {
             {MONTHS[month.getMonth()]} {month.getFullYear()}
           </span>
           <button onClick={() => shiftMonth(1)} style={navBtnStyle}><IconChevronRight /></button>
+          <button onClick={exportCsv} disabled={!appointments || !appointments.length}
+            style={{ marginLeft:6, padding:'7px 14px', borderRadius:999, border:`1px solid ${T.line}`, background:T.surfaceSoft, color: appointments && appointments.length ? T.accent : T.textMuted, fontFamily:T.sans, fontSize:11.5, fontWeight:700, cursor: appointments && appointments.length ? 'pointer' : 'default' }}>
+            Exportar CSV
+          </button>
         </div>
       </div>
 
@@ -136,6 +176,15 @@ export default function ReportsView({ specialties, onApiError }) {
               <div style={{ fontSize:28, fontWeight:700, fontFamily:T.serif, color: stats.cancelRate > 20 ? T.danger : T.textStrong, lineHeight:1 }}>{stats.cancelRate}%</div>
               <div style={{ fontSize:11, color:T.textMuted, marginTop:6 }}>Taxa de cancelamento</div>
               <div style={{ fontSize:10.5, color:T.textSoft, marginTop:4 }}>{stats.cancelled} cancelada{stats.cancelled !== 1 ? 's' : ''}</div>
+            </div>
+            <div style={cardStyle}>
+              <div style={{ fontSize:28, fontWeight:700, fontFamily:T.serif, color: stats.noShowRate === null ? T.textMuted : stats.noShowRate > 15 ? T.danger : T.textStrong, lineHeight:1 }}>
+                {stats.noShowRate === null ? '—' : `${stats.noShowRate}%`}
+              </div>
+              <div style={{ fontSize:11, color:T.textMuted, marginTop:6 }}>Taxa de falta (no-show)</div>
+              <div style={{ fontSize:10.5, color:T.textSoft, marginTop:4 }}>
+                {stats.completed} realizada{stats.completed !== 1 ? 's' : ''} · {stats.noShow} falta{stats.noShow !== 1 ? 's' : ''}
+              </div>
             </div>
           </div>
 

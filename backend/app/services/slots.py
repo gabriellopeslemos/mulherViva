@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Appointment, AvailabilityOverride, AvailabilityRule, Specialty
+from .settings import get_int_setting
 
 Interval = tuple[time, time]
 
@@ -65,6 +66,17 @@ def _override_interval(o: AvailabilityOverride) -> Interval:
     return (o.start_time or time(0, 0), o.end_time or DAY_END)
 
 
+def _pad(t: time, minutes: int, *, earlier: bool) -> time:
+    """Shift a time by `minutes`, clamped to the day so it never wraps."""
+    if minutes <= 0:
+        return t
+    base = datetime.combine(date.min, t)
+    shifted = base - timedelta(minutes=minutes) if earlier else base + timedelta(minutes=minutes)
+    if shifted.date() != date.min:
+        return time(0, 0) if earlier else DAY_END
+    return shifted.time()
+
+
 def compute_day_slots(
     day: date,
     weekday_rules: list[AvailabilityRule],
@@ -73,6 +85,7 @@ def compute_day_slots(
     slot_duration_min: int,
     now: datetime | None = None,
     min_lead_hours: int = 0,
+    buffer_min: int = 0,
 ) -> list[Interval]:
     """Pure interval math for one day. `overrides` and `appointments` must
     already be filtered to this date (and specialty where applicable)."""
@@ -85,8 +98,12 @@ def compute_day_slots(
 
     slots = _chop(windows, slot_duration_min)
 
+    # Existing appointments make a slot unavailable; an optional buffer extends
+    # the busy interval on both sides so consultations aren't back-to-back.
     busy = [
-        (a.start_time, a.end_time) for a in appointments if a.status != "cancelled"
+        (_pad(a.start_time, buffer_min, earlier=True), _pad(a.end_time, buffer_min, earlier=False))
+        for a in appointments
+        if a.status != "cancelled"
     ]
     slots = [
         (s, e)
@@ -108,9 +125,19 @@ def get_available_slots(
     specialty: Specialty,
     date_from: date,
     date_to: date,
+    buffer_min: int | None = None,
+    max_advance_days: int | None = None,
 ) -> dict[date, list[Interval]]:
     settings = get_settings()
+    if buffer_min is None:
+        buffer_min = get_int_setting(db, "buffer_minutes", settings.buffer_minutes)
     date_to = min(date_to, date_from + timedelta(days=MAX_RANGE_DAYS - 1))
+    if max_advance_days is None:
+        max_advance_days = get_int_setting(
+            db, "max_booking_advance_days", settings.max_booking_advance_days
+        )
+    if max_advance_days > 0:
+        date_to = min(date_to, date.today() + timedelta(days=max_advance_days))
 
     rules = list(
         db.scalars(
@@ -158,6 +185,7 @@ def get_available_slots(
             specialty.slot_duration_min,
             now=now,
             min_lead_hours=settings.min_booking_lead_hours,
+            buffer_min=buffer_min,
         )
         day += timedelta(days=1)
     return result

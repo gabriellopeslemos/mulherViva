@@ -1,3 +1,4 @@
+import secrets
 from datetime import date as date_type
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -5,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_admin
+from ..config import get_settings
 from ..database import get_db
 from ..models import (
     Appointment,
@@ -12,6 +14,7 @@ from ..models import (
     AvailabilityRule,
     BlogPost,
     Specialty,
+    WaitlistEntry,
 )
 from ..schemas import (
     AppointmentIn,
@@ -26,11 +29,30 @@ from ..schemas import (
     BlogPostOut,
     BlogPostUpdate,
     InstagramSyncResult,
+    SettingsOut,
+    SettingsUpdate,
     SpecialtyOut,
     SpecialtyUpdate,
+    WaitlistOut,
 )
+from ..services import notifications, waitlist
 from ..services.instagram import sync_instagram
+from ..services.settings import get_bool_setting, get_int_setting, set_setting
 from ..services.slots import has_overlap
+
+
+def _appt_snapshot(db: Session, appointment: Appointment) -> dict:
+    specialty = db.get(Specialty, appointment.specialty_id)
+    return {
+        "client_name": appointment.client_name,
+        "client_email": appointment.client_email,
+        "date": appointment.date,
+        "start_time": appointment.start_time,
+        "end_time": appointment.end_time,
+        "type": appointment.type,
+        "specialty_name": specialty.name if specialty else "",
+        "token": appointment.token,
+    }
 
 router = APIRouter(
     prefix="/api/admin",
@@ -87,14 +109,23 @@ def create_appointment(body: AppointmentIn, db: Session = Depends(get_db)):
         end_time=body.end_time,
         client_name=body.client_name,
         client_contact=body.client_contact,
+        client_email=body.client_email,
+        client_phone=body.client_phone,
         type=body.type,
         status=body.status,
         notes=body.notes,
+        reason=body.reason,
+        is_first_visit=body.is_first_visit,
+        token=secrets.token_urlsafe(24),
         source="admin",
     )
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
+    if appointment.client_email and appointment.status in ("confirmed", "cancelled"):
+        notifications.notify_status_change(
+            _appt_snapshot(db, appointment), appointment.status
+        )
     return appointment
 
 
@@ -103,6 +134,7 @@ def update_appointment(
     appointment_id: int, body: AppointmentUpdate, db: Session = Depends(get_db)
 ):
     appointment = _get_or_404(db, Appointment, appointment_id, "Consulta")
+    previous_status = appointment.status
     data = body.model_dump(exclude_unset=True, exclude={"force"})
     if "specialty_id" in data:
         _get_or_404(db, Specialty, data["specialty_id"], "Especialidade")
@@ -129,6 +161,16 @@ def update_appointment(
         )
     db.commit()
     db.refresh(appointment)
+    if (
+        appointment.client_email
+        and appointment.status != previous_status
+        and appointment.status in ("confirmed", "cancelled")
+    ):
+        notifications.notify_status_change(
+            _appt_snapshot(db, appointment), appointment.status
+        )
+    if appointment.status == "cancelled" and previous_status != "cancelled":
+        waitlist.notify_next(db, appointment.specialty_id, appointment.date)
     return appointment
 
 
@@ -282,6 +324,67 @@ def update_post(post_id: int, body: BlogPostUpdate, db: Session = Depends(get_db
 def delete_post(post_id: int, db: Session = Depends(get_db)):
     post = _get_or_404(db, BlogPost, post_id, "Post")
     db.delete(post)
+    db.commit()
+
+
+# ---- settings ----
+
+def _settings_out(db: Session) -> SettingsOut:
+    defaults = get_settings()
+    return SettingsOut(
+        auto_confirm_bookings=get_bool_setting(db, "auto_confirm_bookings", False),
+        buffer_minutes=get_int_setting(db, "buffer_minutes", defaults.buffer_minutes),
+        cancellation_window_hours=get_int_setting(
+            db, "cancellation_window_hours", defaults.cancellation_window_hours
+        ),
+        max_booking_advance_days=get_int_setting(
+            db, "max_booking_advance_days", defaults.max_booking_advance_days
+        ),
+    )
+
+
+@router.get("/settings", response_model=SettingsOut)
+def get_app_settings(db: Session = Depends(get_db)):
+    return _settings_out(db)
+
+
+@router.patch("/settings", response_model=SettingsOut)
+def update_app_settings(body: SettingsUpdate, db: Session = Depends(get_db)):
+    if body.auto_confirm_bookings is not None:
+        set_setting(
+            db,
+            "auto_confirm_bookings",
+            "true" if body.auto_confirm_bookings else "false",
+        )
+    if body.buffer_minutes is not None:
+        set_setting(db, "buffer_minutes", str(body.buffer_minutes))
+    if body.cancellation_window_hours is not None:
+        set_setting(db, "cancellation_window_hours", str(body.cancellation_window_hours))
+    if body.max_booking_advance_days is not None:
+        set_setting(db, "max_booking_advance_days", str(body.max_booking_advance_days))
+    return _settings_out(db)
+
+
+# ---- waitlist ----
+
+@router.get("/waitlist", response_model=list[WaitlistOut])
+def list_waitlist(
+    specialty_id: int | None = None,
+    active_only: bool = True,
+    db: Session = Depends(get_db),
+):
+    query = select(WaitlistEntry).order_by(WaitlistEntry.created_at)
+    if specialty_id:
+        query = query.where(WaitlistEntry.specialty_id == specialty_id)
+    if active_only:
+        query = query.where(WaitlistEntry.active == True)  # noqa: E712
+    return list(db.scalars(query))
+
+
+@router.delete("/waitlist/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_waitlist_entry(entry_id: int, db: Session = Depends(get_db)):
+    entry = _get_or_404(db, WaitlistEntry, entry_id, "Lista de espera")
+    db.delete(entry)
     db.commit()
 
 

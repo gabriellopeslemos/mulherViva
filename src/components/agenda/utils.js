@@ -3,7 +3,7 @@ export const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 export const START_HOUR = 8
 export const END_HOUR = 19
-export const STATUS_LABELS = { confirmed: 'Confirmado', pending: 'Aguardando', cancelled: 'Cancelado' }
+export const STATUS_LABELS = { confirmed: 'Confirmado', pending: 'Aguardando', cancelled: 'Cancelado', completed: 'Realizada', no_show: 'Faltou' }
 
 export function mondayOf(date) {
   const d = new Date(date)

@@ -104,13 +104,20 @@ class SlotsResponse(BaseModel):
 
 # ---- bookings / appointments ----
 
+EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+STATUS_RE = "^(pending|confirmed|cancelled|completed|no_show)$"
+
+
 class BookingIn(BaseModel):
     specialty_id: int
     date: date_type
     start: time
     type: str = Field(pattern="^(online|presencial)$")
     client_name: str = Field(min_length=2, max_length=150)
-    client_contact: str = Field(min_length=5, max_length=150)
+    client_email: str = Field(pattern=EMAIL_RE, max_length=150)
+    client_phone: str = Field(min_length=8, max_length=40)
+    reason: str | None = Field(default=None, max_length=500)
+    is_first_visit: bool = False
     notes: str | None = Field(default=None, max_length=1000)
 
 
@@ -124,10 +131,15 @@ class AppointmentOut(BaseModel):
     end_time: time
     client_name: str
     client_contact: str
+    client_email: str | None
+    client_phone: str | None
     type: str
     status: str
     notes: str | None
+    reason: str | None
+    is_first_visit: bool
     source: str
+    token: str | None
     created_at: datetime
 
 
@@ -138,9 +150,13 @@ class AppointmentIn(BaseModel):
     end_time: time
     client_name: str = Field(min_length=2, max_length=150)
     client_contact: str = Field(default="", max_length=150)
+    client_email: str | None = Field(default=None, max_length=150)
+    client_phone: str | None = Field(default=None, max_length=40)
     type: str = Field(pattern="^(online|presencial)$")
-    status: str = Field(default="confirmed", pattern="^(pending|confirmed|cancelled)$")
+    status: str = Field(default="confirmed", pattern=STATUS_RE)
     notes: str | None = Field(default=None, max_length=1000)
+    reason: str | None = Field(default=None, max_length=500)
+    is_first_visit: bool = False
     force: bool = False
 
 
@@ -151,10 +167,75 @@ class AppointmentUpdate(BaseModel):
     end_time: time | None = None
     client_name: str | None = Field(default=None, min_length=2, max_length=150)
     client_contact: str | None = Field(default=None, max_length=150)
+    client_email: str | None = Field(default=None, max_length=150)
+    client_phone: str | None = Field(default=None, max_length=40)
     type: str | None = Field(default=None, pattern="^(online|presencial)$")
-    status: str | None = Field(default=None, pattern="^(pending|confirmed|cancelled)$")
+    status: str | None = Field(default=None, pattern=STATUS_RE)
     notes: str | None = Field(default=None, max_length=1000)
+    reason: str | None = Field(default=None, max_length=500)
+    is_first_visit: bool | None = None
     force: bool = False
+
+
+# ---- patient self-service (manage by token) ----
+
+class ManageAppointmentOut(BaseModel):
+    specialty_name: str
+    date: date_type
+    start_time: time
+    end_time: time
+    type: str
+    status: str
+    client_name: str
+    can_modify: bool
+    cancellation_window_hours: int
+
+
+class RescheduleIn(BaseModel):
+    date: date_type
+    start: time
+
+
+# ---- waitlist ----
+
+class WaitlistIn(BaseModel):
+    specialty_id: int
+    client_name: str = Field(min_length=2, max_length=150)
+    client_email: str = Field(pattern=EMAIL_RE, max_length=150)
+    client_phone: str | None = Field(default=None, max_length=40)
+    preferred_date: date_type | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class WaitlistOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    specialty_id: int
+    client_name: str
+    client_email: str
+    client_phone: str | None
+    preferred_date: date_type | None
+    notes: str | None
+    active: bool
+    notified_at: datetime | None
+    created_at: datetime
+
+
+# ---- settings ----
+
+class SettingsOut(BaseModel):
+    auto_confirm_bookings: bool
+    buffer_minutes: int
+    cancellation_window_hours: int
+    max_booking_advance_days: int
+
+
+class SettingsUpdate(BaseModel):
+    auto_confirm_bookings: bool | None = None
+    buffer_minutes: int | None = Field(default=None, ge=0, le=240)
+    cancellation_window_hours: int | None = Field(default=None, ge=0, le=336)
+    max_booking_advance_days: int | None = Field(default=None, ge=1, le=365)
 
 
 # ---- blog ----
