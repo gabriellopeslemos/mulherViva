@@ -122,7 +122,7 @@ def create_appointment(body: AppointmentIn, db: Session = Depends(get_db)):
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
-    if appointment.client_email and appointment.status in ("confirmed", "cancelled"):
+    if appointment.client_email and appointment.status == "confirmed":
         notifications.notify_status_change(
             _appt_snapshot(db, appointment), appointment.status
         )

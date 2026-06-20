@@ -27,6 +27,14 @@ function icsStamp(iso, t) {
   return `${iso.replace(/-/g, '')}T${t.slice(0, 5).replace(':', '')}00`
 }
 
+function icsEscape(value) {
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n')
+}
+
 function downloadIcs(booking, specialtyName) {
   const lines = [
     'BEGIN:VCALENDAR',
@@ -36,8 +44,8 @@ function downloadIcs(booking, specialtyName) {
     `UID:${booking.token || booking.id}@mulherviva`,
     `DTSTART:${icsStamp(booking.date, booking.start_time)}`,
     `DTEND:${icsStamp(booking.date, booking.end_time)}`,
-    `SUMMARY:Consulta — ${specialtyName}`,
-    `DESCRIPTION:${booking.type === 'online' ? 'Online (videoconferência)' : 'Presencial'}`,
+    `SUMMARY:${icsEscape(`Consulta — ${specialtyName}`)}`,
+    `DESCRIPTION:${icsEscape(booking.type === 'online' ? 'Online (videoconferência)' : 'Presencial')}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ]

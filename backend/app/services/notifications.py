@@ -40,6 +40,16 @@ def manage_url(token: str | None) -> str | None:
     return f"{base}/?manage={token}"
 
 
+def _ics_escape(value: str) -> str:
+    """Escape a TEXT value per RFC 5545 (backslash, semicolon, comma, newline)."""
+    return (
+        value.replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\n", "\\n")
+    )
+
+
 def build_ics(appt: dict) -> str:
     """Minimal single-event iCalendar (floating local time)."""
     settings = get_settings()
@@ -48,6 +58,9 @@ def build_ics(appt: dict) -> str:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     uid = f"{appt.get('token') or appt['date'].isoformat()}@mulherviva"
     location = "Online (videoconferência)" if appt["type"] == "online" else settings.clinic_address
+    summary = _ics_escape(f"Consulta — {appt['specialty_name']}")
+    description = _ics_escape(settings.clinic_name)
+    location = _ics_escape(location)
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -59,8 +72,8 @@ def build_ics(appt: dict) -> str:
         f"DTSTAMP:{stamp}",
         f"DTSTART:{start.strftime('%Y%m%dT%H%M%S')}",
         f"DTEND:{end.strftime('%Y%m%dT%H%M%S')}",
-        f"SUMMARY:Consulta — {appt['specialty_name']}",
-        f"DESCRIPTION:{settings.clinic_name}",
+        f"SUMMARY:{summary}",
+        f"DESCRIPTION:{description}",
         f"LOCATION:{location}",
         "END:VEVENT",
         "END:VCALENDAR",
@@ -196,7 +209,13 @@ def notify_status_change(appt: dict, status: str) -> None:
         notify_booking_cancelled(appt)
 
 
-def notify_reminder(appt: dict) -> None:
+def notify_reminder(appt: dict) -> bool:
+    """Send the 24h reminder synchronously and report whether it was sent.
+
+    Unlike the other notifiers, this returns the result so the reminder loop
+    only marks an appointment as reminded when the e-mail actually went out
+    (the loop already runs in a worker thread, so blocking on SMTP is fine).
+    """
     settings = get_settings()
     body = "\n".join([
         f"Olá, {appt['client_name']}!",
@@ -208,7 +227,7 @@ def notify_reminder(appt: dict) -> None:
         "",
         settings.clinic_name,
     ])
-    _send_async(appt.get("client_email"), "Lembrete: sua consulta é amanhã", body)
+    return _send(appt.get("client_email"), "Lembrete: sua consulta é amanhã", body)
 
 
 def notify_waitlist_slot(entry: dict) -> None:

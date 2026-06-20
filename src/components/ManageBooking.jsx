@@ -68,7 +68,8 @@ export default function ManageBooking({ token, onClose }) {
     setBusy(true)
     setActionError(null)
     try {
-      await api.post(`/api/bookings/manage/${token}/cancel`)
+      const updated = await api.post(`/api/bookings/manage/${token}/cancel`)
+      setData(updated)
       setResultMsg('Sua consulta foi cancelada. Enviamos um e-mail de confirmação.')
       setMode('done')
     } catch (err) {

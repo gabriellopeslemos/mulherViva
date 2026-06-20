@@ -2,7 +2,7 @@ import secrets
 from datetime import date as date_type
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -230,7 +230,9 @@ def managed_booking_slots(
     specialty = db.get(Specialty, appointment.specialty_id)
     if specialty is None or not specialty.active:
         raise HTTPException(status_code=404, detail="Especialidade nao encontrada")
-    slots_by_day = get_available_slots(db, specialty, date_from, date_to)
+    slots_by_day = get_available_slots(
+        db, specialty, date_from, date_to, exclude_appointment_id=appointment.id
+    )
     return SlotsResponse(
         days=[
             SlotsDayOut(date=day, slots=[SlotOut(start=s, end=e) for s, e in slots])
@@ -255,7 +257,9 @@ def reschedule_managed_booking(
     if specialty is None or not specialty.active:
         raise HTTPException(status_code=404, detail="Especialidade nao encontrada")
 
-    day_slots = get_available_slots(db, specialty, body.date, body.date).get(body.date, [])
+    day_slots = get_available_slots(
+        db, specialty, body.date, body.date, exclude_appointment_id=appointment.id
+    ).get(body.date, [])
     slot = next(((s, e) for s, e in day_slots if s == body.start), None)
     if slot is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Horario indisponivel")
@@ -290,7 +294,7 @@ def reschedule_managed_booking(
 
 
 @router.post("/waitlist", response_model=WaitlistOut, status_code=status.HTTP_201_CREATED)
-def join_waitlist(body: WaitlistIn, db: Session = Depends(get_db)):
+def join_waitlist(body: WaitlistIn, response: Response, db: Session = Depends(get_db)):
     specialty = db.get(Specialty, body.specialty_id)
     if specialty is None or not specialty.active:
         raise HTTPException(status_code=404, detail="Especialidade nao encontrada")
@@ -302,6 +306,8 @@ def join_waitlist(body: WaitlistIn, db: Session = Depends(get_db)):
         )
     )
     if existing is not None:
+        # Already on the list — report 200 instead of a misleading 201 Created.
+        response.status_code = status.HTTP_200_OK
         return existing
     entry = WaitlistEntry(**body.model_dump())
     db.add(entry)

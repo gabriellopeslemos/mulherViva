@@ -127,6 +127,7 @@ def get_available_slots(
     date_to: date,
     buffer_min: int | None = None,
     max_advance_days: int | None = None,
+    exclude_appointment_id: int | None = None,
 ) -> dict[date, list[Interval]]:
     settings = get_settings()
     if buffer_min is None:
@@ -155,15 +156,14 @@ def get_available_slots(
             )
         )
     )
-    appointments = list(
-        db.scalars(
-            select(Appointment).where(
-                Appointment.date >= date_from,
-                Appointment.date <= date_to,
-                Appointment.status != "cancelled",
-            )
-        )
+    appt_query = select(Appointment).where(
+        Appointment.date >= date_from,
+        Appointment.date <= date_to,
+        Appointment.status != "cancelled",
     )
+    if exclude_appointment_id is not None:
+        appt_query = appt_query.where(Appointment.id != exclude_appointment_id)
+    appointments = list(db.scalars(appt_query))
 
     now = datetime.now()
     result: dict[date, list[Interval]] = {}

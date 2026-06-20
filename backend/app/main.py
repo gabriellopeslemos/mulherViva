@@ -29,7 +29,7 @@ _APPOINTMENT_COLUMNS = {
     "client_email": "VARCHAR(150)",
     "client_phone": "VARCHAR(150)",
     "reason": "VARCHAR(500)",
-    "is_first_visit": "BOOLEAN DEFAULT 0",
+    "is_first_visit": "BOOLEAN DEFAULT FALSE",
     "token": "VARCHAR(64)",
     "reminder_sent_at": "DATETIME",
 }
@@ -91,7 +91,7 @@ def _send_due_reminders() -> int:
         )
         for appt in appointments:
             specialty = db.get(Specialty, appt.specialty_id)
-            notifications.notify_reminder(
+            delivered = notifications.notify_reminder(
                 {
                     "client_name": appt.client_name,
                     "client_email": appt.client_email,
@@ -103,8 +103,12 @@ def _send_due_reminders() -> int:
                     "token": appt.token,
                 }
             )
-            appt.reminder_sent_at = utcnow()
-            sent += 1
+            # Only flag as reminded once the e-mail actually went out, so a
+            # transient SMTP failure is retried on the next loop instead of
+            # silently dropping the reminder.
+            if delivered:
+                appt.reminder_sent_at = utcnow()
+                sent += 1
         if sent:
             db.commit()
     return sent
