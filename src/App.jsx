@@ -13,6 +13,7 @@ import FloatingNavbar from './components/FloatingNavbar'
 import AgendaPanel from './components/AgendaPanel'
 import AdminLogin from './components/AdminLogin'
 import BookingSection from './components/BookingSection'
+import ManageBooking from './components/ManageBooking'
 import { api, clearToken, getToken } from './lib/api'
 import heroImage from '../images/hero-nobg.png'
 import aboutImage from '../images/about.png'
@@ -201,6 +202,9 @@ function SpecialtyLayer({ item, index, steps, storyProgress, prefersReducedMotio
 
 function App() {
   const [showAgenda, setShowAgenda] = useState(false)
+  const [manageToken, setManageToken] = useState(() =>
+    new URLSearchParams(window.location.search).get('manage'),
+  )
   const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
   const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
@@ -466,6 +470,16 @@ function App() {
         aria-hidden="true"
       />
       <FloatingNavbar onOpenAgenda={() => setShowAgenda(true)} />
+
+      {manageToken && (
+        <ManageBooking
+          token={manageToken}
+          onClose={() => {
+            setManageToken(null)
+            window.history.replaceState(null, '', window.location.pathname)
+          }}
+        />
+      )}
 
       {showAgenda && !isAdminAuthed && (
         <AdminLogin

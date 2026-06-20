@@ -172,3 +172,30 @@ def test_30_min_slots():
     slots = compute_day_slots(DAY, [rule(time(8), time(10))], [], [], 30)
     assert len(slots) == 4
     assert slots[0] == (time(8), time(8, 30))
+
+
+def test_buffer_blocks_adjacent_slots():
+    # a 09:00-10:00 appointment with a 30-min buffer also blocks the
+    # 08:00-09:00 (ends within buffer) and 10:00-11:00 (starts within buffer) slots
+    slots = compute_day_slots(
+        DAY,
+        [rule(time(8), time(12))],
+        [],
+        [appt(time(9), time(10))],
+        60,
+        buffer_min=30,
+    )
+    assert slots == [(time(11), time(12))]
+
+
+def test_zero_buffer_keeps_adjacent_slots():
+    slots = compute_day_slots(
+        DAY,
+        [rule(time(8), time(12))],
+        [],
+        [appt(time(9), time(10))],
+        60,
+        buffer_min=0,
+    )
+    assert (time(8), time(9)) in slots
+    assert (time(10), time(11)) in slots

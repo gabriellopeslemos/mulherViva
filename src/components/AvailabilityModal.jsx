@@ -127,6 +127,10 @@ export default function AvailabilityModal({ onClose, onAuthExpired }) {
   const [allSpecialties, setAllSpecialties] = useState([])
   const [rules, setRules] = useState([])
   const [overrides, setOverrides] = useState([])
+  const [autoConfirm, setAutoConfirm] = useState(false)
+  const [policy, setPolicy] = useState(null)
+  const [policySaved, setPolicySaved] = useState(false)
+  const [waitlistEntries, setWaitlistEntries] = useState([])
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [editingRuleId, setEditingRuleId] = useState(null)
@@ -172,9 +176,71 @@ export default function AvailabilityModal({ onClose, onAuthExpired }) {
       .get('/api/admin/availability/overrides', { auth: true })
       .then(setOverrides)
       .catch(handleApiError)
+    api
+      .get('/api/admin/settings', { auth: true })
+      .then(s => {
+        setAutoConfirm(s.auto_confirm_bookings)
+        setPolicy({
+          buffer_minutes: s.buffer_minutes,
+          cancellation_window_hours: s.cancellation_window_hours,
+          max_booking_advance_days: s.max_booking_advance_days,
+        })
+      })
+      .catch(handleApiError)
+    api
+      .get('/api/admin/waitlist', { auth: true })
+      .then(setWaitlistEntries)
+      .catch(handleApiError)
   }, [handleApiError])
 
   useEffect(() => { load() }, [load])
+
+  const handleToggleAutoConfirm = async () => {
+    const next = !autoConfirm
+    setAutoConfirm(next)
+    try {
+      await api.patch('/api/admin/settings', { auto_confirm_bookings: next }, { auth: true })
+    } catch (err) {
+      setAutoConfirm(!next)
+      handleApiError(err)
+    }
+  }
+
+  const setPolicyField = (k, v) => {
+    setPolicySaved(false)
+    setPolicy(p => ({ ...p, [k]: v === '' ? '' : Number(v) }))
+  }
+
+  const handleSavePolicy = async () => {
+    setError(null)
+    setSaving(true)
+    try {
+      const updated = await api.patch('/api/admin/settings', {
+        buffer_minutes: Number(policy.buffer_minutes) || 0,
+        cancellation_window_hours: Number(policy.cancellation_window_hours) || 0,
+        max_booking_advance_days: Number(policy.max_booking_advance_days) || 1,
+      }, { auth: true })
+      setPolicy({
+        buffer_minutes: updated.buffer_minutes,
+        cancellation_window_hours: updated.cancellation_window_hours,
+        max_booking_advance_days: updated.max_booking_advance_days,
+      })
+      setPolicySaved(true)
+    } catch (err) {
+      handleApiError(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRemoveWaitlist = async (id) => {
+    try {
+      await api.delete(`/api/admin/waitlist/${id}`, { auth: true })
+      setWaitlistEntries(list => list.filter(e => e.id !== id))
+    } catch (err) {
+      handleApiError(err)
+    }
+  }
 
   const activeSpecialties = allSpecialties.filter(s => s.active)
 
@@ -320,8 +386,86 @@ export default function AvailabilityModal({ onClose, onAuthExpired }) {
 
         <div style={{ overflowY:'auto', padding:'18px 26px 24px', display:'flex', flexDirection:'column', gap:22 }}>
 
-          {/* Specialty settings */}
+          {/* Booking settings */}
           <div>
+            <p style={sectionTitleStyle}>Agendamento online</p>
+            <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', borderRadius:12, background:T.surfaceSoft, border:`1px solid ${T.line}` }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12.5, fontWeight:700, color:T.textStrong, fontFamily:T.serif }}>Confirmar consultas automaticamente</div>
+                <div style={{ fontSize:11.5, color:T.textMuted, marginTop:2, lineHeight:1.5 }}>
+                  {autoConfirm
+                    ? 'As solicitações entram já confirmadas e o paciente recebe o e-mail de confirmação na hora.'
+                    : 'As solicitações ficam aguardando sua confirmação manual (recomendado para triagem).'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleAutoConfirm}
+                title={autoConfirm ? 'Desativar auto-confirmação' : 'Ativar auto-confirmação'}
+                style={{ width:40, height:22, borderRadius:999, border:'none', cursor:'pointer', position:'relative', background: autoConfirm ? T.accent : T.line, transition:'background 180ms', flexShrink:0 }}
+              >
+                <span style={{ position:'absolute', top:2, left: autoConfirm ? 20 : 2, width:18, height:18, borderRadius:'50%', background:'white', transition:'left 180ms', boxShadow:'0 1px 3px rgba(0,0,0,0.2)' }} />
+              </button>
+            </div>
+
+            {policy && (
+              <div style={{ marginTop:12 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:10 }}>
+                  <div>
+                    <label style={labelStyle}>Intervalo entre consultas (min)</label>
+                    <input style={fieldStyle} type="number" min={0} max={240} value={policy.buffer_minutes}
+                      onChange={e => setPolicyField('buffer_minutes', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Cancelar/reagendar até (h antes)</label>
+                    <input style={fieldStyle} type="number" min={0} max={336} value={policy.cancellation_window_hours}
+                      onChange={e => setPolicyField('cancellation_window_hours', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Antecedência máxima (dias)</label>
+                    <input style={fieldStyle} type="number" min={1} max={365} value={policy.max_booking_advance_days}
+                      onChange={e => setPolicyField('max_booking_advance_days', e.target.value)} />
+                  </div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:10 }}>
+                  <button onClick={handleSavePolicy} disabled={saving}
+                    style={{ padding:'8px 18px', borderRadius:999, border:'none', background:T.accent, color:'white', fontFamily:T.sans, fontSize:12, fontWeight:700, cursor: saving ? 'wait' : 'pointer' }}>
+                    {saving ? 'Salvando...' : 'Salvar políticas'}
+                  </button>
+                  {policySaved && <span style={{ fontSize:11.5, color:T.ok, fontWeight:700 }}>Salvo ✓</span>}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Waitlist */}
+          {waitlistEntries.length > 0 && (
+            <div style={{ borderTop:`1px solid ${T.line}`, paddingTop:18 }}>
+              <p style={sectionTitleStyle}>Lista de espera ({waitlistEntries.length})</p>
+              <p style={{ fontSize:12, color:T.textMuted, margin:'0 0 10px', lineHeight:1.5 }}>
+                Pessoas avisadas automaticamente por e-mail quando um horário abre. O aviso vai para a mais antiga da fila.
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {waitlistEntries.map(e => (
+                  <div key={e.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, padding:'8px 12px', borderRadius:11, background:T.surfaceSoft, border:`1px solid ${T.line}` }}>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:12.5, fontWeight:700, color:T.textStrong, fontFamily:T.serif, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{e.client_name}</div>
+                      <div style={{ fontSize:11, color:T.textMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {e.client_email}{e.preferred_date ? ` · prefere ${new Date(`${e.preferred_date}T00:00:00`).toLocaleDateString('pt-BR')}` : ''} · {specialtyName(e.specialty_id)}
+                      </div>
+                    </div>
+                    <button onClick={() => handleRemoveWaitlist(e.id)}
+                      style={{ background:'none', border:'none', cursor:'pointer', color:T.danger, fontSize:11.5, fontWeight:700, fontFamily:T.sans, padding:'2px 6px', flexShrink:0 }}>
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Specialty settings */}
+          <div style={{ borderTop:`1px solid ${T.line}`, paddingTop:18 }}>
             <p style={sectionTitleStyle}>Especialidades</p>
             <p style={{ fontSize:12, color:T.textMuted, margin:'0 0 10px', lineHeight:1.5 }}>
               Nome, duração padrão da consulta e visibilidade no site público.

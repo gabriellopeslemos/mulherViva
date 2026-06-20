@@ -85,11 +85,15 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
       end: a.end_time.slice(0, 5),
       client: a.client_name,
       contact: a.client_contact,
+      email: a.client_email,
+      phone: a.client_phone,
       specialtyId: a.specialty_id,
       specialty: specialtyNames[a.specialty_id] || '',
       type: a.type,
       status: a.status,
       notes: a.notes,
+      reason: a.reason,
+      isFirstVisit: a.is_first_visit,
       source: a.source,
     }
   }, [specialtyNames])

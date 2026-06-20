@@ -1459,6 +1459,132 @@ p {
   max-width: 560px;
 }
 
+.booking-confirmation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.manage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31, 17, 25, 0.45);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+
+.manage-card {
+  position: relative;
+  width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: clamp(24px, 5vw, 40px);
+  box-shadow: var(--shadow-md, 0 28px 72px rgba(90, 52, 78, 0.18));
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.manage-card h2 {
+  font-family: var(--serif);
+  font-size: clamp(20px, 3vw, 28px);
+  margin: 0;
+  color: var(--accent-strong);
+}
+
+.manage-card p {
+  color: var(--text-soft);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.manage-detail strong {
+  color: var(--accent-strong);
+}
+
+.manage-note {
+  background: rgba(122, 62, 106, 0.06);
+  border-left: 3px solid var(--accent);
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.manage-reschedule {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+}
+
+.manage-danger {
+  color: var(--danger, #b05060);
+  border-color: rgba(176, 80, 96, 0.4);
+}
+
+.manage-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: none;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.booking-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+.booking-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.booking-waitlist {
+  display: grid;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--surface);
+}
+
+.booking-waitlist--done {
+  text-align: center;
+  border-style: solid;
+}
+
+.booking-waitlist--done strong {
+  font-family: var(--serif);
+  font-size: 18px;
+  color: var(--accent-strong);
+}
+
 @media (max-width: 720px) {
   .booking-form__grid {
     grid-template-columns: 1fr;

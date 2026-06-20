@@ -32,6 +32,8 @@ export function DetailPanel({ appt, onClose, onStatusChange, onEdit }) {
     confirmed: { bg: 'rgba(122,62,106,0.1)', color: T.accent,    dot: T.accent },
     pending:   { bg: 'rgba(220,199,210,0.5)', color: T.textMuted, dot: '#b09ea9' },
     cancelled: { bg: 'rgba(210,180,195,0.3)', color: T.textMuted, dot: '#c9b3be' },
+    completed: { bg: 'rgba(109,191,143,0.18)', color: '#3f7a5a',  dot: T.ok },
+    no_show:   { bg: 'rgba(176,80,96,0.12)',  color: T.danger,    dot: T.danger },
   }
 
   return (
@@ -49,9 +51,13 @@ export function DetailPanel({ appt, onClose, onStatusChange, onEdit }) {
               {initials}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontWeight:700, fontSize:14, color:T.textStrong, fontFamily:T.serif, lineHeight:1.3, marginBottom:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{appt.client}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                <div style={{ fontWeight:700, fontSize:14, color:T.textStrong, fontFamily:T.serif, lineHeight:1.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{appt.client}</div>
+                {appt.isFirstVisit && <span style={{ fontSize:8.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', color:T.ok, background:'rgba(109,191,143,0.16)', padding:'2px 6px', borderRadius:999, flexShrink:0 }}>1ª vez</span>}
+              </div>
               <div style={{ fontSize:11, color:T.textMuted, lineHeight:1.3 }}>{appt.specialty}</div>
-              {appt.contact && <div style={{ fontSize:10.5, color:T.textMuted, lineHeight:1.3, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{appt.contact}</div>}
+              {(appt.phone || appt.contact) && <div style={{ fontSize:10.5, color:T.textMuted, lineHeight:1.3, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{appt.phone || appt.contact}</div>}
+              {appt.email && <div style={{ fontSize:10.5, color:T.textMuted, lineHeight:1.3, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{appt.email}</div>}
             </div>
           </div>
         </div>
@@ -59,7 +65,7 @@ export function DetailPanel({ appt, onClose, onStatusChange, onEdit }) {
         <div>
           <div style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', color:T.textMuted, marginBottom:8 }}>Status</div>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-            {['confirmed','pending','cancelled'].map(s => {
+            {['confirmed','pending','completed','no_show','cancelled'].map(s => {
               const sc = statusColors[s]
               const isActive = localStatus === s
               return (
@@ -76,6 +82,7 @@ export function DetailPanel({ appt, onClose, onStatusChange, onEdit }) {
           <InfoRow icon={<IconCalendar />} label="Data"      value={`${DAYS[dayIdx] || ''}., ${dayDate.getDate()} de ${MONTHS[dayDate.getMonth()]} de ${dayDate.getFullYear()}`} />
           <InfoRow icon={<IconClock />}    label="Horário"   value={`${appt.start} – ${appt.end}`} />
           <InfoRow icon={appt.type === 'online' ? <IconVideo /> : <IconPin />} label="Modalidade" value={appt.type === 'online' ? 'Videoconferência' : `Presencial — ${appt.location || 'Centro Médico Lúcio Costa'}`} />
+          {appt.reason && <InfoRow icon={<IconNote />} label="Motivo" value={appt.reason} />}
         </div>
 
         {appt.notes && (
@@ -179,11 +186,14 @@ export function NewApptModal({ onClose, onCreate, specialties, defaultDate, defa
   const [form, setForm] = useState({
     client: '',
     contact: '',
+    email: '',
     specialtyId: specialties[0]?.id ?? '',
     type: 'online',
     date: defaultDate,
     start: defaultStart,
     end: defaultEnd,
+    reason: '',
+    isFirstVisit: false,
     notes: '',
   })
   const [error, setError] = useState(null)
@@ -205,8 +215,12 @@ export function NewApptModal({ onClose, onCreate, specialties, defaultDate, defa
         end_time: form.end,
         client_name: form.client.trim(),
         client_contact: form.contact.trim(),
+        client_phone: form.contact.trim() || null,
+        client_email: form.email.trim() || null,
         type: form.type,
         status: 'confirmed',
+        reason: form.reason.trim() || null,
+        is_first_visit: form.isFirstVisit,
         notes: form.notes.trim() || null,
       })
       onClose()
@@ -233,9 +247,15 @@ export function NewApptModal({ onClose, onCreate, specialties, defaultDate, defa
             <label style={labelStyle}>Paciente</label>
             <input style={fieldStyle} placeholder="Nome completo" value={form.client} onChange={e => set('client', e.target.value)} />
           </div>
-          <div>
-            <label style={labelStyle}>Contato (telefone ou e-mail)</label>
-            <input style={fieldStyle} placeholder="(61) 99999-0000" value={form.contact} onChange={e => set('contact', e.target.value)} />
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <div>
+              <label style={labelStyle}>Telefone</label>
+              <input style={fieldStyle} placeholder="(61) 99999-0000" value={form.contact} onChange={e => set('contact', e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>E-mail (p/ avisos)</label>
+              <input style={fieldStyle} type="email" placeholder="paciente@email.com" value={form.email} onChange={e => set('email', e.target.value)} />
+            </div>
           </div>
           <div>
             <label style={labelStyle}>Especialidade</label>
@@ -269,6 +289,14 @@ export function NewApptModal({ onClose, onCreate, specialties, defaultDate, defa
             </div>
           </div>
           <div>
+            <label style={labelStyle}>Motivo da consulta</label>
+            <input style={fieldStyle} placeholder="Rotina, acompanhamento..." value={form.reason} onChange={e => set('reason', e.target.value)} />
+          </div>
+          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12.5, color:T.textSoft, cursor:'pointer' }}>
+            <input type="checkbox" checked={form.isFirstVisit} onChange={e => set('isFirstVisit', e.target.checked)} style={{ width:16, height:16, accentColor:T.accent, cursor:'pointer' }} />
+            Primeira consulta
+          </label>
+          <div>
             <label style={labelStyle}>Observações</label>
             <textarea style={{ ...fieldStyle, borderRadius:14, resize:'none' }} rows={2} placeholder="Notas sobre a consulta..." value={form.notes} onChange={e => set('notes', e.target.value)} />
           </div>
@@ -289,13 +317,16 @@ export function NewApptModal({ onClose, onCreate, specialties, defaultDate, defa
 export function EditApptModal({ appt, specialties, onClose, onSaved, onDeleted }) {
   const [form, setForm] = useState({
     client: appt.client,
-    contact: appt.contact || '',
+    contact: appt.phone || appt.contact || '',
+    email: appt.email || '',
     specialtyId: appt.specialtyId,
     type: appt.type,
     status: appt.status,
     date: toIsoDate(appt.date),
     start: appt.start,
     end: appt.end,
+    reason: appt.reason || '',
+    isFirstVisit: appt.isFirstVisit || false,
     notes: appt.notes || '',
   })
   const [error, setError] = useState(null)
@@ -322,8 +353,12 @@ export function EditApptModal({ appt, specialties, onClose, onSaved, onDeleted }
           end_time: form.end,
           client_name: form.client.trim(),
           client_contact: form.contact.trim(),
+          client_phone: form.contact.trim() || null,
+          client_email: form.email.trim() || null,
           type: form.type,
           status: form.status,
+          reason: form.reason.trim() || null,
+          is_first_visit: form.isFirstVisit,
           notes: form.notes.trim() || null,
           force,
         },
@@ -368,9 +403,15 @@ export function EditApptModal({ appt, specialties, onClose, onSaved, onDeleted }
             <label style={labelStyle}>Paciente</label>
             <input style={fieldStyle} value={form.client} onChange={e => set('client', e.target.value)} />
           </div>
-          <div>
-            <label style={labelStyle}>Contato</label>
-            <input style={fieldStyle} placeholder="Telefone ou e-mail" value={form.contact} onChange={e => set('contact', e.target.value)} />
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <div>
+              <label style={labelStyle}>Telefone</label>
+              <input style={fieldStyle} placeholder="(61) 99999-0000" value={form.contact} onChange={e => set('contact', e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>E-mail (p/ avisos)</label>
+              <input style={fieldStyle} type="email" placeholder="paciente@email.com" value={form.email} onChange={e => set('email', e.target.value)} />
+            </div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
             <div>
@@ -399,6 +440,8 @@ export function EditApptModal({ appt, specialties, onClose, onSaved, onDeleted }
               <select style={{ ...fieldStyle, appearance:'none', cursor:'pointer' }} value={form.status} onChange={e => set('status', e.target.value)}>
                 <option value="confirmed">Confirmado</option>
                 <option value="pending">Aguardando</option>
+                <option value="completed">Realizada</option>
+                <option value="no_show">Faltou</option>
                 <option value="cancelled">Cancelado</option>
               </select>
             </div>
@@ -413,6 +456,14 @@ export function EditApptModal({ appt, specialties, onClose, onSaved, onDeleted }
               <input style={fieldStyle} type="time" value={form.end} onChange={e => set('end', e.target.value)} />
             </div>
           </div>
+          <div>
+            <label style={labelStyle}>Motivo da consulta</label>
+            <input style={fieldStyle} placeholder="Rotina, acompanhamento..." value={form.reason} onChange={e => set('reason', e.target.value)} />
+          </div>
+          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12.5, color:T.textSoft, cursor:'pointer' }}>
+            <input type="checkbox" checked={form.isFirstVisit} onChange={e => set('isFirstVisit', e.target.checked)} style={{ width:16, height:16, accentColor:T.accent, cursor:'pointer' }} />
+            Primeira consulta
+          </label>
           <div>
             <label style={labelStyle}>Observações</label>
             <textarea style={{ ...fieldStyle, borderRadius:14, resize:'none' }} rows={2} value={form.notes} onChange={e => set('notes', e.target.value)} />
