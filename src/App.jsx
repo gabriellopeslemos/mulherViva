@@ -15,15 +15,17 @@ import AdminLogin from './components/AdminLogin'
 import BookingSection from './components/BookingSection'
 import ManageBooking from './components/ManageBooking'
 import { api, clearToken, getToken } from './lib/api'
-import heroImage from '../images/hero-nobg.png'
-import aboutImage from '../images/about.png'
-import gynImage from '../images/exam.jpg'
-import obstImage from '../images/hug.jpg'
-import homeoImage from '../images/m.jpg'
-import testimonialRandomOne from '../images/mulherRandom.jpg'
-import testimonialRandomTwo from '../images/mulherRandom2.jpg'
-import testimonialRandomThree from '../images/homemrandom.jpg'
-import iphoneMapImage from '../images/iphone17map.png'
+import {
+  heroImage,
+  aboutImage,
+  gynImage,
+  obstImage,
+  homeoImage,
+  testimonialRandomOne,
+  testimonialRandomTwo,
+  testimonialRandomThree,
+  iphoneMapImage,
+} from './lib/placeholderImages'
 
 const IconGraduation = () => (
   <svg
