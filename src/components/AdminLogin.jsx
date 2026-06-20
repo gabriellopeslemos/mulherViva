@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { api, setToken } from '../lib/api'
 
 const T = {
@@ -14,35 +15,27 @@ const T = {
   sans: '"Mulish","Gill Sans",system-ui,sans-serif',
 }
 
-const fieldStyle = {
-  width: '100%',
-  padding: '11px 16px',
-  borderRadius: 999,
-  border: `1.5px solid ${T.line}`,
-  background: T.surfaceSoft,
-  fontFamily: T.sans,
-  fontSize: 13,
-  color: T.text,
-  outline: 'none',
-  boxSizing: 'border-box',
-}
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 export default function AdminLogin({ onSuccess, onClose }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const handleCredential = async (response) => {
     setError(null)
     setLoading(true)
     try {
-      const data = await api.post('/api/auth/login', { username, password })
+      const data = await api.post('/api/auth/google', { credential: response.credential })
       setToken(data.access_token)
       onSuccess()
     } catch (err) {
-      setError(err.status === 401 ? 'Usuário ou senha incorretos' : 'Não foi possível conectar ao servidor')
+      if (err.status === 403) {
+        setError('Este e-mail não tem acesso ao painel')
+      } else if (err.status === 401) {
+        setError('Falha na verificação do Google')
+      } else {
+        setError('Não foi possível conectar ao servidor')
+      }
     } finally {
       setLoading(false)
     }
@@ -62,8 +55,7 @@ export default function AdminLogin({ onSuccess, onClose }) {
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <form
-        onSubmit={handleSubmit}
+      <div
         style={{
           background: T.surface,
           borderRadius: 22,
@@ -73,10 +65,10 @@ export default function AdminLogin({ onSuccess, onClose }) {
           fontFamily: T.sans,
           display: 'flex',
           flexDirection: 'column',
-          gap: 14,
+          gap: 18,
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: 6 }}>
+        <div style={{ textAlign: 'center' }}>
           <div
             style={{
               width: 44,
@@ -99,66 +91,55 @@ export default function AdminLogin({ onSuccess, onClose }) {
             Área administrativa
           </h2>
           <p style={{ fontSize: 12, color: T.textMuted, margin: '6px 0 0' }}>
-            Acesse a agenda e o painel de gestão
+            Acesse com sua conta Google autorizada
           </p>
         </div>
-        <div>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: T.textMuted, display: 'block', marginBottom: 5 }}>
-            Usuário
-          </label>
-          <input
-            style={fieldStyle}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            autoFocus
-          />
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          {GOOGLE_CLIENT_ID ? (
+            <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+              <div style={{ opacity: loading ? 0.6 : 1, pointerEvents: loading ? 'none' : 'auto' }}>
+                <GoogleLogin
+                  onSuccess={handleCredential}
+                  onError={() => setError('Não foi possível iniciar o login com o Google')}
+                  shape="pill"
+                  text="signin_with"
+                  locale="pt-BR"
+                  width="280"
+                />
+              </div>
+            </GoogleOAuthProvider>
+          ) : (
+            <div style={{ fontSize: 12, color: '#b05060', textAlign: 'center' }}>
+              Login Google não configurado (defina VITE_GOOGLE_CLIENT_ID)
+            </div>
+          )}
+          {loading && (
+            <div style={{ fontSize: 12, color: T.textMuted }}>Entrando...</div>
+          )}
+          {error && (
+            <div style={{ fontSize: 12, color: '#b05060', textAlign: 'center' }}>{error}</div>
+          )}
         </div>
-        <div>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: T.textMuted, display: 'block', marginBottom: 5 }}>
-            Senha
-          </label>
-          <input
-            style={fieldStyle}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </div>
-        {error && (
-          <div style={{ fontSize: 12, color: '#b05060', textAlign: 'center' }}>{error}</div>
-        )}
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 999, border: `1px solid ${T.line}`, background: T.surfaceSoft, color: T.textMuted, fontFamily: T.sans, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-          >
-            Voltar
-          </button>
-          <button
-            type="submit"
-            disabled={loading || !username || !password}
-            style={{
-              flex: 1,
-              padding: '10px 0',
-              borderRadius: 999,
-              border: 'none',
-              background: T.accent,
-              color: 'white',
-              fontFamily: T.sans,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: loading ? 'wait' : 'pointer',
-              opacity: loading || !username || !password ? 0.6 : 1,
-              boxShadow: '0 6px 18px rgba(122,62,106,0.28)',
-            }}
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </div>
-      </form>
+
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '10px 0',
+            borderRadius: 999,
+            border: `1px solid ${T.line}`,
+            background: T.surfaceSoft,
+            color: T.textMuted,
+            fontFamily: T.sans,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Voltar
+        </button>
+      </div>
     </div>
   )
 }

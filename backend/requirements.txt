@@ -3,6 +3,7 @@ uvicorn[standard]
 sqlalchemy
 pydantic-settings
 PyJWT
-bcrypt
+google-auth
+requests
 httpx
 pytest

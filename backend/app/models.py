@@ -10,14 +10,6 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class AdminUser(Base):
-    __tablename__ = "admin_users"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String(100), unique=True)
-    password_hash: Mapped[str] = mapped_column(String(200))
-
-
 class Specialty(Base):
     __tablename__ = "specialties"
 
