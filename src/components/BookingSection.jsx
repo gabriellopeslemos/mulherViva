@@ -358,7 +358,7 @@ export default function BookingSection() {
         type: selectedSlot.type,
         client_name: form.name.trim(),
         client_contact: form.phone.trim(),
-        client_email: form.email.trim() || null,
+        client_email: form.email.trim(),
         notes: form.notes.trim() || null,
       })
       setConfirmation(booking)
@@ -406,8 +406,8 @@ export default function BookingSection() {
           <p className="eyebrow">Agendamento online</p>
           <h2>Sua consulta, no seu tempo.</h2>
           <p>
-            Escolha o dia, a especialidade e o horário em poucos toques. Nossa
-            equipe confirma com você em seguida.
+            Escolha o dia, a especialidade e o horário em poucos toques. A
+            confirmação chega na hora, no seu e-mail.
           </p>
         </motion.div>
 
@@ -422,10 +422,11 @@ export default function BookingSection() {
             <div className="bk-success__badge">
               <CheckIcon />
             </div>
-            <h3>Solicitação enviada!</h3>
+            <h3>Consulta confirmada!</h3>
             <p className="bk-success__lead">
-              Recebemos seu pedido de consulta. Entraremos em contato para
-              confirmar — fique de olho no seu telefone ou e-mail.
+              Tudo certo! Enviamos um e-mail de confirmação para{' '}
+              <strong>{confirmation.client_email}</strong> com os detalhes da
+              sua consulta.
             </p>
             <dl className="bk-success__details">
               <div>
@@ -712,9 +713,7 @@ export default function BookingSection() {
                         />
                       </label>
                       <label className="bk-field" htmlFor="bk-email">
-                        <span>
-                          E-mail <em>(opcional)</em>
-                        </span>
+                        <span>E-mail</span>
                         <input
                           id="bk-email"
                           type="email"
@@ -723,6 +722,7 @@ export default function BookingSection() {
                           placeholder="voce@email.com"
                           value={form.email}
                           onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                          required
                         />
                       </label>
                       {selectedSlot && (
@@ -749,11 +749,11 @@ export default function BookingSection() {
                       </label>
                     </div>
                     <button className="bk-btn bk-btn--primary bk-form__submit" type="submit" disabled={submitting}>
-                      {submitting ? 'Enviando…' : 'Solicitar agendamento'}
+                      {submitting ? 'Enviando…' : 'Confirmar agendamento'}
                     </button>
                     <p className="bk-form__note">
-                      Sem pagamento agora — a consulta só é confirmada após nosso
-                      contato.
+                      Sem pagamento agora. Sua consulta é confirmada na hora e
+                      você recebe os detalhes por e-mail.
                     </p>
                   </motion.form>
                 )}
@@ -797,8 +797,8 @@ export default function BookingSection() {
                 </li>
               </ul>
               <p className="bk-summary__note">
-                Após enviar, nossa equipe entra em contato para confirmar o
-                horário com você.
+                Ao enviar, sua consulta fica confirmada e você recebe um e-mail
+                com todos os detalhes.
               </p>
             </aside>
           </div>

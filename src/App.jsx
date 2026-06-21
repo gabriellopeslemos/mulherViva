@@ -3,15 +3,16 @@ import {
   motion,
   useInView,
   useMotionValue,
-  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
+import AdminHub from './components/AdminHub'
 import AgendaPanel from './components/AgendaPanel'
 import AdminLogin from './components/AdminLogin'
+import BlogPanel from './components/BlogPanel'
 import BookingSection from './components/BookingSection'
 import { api, clearToken, getToken } from './lib/api'
 import heroImage from '../images/hero-nobg.png'
@@ -71,18 +72,21 @@ const specialties = [
     text: 'Ginecologia natural, integrativa e preventiva, baseada no olhar integral da mulher. A história, os sinais, os sintomas, o exame físico e, quando necessário, exames complementares são cuidadosamente avaliados.',
     image: gynImage,
     imageAlt: 'Médica realizando atendimento ginecológico acolhedor',
+    tone: '#f8ead9',
   },
   {
     title: 'Obstetrícia',
     text: 'Com o mínimo de intervenções possível, atendo gestantes e suas famílias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistência.',
     image: obstImage,
     imageAlt: 'Gestante sendo acolhida em consulta de obstetrícia',
+    tone: '#f3dde6',
   },
   {
     title: 'Homeopatia',
     text: 'A homeopatia é uma especialidade médica que busca restabelecer o equilíbrio da saúde física, emocional, mental e energética do ser. Adota uma abordagem holística, considerando a paciente, sua história e relações como um todo.',
     image: homeoImage,
     imageAlt: 'Atendimento de homeopatia em ambiente sereno',
+    tone: '#e9dded',
   },
 ]
 
@@ -131,6 +135,15 @@ const fallbackBlogPosts = [
   },
 ]
 
+const ribbonItems = [
+  'Ginecologia natural',
+  'Obstetrícia humanizada',
+  'Homeopatia',
+  'Medicina integrativa',
+  'Escuta profunda',
+  'Cuidado sem pressa',
+]
+
 const heroBlobDefs = [
   { color: '#dfa9bf', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
   { color: '#c98ba6', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
@@ -149,62 +162,17 @@ function formatPostDate(isoDate) {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-function SpecialtyLayer({ item, index, steps, storyProgress, prefersReducedMotion, isActive }) {
-  const stepSize = 1 / steps
-  const start = index * stepSize
-  const end = start + stepSize
-  const fadeWindow = stepSize * 0.34
-  const holdStart = start + fadeWindow
-  const holdEnd = end - fadeWindow
-  const startOpacity = index === 0 ? 1 : 0
-  const endOpacity = index === steps - 1 ? 1 : 0
-  const opacity = useTransform(
-    storyProgress,
-    [start, holdStart, holdEnd, end],
-    [startOpacity, 1, 1, endOpacity],
-  )
-  const translateY = useTransform(
-    storyProgress,
-    [start, holdStart, holdEnd, end],
-    [prefersReducedMotion ? 0 : 24, 0, 0, prefersReducedMotion ? 0 : -24],
-  )
-  const mediaScale = useTransform(
-    storyProgress,
-    [start, holdStart, holdEnd, end],
-    [0.98, 1, 1, 0.98],
-  )
-
-  return (
-    <motion.div
-      className={`specialty-layer${isActive ? ' is-active' : ''}`}
-      aria-hidden={!isActive}
-      style={{ opacity, zIndex: isActive ? 2 : 1 }}
-    >
-      <motion.div className="specialty-layer__content" style={{ y: translateY }}>
-        <p className="eyebrow">0{index + 1}</p>
-        <h3>{item.title}</h3>
-        <p>{item.text}</p>
-        <a className="card-link" href="#agendamento">
-          Agendar Consulta &rarr;
-        </a>
-      </motion.div>
-      <motion.div className="specialty-layer__media" style={{ scale: mediaScale }}>
-        <img
-          src={item.image}
-          alt={item.imageAlt}
-          loading="lazy"
-        />
-      </motion.div>
-    </motion.div>
-  )
-}
-
 function App() {
-  const [showAgenda, setShowAgenda] = useState(false)
+  // null = fechado | 'hub' | 'agenda' | 'blog'
+  const [adminScreen, setAdminScreen] = useState(null)
   const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
   const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
-  const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
+  const [blogTick, setBlogTick] = useState(0)
   const specialtiesScrollRef = useRef(null)
+  const specialtiesTrackRef = useRef(null)
+  // Pixel endpoints for the horizontal sweep: starts with the first panel
+  // centered, ends with the last one centered — then the page scrolls on.
+  const [trackRange, setTrackRange] = useState({ from: 0, to: 0 })
   const addressContentRef = useRef(null)
   const addressTitleRef = useRef(null)
   const heroBlobLayerRef = useRef(null)
@@ -235,13 +203,33 @@ function App() {
     damping: 24,
     mass: 0.25,
   })
-  const entryHold = 0.12
-  const exitHold = 0.08
-  const storyProgress = useTransform(
+  // Short hold at the start keeps panel 1 centered while the section header
+  // scrolls away, then the sweep begins.
+  const trackX = useTransform(
     scrollYProgress,
-    [0, entryHold, 1 - exitHold, 1],
-    [0, 0, 1, 1],
+    [0, 0.15, 1],
+    [trackRange.from, trackRange.from, trackRange.to],
   )
+
+  useEffect(() => {
+    const measure = () => {
+      const track = specialtiesTrackRef.current
+      const first = track?.firstElementChild
+      const last = track?.lastElementChild
+      if (!track || !first || !last) return
+      // Rect deltas are immune to the track's current translation.
+      const trackLeft = track.getBoundingClientRect().left
+      const lastRect = last.getBoundingClientRect()
+      const centerOf = (width) => (window.innerWidth - width) / 2
+      setTrackRange({
+        from: Math.max(0, centerOf(first.offsetWidth)),
+        to: centerOf(lastRect.width) - (lastRect.left - trackLeft),
+      })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   useEffect(() => {
     api
@@ -256,11 +244,12 @@ function App() {
             date: formatPostDate(post.published_at),
             tag: post.tag || 'Blog',
             permalink: post.permalink,
+            pinned: post.pinned,
           })),
         )
       })
       .catch(() => {})
-  }, [])
+  }, [blogTick])
 
   useEffect(() => {
     if (prefersReducedMotion || !startYearsCount) return undefined
@@ -428,12 +417,6 @@ function App() {
     return () => window.removeEventListener('resize', updateAddressTitleWidth)
   }, [])
 
-  useMotionValueEvent(storyProgress, 'change', (value) => {
-    const steps = specialties.length
-    const nextIndex = Math.min(steps - 1, Math.max(0, Math.floor(value * steps)))
-    setActiveSpecialtyIndex(nextIndex)
-  })
-
   const handleHeroPointerMove = (event) => {
     if (prefersReducedMotion) {
       return
@@ -458,22 +441,6 @@ function App() {
 
   const year = new Date().getFullYear()
 
-  const handleAppointmentSubmit = (event) => {
-    event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    const subject = `Solicitação de agendamento - ${data.get('nome') || 'Paciente'}`
-    const body = [
-      `Nome: ${data.get('nome') || ''}`,
-      `Telefone: ${data.get('telefone') || ''}`,
-      `E-mail: ${data.get('email') || ''}`,
-      `Data preferida: ${data.get('data') || ''}`,
-      `Especialidade: ${data.get('especialidade') || ''}`,
-      '',
-      data.get('mensagem') || '',
-    ].join('\n')
-    window.location.href = `mailto:contato@mulherviva.org?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-  }
-
   return (
     <div className="page">
       <motion.div
@@ -481,21 +448,38 @@ function App() {
         style={{ scaleX: pageProgressSpring }}
         aria-hidden="true"
       />
-      <FloatingNavbar onOpenAgenda={() => setShowAgenda(true)} />
+      <FloatingNavbar onOpenAgenda={() => setAdminScreen('hub')} />
 
-      {showAgenda && !isAdminAuthed && (
+      {adminScreen && !isAdminAuthed && (
         <AdminLogin
           onSuccess={() => setIsAdminAuthed(true)}
-          onClose={() => setShowAgenda(false)}
+          onClose={() => setAdminScreen(null)}
         />
       )}
-      {showAgenda && isAdminAuthed && (
+      {adminScreen === 'hub' && isAdminAuthed && (
+        <AdminHub
+          onOpenAgenda={() => setAdminScreen('agenda')}
+          onOpenBlog={() => setAdminScreen('blog')}
+          onClose={() => setAdminScreen(null)}
+        />
+      )}
+      {adminScreen === 'agenda' && isAdminAuthed && (
         <AgendaPanel
-          onClose={() => setShowAgenda(false)}
+          onClose={() => setAdminScreen('hub')}
           onAuthExpired={() => {
             clearToken()
             setIsAdminAuthed(false)
           }}
+        />
+      )}
+      {adminScreen === 'blog' && isAdminAuthed && (
+        <BlogPanel
+          onClose={() => setAdminScreen('hub')}
+          onAuthExpired={() => {
+            clearToken()
+            setIsAdminAuthed(false)
+          }}
+          onChanged={() => setBlogTick((t) => t + 1)}
         />
       )}
 
@@ -560,26 +544,60 @@ function App() {
           </div>
         </section>
 
-        <section className="section alt specialties-section" id="especialidades">
+        <div className="ribbon" aria-hidden="true">
+          <div className="ribbon-track">
+            {/* Two identical halves so the -50% marquee loops seamlessly. */}
+            {[...ribbonItems, ...ribbonItems].map((item, index) => (
+              <span key={`${item}-${index}`} className="ribbon-item">
+                {item}
+                <i>✦</i>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <section className="section specialties-section" id="especialidades">
+          <div className="container">
+            <div className="section-header section-header--center" data-reveal>
+              <p className="eyebrow">Cuidado integral</p>
+              <h2>Especialidades</h2>
+              <p>
+                Ginecologia, obstetrícia e homeopatia — três caminhos que se
+                encontram no olhar integral sobre a saúde da mulher.
+              </p>
+            </div>
+          </div>
           <div
-            className="specialties-scroll"
+            className={`specialties-scroll${prefersReducedMotion ? ' is-static' : ''}`}
             style={{ '--specialty-steps': specialties.length }}
             ref={specialtiesScrollRef}
           >
             <div className="specialties-sticky">
-              <div className="container specialties-stage">
+              <motion.div
+                className="specialties-track"
+                ref={specialtiesTrackRef}
+                style={{ x: prefersReducedMotion ? 0 : trackX }}
+              >
                 {specialties.map((item, index) => (
-                  <SpecialtyLayer
+                  <article
                     key={item.title}
-                    item={item}
-                    index={index}
-                    steps={specialties.length}
-                    storyProgress={storyProgress}
-                    prefersReducedMotion={prefersReducedMotion}
-                    isActive={index === activeSpecialtyIndex}
-                  />
+                    className="specialty-card"
+                    style={{ '--card-tone': item.tone }}
+                  >
+                    <div className="specialty-card__content">
+                      <p className="specialty-card__number">[0{index + 1}]</p>
+                      <h3>{item.title}</h3>
+                      <p>{item.text}</p>
+                      <a className="card-link" href="#agendamento">
+                        Agendar Consulta &rarr;
+                      </a>
+                    </div>
+                    <div className="specialty-card__media">
+                      <img src={item.image} alt={item.imageAlt} loading="lazy" />
+                    </div>
+                  </article>
                 ))}
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -729,6 +747,15 @@ function App() {
                   style={{ '--delay': `${index * 90}ms` }}
                 >
                   <div className="blog-meta">
+                    {post.pinned && (
+                      <span className="blog-pin" title="Publicação fixada">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M9 4h6l-.6 6.2 2.6 2.8v2H7v-2l2.6-2.8L9 4z" />
+                          <path d="M12 15v6" />
+                        </svg>
+                        Fixado
+                      </span>
+                    )}
                     <span className="blog-tag">{post.tag}</span>
                     <span className="blog-date">{post.date}</span>
                   </div>
@@ -817,170 +844,41 @@ function App() {
         </section>
 
         <BookingSection />
-
-        <section className="section appointment-section" id="contato">
-          <div className="container">
-            <div className="appointment-card" data-reveal>
-              <aside className="appointment-aside">
-                <p className="appointment-label">Contato</p>
-                <h2>Vamos conversar?</h2>
-                <p className="appointment-copy">
-                  Preencha o formulário e a equipe entrará em contato para
-                  confirmar o melhor horário para você.
-                </p>
-                <div className="appointment-divider" aria-hidden="true" />
-                <div className="appointment-contacts">
-                  <div className="appointment-contact">
-                    <span className="appointment-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" role="img" focusable="false">
-                        <path
-                          d="M12 3.5a8.5 8.5 0 0 1 7.3 12.9L20 20l-3.8-1.3A8.5 8.5 0 1 1 12 3.5z"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinejoin="round"
-                        />
-                        <circle cx="12" cy="11" r="3" fill="currentColor" />
-                      </svg>
-                    </span>
-                    <div>
-                      <strong>Consultório · Brasília - DF</strong>
-                      <span>Atendimento presencial e online</span>
-                    </div>
-                  </div>
-                  <div className="appointment-contact">
-                    <span className="appointment-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" role="img" focusable="false">
-                        <path
-                          d="M6.4 5.6c.3-.4.8-.6 1.3-.4l3 1.2c.4.2.7.6.7 1.1v2c0 .4-.2.8-.6 1l-1.5.9c.8 1.6 2.1 2.9 3.7 3.7l.9-1.5c.2-.4.6-.6 1-.6h2c.5 0 .9.3 1.1.7l1.2 3c.2.5 0 1-.4 1.3-.9.7-2 1.1-3.2 1-2.8-.3-5.4-1.8-7.6-4-2.2-2.2-3.7-4.8-4-7.6-.1-1.2.3-2.3 1-3.2z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </span>
-                    <div>
-                      <strong>+55 61 99999-0000</strong>
-                      <span>Atendimento das 8h às 18h</span>
-                    </div>
-                  </div>
-                  <div className="appointment-contact">
-                    <span className="appointment-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" role="img" focusable="false">
-                        <rect
-                          x="3"
-                          y="5"
-                          width="18"
-                          height="14"
-                          rx="2"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                        />
-                        <path
-                          d="M4 7l8 6 8-6"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <div>
-                      <strong>contato@mulherviva.org</strong>
-                      <span>Respondemos em até 24h</span>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-              <form className="appointment-form" onSubmit={handleAppointmentSubmit}>
-                <div className="appointment-grid">
-                  <label className="field" htmlFor="nome">
-                    <span>Nome</span>
-                    <input
-                      id="nome"
-                      name="nome"
-                      type="text"
-                      placeholder="Seu nome"
-                      autoComplete="name"
-                      required
-                    />
-                  </label>
-                  <label className="field" htmlFor="telefone">
-                    <span>Telefone</span>
-                    <input
-                      id="telefone"
-                      name="telefone"
-                      type="tel"
-                      placeholder="(00) 00000-0000"
-                      autoComplete="tel"
-                      required
-                    />
-                  </label>
-                  <label className="field span-2" htmlFor="email">
-                    <span>E-mail</span>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Seu e-mail"
-                      autoComplete="email"
-                      required
-                    />
-                  </label>
-                  <label className="field" htmlFor="data">
-                    <span>Data preferida</span>
-                    <input id="data" name="data" type="date" />
-                  </label>
-                  <label className="field" htmlFor="especialidade">
-                    <span>Especialidade</span>
-                    <select id="especialidade" name="especialidade">
-                      <option>Medicina Integrativa</option>
-                      <option>Obstetrícia Humanizada</option>
-                      <option>Homeopatia</option>
-                    </select>
-                  </label>
-                  <label className="field span-2" htmlFor="mensagem">
-                    <span>Mensagem (opcional)</span>
-                    <textarea
-                      id="mensagem"
-                      name="mensagem"
-                      placeholder="Conte um pouco sobre o que você precisa"
-                    />
-                  </label>
-                </div>
-                <div className="appointment-actions">
-                  <button className="appointment-submit" type="submit">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <rect
-                        x="3"
-                        y="5"
-                        width="18"
-                        height="16"
-                        rx="2"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <path
-                        d="M8 3v4M16 3v4M3 10h18"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Solicitar agendamento
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="site-footer">
-        <div className="container footer-inner">
-          <p>Mulher Viva · Medicina Integrativa da Saúde Feminina</p>
-          <p>© {year} Dra. Luciana da Silva Lopes. Todos os direitos reservados.</p>
+        <div className="footer-panel" data-reveal>
+          <div className="container">
+            <div className="footer-cols">
+              <div className="footer-brand">
+                <span className="footer-logo" aria-hidden="true">MV</span>
+                <div>
+                  <strong>Mulher Viva</strong>
+                  <span>Medicina Integrativa da Saúde Feminina</span>
+                </div>
+              </div>
+              <div className="footer-col">
+                <span className="footer-col__label">Contato</span>
+                <a href="tel:+5561999990000">+55 61 99999-0000</a>
+                <a href="mailto:contato@mulherviva.org">contato@mulherviva.org</a>
+                <span>Atendimento das 8h às 18h</span>
+              </div>
+              <div className="footer-col">
+                <span className="footer-col__label">Consultório</span>
+                <span>Centro Médico Lúcio Costa</span>
+                <span>SGAS 610, Bloco 2, Sala 250</span>
+                <span>Brasília - DF · Presencial e online</span>
+              </div>
+              <div className="footer-col footer-col--cta">
+                <a className="btn btn-primary" href="#agendamento">
+                  Agendar consulta
+                </a>
+              </div>
+            </div>
+            <div className="footer-bottom">
+              <p>© {year} Dra. Luciana da Silva Lopes. Todos os direitos reservados.</p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

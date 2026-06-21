@@ -1,6 +1,6 @@
 from datetime import date as date_type, datetime, time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # ---- auth ----
@@ -117,7 +117,7 @@ class BookingIn(BaseModel):
     type: str = Field(pattern="^(online|presencial)$")
     client_name: str = Field(min_length=2, max_length=150)
     client_contact: str = Field(min_length=5, max_length=150)
-    client_email: str | None = Field(default=None, max_length=150)
+    client_email: EmailStr = Field(max_length=150)
     notes: str | None = Field(default=None, max_length=1000)
 
 
@@ -174,6 +174,7 @@ class BlogPostIn(BaseModel):
     body: str
     tag: str | None = Field(default=None, max_length=60)
     image_url: str | None = None
+    pinned: bool = False
     published_at: datetime | None = None
 
 
@@ -182,6 +183,7 @@ class BlogPostUpdate(BaseModel):
     body: str | None = None
     tag: str | None = Field(default=None, max_length=60)
     image_url: str | None = None
+    pinned: bool | None = None
     published_at: datetime | None = None
 
 
@@ -195,6 +197,7 @@ class BlogPostListItem(BaseModel):
     source: str
     image_url: str | None
     permalink: str | None
+    pinned: bool
     published_at: datetime
 
 
@@ -208,6 +211,7 @@ class BlogPostOut(BaseModel):
     source: str
     image_url: str | None
     permalink: str | None
+    pinned: bool
     published_at: datetime
 
 

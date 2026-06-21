@@ -64,3 +64,12 @@ def run_migrations() -> None:
                 conn.execute(
                     text("ALTER TABLE appointments ADD COLUMN client_email VARCHAR(150)")
                 )
+        if "blog_posts" in tables:
+            cols = {c["name"] for c in inspector.get_columns("blog_posts")}
+            if "pinned" not in cols:
+                conn.execute(
+                    text(
+                        "ALTER TABLE blog_posts "
+                        "ADD COLUMN pinned BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                )

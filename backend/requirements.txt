@@ -5,4 +5,5 @@ pydantic-settings
 PyJWT
 bcrypt
 httpx
+email-validator
 pytest

@@ -267,6 +267,17 @@ def update_specialty(
 
 # ---- blog ----
 
+@router.get("/blog", response_model=list[BlogPostOut])
+def list_posts(db: Session = Depends(get_db)):
+    return list(
+        db.scalars(
+            select(BlogPost).order_by(
+                BlogPost.pinned.desc(), BlogPost.published_at.desc()
+            )
+        )
+    )
+
+
 @router.post("/blog", response_model=BlogPostOut, status_code=status.HTTP_201_CREATED)
 def create_post(body: BlogPostIn, db: Session = Depends(get_db)):
     data = body.model_dump(exclude_unset=True)

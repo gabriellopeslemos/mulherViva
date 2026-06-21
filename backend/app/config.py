@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     ig_access_token: str = ""
     ig_auto_sync: bool = False
     min_booking_lead_hours: int = 2
+    resend_api_key: str = ""
+    email_from: str = "Mulher Viva <onboarding@resend.dev>"
+    clinic_address: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

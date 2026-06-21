@@ -1,7 +1,7 @@
 from datetime import date as date_type
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -18,11 +18,12 @@ from ..schemas import (
     SlotsResponse,
     SpecialtyOut,
 )
+from ..services.email import send_booking_confirmation
 from ..services.slots import get_available_slots, has_overlap
 
 router = APIRouter(prefix="/api", tags=["public"])
 
-MAX_PENDING_PER_CONTACT_PER_DAY = 3
+MAX_BOOKINGS_PER_CONTACT_PER_DAY = 3
 
 
 @router.get("/specialties", response_model=list[SpecialtyOut])
@@ -59,22 +60,27 @@ def available_slots(
 @router.post(
     "/bookings", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED
 )
-def create_booking(body: BookingIn, db: Session = Depends(get_db)):
+def create_booking(
+    body: BookingIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     specialty = db.get(Specialty, body.specialty_id)
     if specialty is None or not specialty.active:
         raise HTTPException(status_code=404, detail="Especialidade nao encontrada")
 
-    pending_today = db.scalar(
+    bookings_today = db.scalar(
         select(func.count(Appointment.id)).where(
             Appointment.client_contact == body.client_contact,
-            Appointment.status == "pending",
+            Appointment.source == "public",
+            Appointment.status != "cancelled",
             func.date(Appointment.created_at) == datetime.utcnow().date(),
         )
     )
-    if pending_today >= MAX_PENDING_PER_CONTACT_PER_DAY:
+    if bookings_today >= MAX_BOOKINGS_PER_CONTACT_PER_DAY:
         raise HTTPException(
             status_code=429,
-            detail="Limite de agendamentos pendentes atingido para este contato",
+            detail="Limite de agendamentos atingido para este contato hoje",
         )
 
     day_slots = get_available_slots(db, specialty, body.date, body.date).get(
@@ -105,13 +111,23 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
         client_contact=body.client_contact,
         client_email=body.client_email,
         type=body.type,
-        status="pending",
+        status="confirmed",
         notes=body.notes,
         source="public",
     )
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
+    background_tasks.add_task(
+        send_booking_confirmation,
+        to_email=appointment.client_email,
+        client_name=appointment.client_name,
+        specialty_name=specialty.name,
+        day=appointment.date,
+        start=appointment.start_time,
+        end=appointment.end_time,
+        modality=appointment.type,
+    )
     return appointment
 
 
@@ -129,7 +145,7 @@ def list_blog(
     total = db.scalar(select(func.count(BlogPost.id)))
     posts = db.scalars(
         select(BlogPost)
-        .order_by(BlogPost.published_at.desc())
+        .order_by(BlogPost.pinned.desc(), BlogPost.published_at.desc())
         .limit(limit)
         .offset(offset)
     )
@@ -142,6 +158,7 @@ def list_blog(
             source=p.source,
             image_url=p.image_url,
             permalink=p.permalink,
+            pinned=p.pinned,
             published_at=p.published_at,
         )
         for p in posts
