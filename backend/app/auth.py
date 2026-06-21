@@ -1,34 +1,48 @@
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 from .config import get_settings
-from .database import get_db
-from .models import AdminUser
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+def verify_google_credential(credential: str) -> str:
+    """Verify a Google Identity Services ID token and return its verified email.
 
-
-def verify_password(password: str, password_hash: str) -> bool:
+    Raises HTTP 401 if the token is invalid, the audience does not match the
+    configured client id, or the email is not verified by Google.
+    """
+    settings = get_settings()
+    invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Falha na verificacao do Google",
+    )
     try:
-        return bcrypt.checkpw(password.encode(), password_hash.encode())
-    except ValueError:
-        return False
+        claims = google_id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except (ValueError, GoogleAuthError):
+        raise invalid
+    if not claims.get("email_verified"):
+        raise invalid
+    email = claims.get("email")
+    if not email:
+        raise invalid
+    return email.strip().lower()
 
 
-def create_access_token(username: str) -> str:
+def create_access_token(email: str) -> str:
     settings = get_settings()
     payload = {
-        "sub": username,
+        "sub": email,
         "exp": datetime.now(timezone.utc)
         + timedelta(minutes=settings.access_token_expire_minutes),
     }
@@ -37,8 +51,11 @@ def create_access_token(username: str) -> str:
 
 def get_current_admin(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
-) -> AdminUser:
+) -> str:
+    """Validate the app JWT and confirm the email is still on the allowlist.
+
+    Returns the authenticated admin email.
+    """
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais invalidas",
@@ -48,13 +65,12 @@ def get_current_admin(
         raise unauthorized
     settings = get_settings()
     try:
-        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=["HS256"])
+        payload = jwt.decode(
+            credentials.credentials, settings.secret_key, algorithms=["HS256"]
+        )
     except jwt.InvalidTokenError:
         raise unauthorized
-    username = payload.get("sub")
-    if not username:
+    email = payload.get("sub")
+    if not email or email.lower() not in settings.allowed_admin_emails_list:
         raise unauthorized
-    user = db.scalar(select(AdminUser).where(AdminUser.username == username))
-    if user is None:
-        raise unauthorized
-    return user
+    return email

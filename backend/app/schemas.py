@@ -1,13 +1,12 @@
 from datetime import date as date_type, datetime, time
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---- auth ----
 
-class LoginRequest(BaseModel):
-    username: str = Field(max_length=100)
-    password: str = Field(max_length=200)
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(max_length=4096)
 
 
 class TokenResponse(BaseModel):
@@ -16,7 +15,7 @@ class TokenResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
-    username: str
+    email: str
 
 
 # ---- specialties ----
@@ -44,7 +43,6 @@ class AvailabilityRuleIn(BaseModel):
     weekday: int = Field(ge=0, le=6)
     start_time: time
     end_time: time
-    type: str = Field(pattern="^(online|presencial)$")
     active: bool = True
 
 
@@ -52,7 +50,6 @@ class AvailabilityRuleUpdate(BaseModel):
     weekday: int | None = Field(default=None, ge=0, le=6)
     start_time: time | None = None
     end_time: time | None = None
-    type: str | None = Field(default=None, pattern="^(online|presencial)$")
     active: bool | None = None
 
 
@@ -64,7 +61,6 @@ class AvailabilityRuleOut(BaseModel):
     weekday: int
     start_time: time
     end_time: time
-    type: str
     active: bool
 
 
@@ -74,7 +70,6 @@ class AvailabilityOverrideIn(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     kind: str = Field(pattern="^(open|block)$")
-    type: str | None = Field(default=None, pattern="^(online|presencial)$")
     reason: str | None = Field(default=None, max_length=300)
 
 
@@ -87,7 +82,6 @@ class AvailabilityOverrideOut(BaseModel):
     start_time: time | None
     end_time: time | None
     kind: str
-    type: str | None
     reason: str | None
 
 
@@ -96,7 +90,6 @@ class AvailabilityOverrideOut(BaseModel):
 class SlotOut(BaseModel):
     start: time
     end: time
-    type: str
 
 
 class SlotsDayOut(BaseModel):
@@ -110,14 +103,20 @@ class SlotsResponse(BaseModel):
 
 # ---- bookings / appointments ----
 
+EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+STATUS_RE = "^(pending|confirmed|cancelled|completed|no_show)$"
+
+
 class BookingIn(BaseModel):
     specialty_id: int
     date: date_type
     start: time
     type: str = Field(pattern="^(online|presencial)$")
     client_name: str = Field(min_length=2, max_length=150)
-    client_contact: str = Field(min_length=5, max_length=150)
-    client_email: EmailStr = Field(max_length=150)
+    client_email: str = Field(pattern=EMAIL_RE, max_length=150)
+    client_phone: str = Field(min_length=8, max_length=40)
+    reason: str | None = Field(default=None, max_length=500)
+    is_first_visit: bool = False
     notes: str | None = Field(default=None, max_length=1000)
 
 
@@ -132,10 +131,14 @@ class AppointmentOut(BaseModel):
     client_name: str
     client_contact: str
     client_email: str | None
+    client_phone: str | None
     type: str
     status: str
     notes: str | None
+    reason: str | None
+    is_first_visit: bool
     source: str
+    token: str | None
     created_at: datetime
 
 
@@ -147,9 +150,12 @@ class AppointmentIn(BaseModel):
     client_name: str = Field(min_length=2, max_length=150)
     client_contact: str = Field(default="", max_length=150)
     client_email: str | None = Field(default=None, max_length=150)
+    client_phone: str | None = Field(default=None, max_length=40)
     type: str = Field(pattern="^(online|presencial)$")
-    status: str = Field(default="confirmed", pattern="^(pending|confirmed|cancelled)$")
+    status: str = Field(default="confirmed", pattern=STATUS_RE)
     notes: str | None = Field(default=None, max_length=1000)
+    reason: str | None = Field(default=None, max_length=500)
+    is_first_visit: bool = False
     force: bool = False
 
 
@@ -161,10 +167,74 @@ class AppointmentUpdate(BaseModel):
     client_name: str | None = Field(default=None, min_length=2, max_length=150)
     client_contact: str | None = Field(default=None, max_length=150)
     client_email: str | None = Field(default=None, max_length=150)
+    client_phone: str | None = Field(default=None, max_length=40)
     type: str | None = Field(default=None, pattern="^(online|presencial)$")
-    status: str | None = Field(default=None, pattern="^(pending|confirmed|cancelled)$")
+    status: str | None = Field(default=None, pattern=STATUS_RE)
     notes: str | None = Field(default=None, max_length=1000)
+    reason: str | None = Field(default=None, max_length=500)
+    is_first_visit: bool | None = None
     force: bool = False
+
+
+# ---- patient self-service (manage by token) ----
+
+class ManageAppointmentOut(BaseModel):
+    specialty_name: str
+    date: date_type
+    start_time: time
+    end_time: time
+    type: str
+    status: str
+    client_name: str
+    can_modify: bool
+    cancellation_window_hours: int
+
+
+class RescheduleIn(BaseModel):
+    date: date_type
+    start: time
+
+
+# ---- waitlist ----
+
+class WaitlistIn(BaseModel):
+    specialty_id: int
+    client_name: str = Field(min_length=2, max_length=150)
+    client_email: str = Field(pattern=EMAIL_RE, max_length=150)
+    client_phone: str | None = Field(default=None, max_length=40)
+    preferred_date: date_type | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class WaitlistOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    specialty_id: int
+    client_name: str
+    client_email: str
+    client_phone: str | None
+    preferred_date: date_type | None
+    notes: str | None
+    active: bool
+    notified_at: datetime | None
+    created_at: datetime
+
+
+# ---- settings ----
+
+class SettingsOut(BaseModel):
+    auto_confirm_bookings: bool
+    buffer_minutes: int
+    cancellation_window_hours: int
+    max_booking_advance_days: int
+
+
+class SettingsUpdate(BaseModel):
+    auto_confirm_bookings: bool | None = None
+    buffer_minutes: int | None = Field(default=None, ge=0, le=240)
+    cancellation_window_hours: int | None = Field(default=None, ge=0, le=336)
+    max_booking_advance_days: int | None = Field(default=None, ge=1, le=365)
 
 
 # ---- blog ----
@@ -174,7 +244,6 @@ class BlogPostIn(BaseModel):
     body: str
     tag: str | None = Field(default=None, max_length=60)
     image_url: str | None = None
-    pinned: bool = False
     published_at: datetime | None = None
 
 
@@ -183,7 +252,6 @@ class BlogPostUpdate(BaseModel):
     body: str | None = None
     tag: str | None = Field(default=None, max_length=60)
     image_url: str | None = None
-    pinned: bool | None = None
     published_at: datetime | None = None
 
 
@@ -197,7 +265,6 @@ class BlogPostListItem(BaseModel):
     source: str
     image_url: str | None
     permalink: str | None
-    pinned: bool
     published_at: datetime
 
 
@@ -211,7 +278,6 @@ class BlogPostOut(BaseModel):
     source: str
     image_url: str | None
     permalink: str | None
-    pinned: bool
     published_at: datetime
 
 
