@@ -15,17 +15,19 @@ import AdminLogin from './components/AdminLogin'
 import BlogPanel from './components/BlogPanel'
 import BookingSection from './components/BookingSection'
 import ManageBooking from './components/ManageBooking'
+import FallbackImage from './components/FallbackImage'
 import { api, clearToken, getToken } from './lib/api'
+import { useAvailableImage } from './lib/useAvailableImage'
 import {
-  heroImage,
-  aboutImage,
-  gynImage,
-  obstImage,
-  homeoImage,
-  testimonialRandomOne,
-  testimonialRandomTwo,
-  testimonialRandomThree,
-  iphoneMapImage,
+  heroImage as heroPlaceholder,
+  aboutImage as aboutPlaceholder,
+  gynImage as gynPlaceholder,
+  obstImage as obstPlaceholder,
+  homeoImage as homeoPlaceholder,
+  testimonialRandomOne as testimonialPlaceholderOne,
+  testimonialRandomTwo as testimonialPlaceholderTwo,
+  testimonialRandomThree as testimonialPlaceholderThree,
+  iphoneMapImage as iphoneMapPlaceholder,
 } from './lib/placeholderImages'
 
 const IconGraduation = () => (
@@ -73,21 +75,24 @@ const specialties = [
   {
     title: 'Ginecologia',
     text: 'Ginecologia natural, integrativa e preventiva, baseada no olhar integral da mulher. A história, os sinais, os sintomas, o exame físico e, quando necessário, exames complementares são cuidadosamente avaliados.',
-    image: gynImage,
+    image: '/images/exam.jpg',
+    placeholder: gynPlaceholder,
     imageAlt: 'Médica realizando atendimento ginecológico acolhedor',
     tone: '#f8ead9',
   },
   {
     title: 'Obstetrícia',
     text: 'Com o mínimo de intervenções possível, atendo gestantes e suas famílias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistência.',
-    image: obstImage,
+    image: '/images/hug.jpg',
+    placeholder: obstPlaceholder,
     imageAlt: 'Gestante sendo acolhida em consulta de obstetrícia',
     tone: '#f3dde6',
   },
   {
     title: 'Homeopatia',
     text: 'A homeopatia é uma especialidade médica que busca restabelecer o equilíbrio da saúde física, emocional, mental e energética do ser. Adota uma abordagem holística, considerando a paciente, sua história e relações como um todo.',
-    image: homeoImage,
+    image: '/images/m.jpg',
+    placeholder: homeoPlaceholder,
     imageAlt: 'Atendimento de homeopatia em ambiente sereno',
     tone: '#e9dded',
   },
@@ -98,21 +103,24 @@ const testimonials = [
     name: 'Luciana M.',
     text: 'Encontrei um cuidado profundo, sem julgamentos e com respeito real.',
     tone: '#eaddea',
-    image: testimonialRandomOne,
+    image: '/images/mulherRandom.jpg',
+    placeholder: testimonialPlaceholderOne,
     imageAlt: 'Foto de Luciana',
   },
   {
     name: 'Renata C.',
     text: 'A consulta foi serena e precisa. Senti que tudo foi explicado com calma.',
     tone: '#e4d7e3',
-    image: testimonialRandomTwo,
+    image: '/images/mulherRandom2.jpg',
+    placeholder: testimonialPlaceholderTwo,
     imageAlt: 'Foto de Renata',
   },
   {
     name: 'Pedro F.',
     text: 'Um encontro entre ciência e sensibilidade que transformou meu olhar.',
     tone: '#e9d4e6',
-    image: testimonialRandomThree,
+    image: '/images/homemrandom.jpg',
+    placeholder: testimonialPlaceholderThree,
     imageAlt: 'Foto de Pedro',
   },
 ]
@@ -165,6 +173,35 @@ function formatPostDate(isoDate) {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
+function TestimonialCard({ item }) {
+  const resolvedImage = useAvailableImage(item.image, item.placeholder)
+
+  return (
+    <article className="testimonial-card">
+      <div
+        className="avatar"
+        role="img"
+        aria-label={item.imageAlt || `Foto de ${item.name}`}
+        style={{
+          '--avatar-tone': item.tone,
+          '--avatar-image': resolvedImage ? `url(${resolvedImage})` : undefined,
+        }}
+      >
+        {!resolvedImage
+          ? item.name
+              .split(' ')
+              .map((word) => word[0])
+              .join('')
+          : null}
+      </div>
+      <div>
+        <p className="testimonial-text">"{item.text}"</p>
+        <p className="testimonial-name">{item.name}</p>
+      </div>
+    </article>
+  )
+}
+
 function App() {
   // null = fechado | 'hub' | 'agenda' | 'blog'
   const [adminScreen, setAdminScreen] = useState(null)
@@ -187,6 +224,9 @@ function App() {
   const [years, setYears] = useState(0)
   const [startYearsCount, setStartYearsCount] = useState(false)
   const isAboutInView = useInView(aboutSectionRef, { once: true, amount: 0.3 })
+  const heroImage = useAvailableImage('/images/hero-nobg.png', heroPlaceholder)
+  const aboutImage = useAvailableImage('/images/about.png', aboutPlaceholder)
+  const iphoneMapImage = useAvailableImage('/images/iphone17map.png', iphoneMapPlaceholder)
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
   const { scrollYProgress: pageScrollProgress } = useScroll()
@@ -609,7 +649,12 @@ function App() {
                       </a>
                     </div>
                     <div className="specialty-card__media">
-                      <img src={item.image} alt={item.imageAlt} loading="lazy" />
+                      <FallbackImage
+                        src={item.image}
+                        fallback={item.placeholder}
+                        alt={item.imageAlt}
+                        loading="lazy"
+                      />
                     </div>
                   </article>
                 ))}
@@ -717,28 +762,7 @@ function App() {
               {/* Two identical halves (each repeats the list enough to span the
                   viewport) so the -50% marquee loops seamlessly and forever. */}
               {[...testimonials, ...testimonials, ...testimonials, ...testimonials].map((item, index) => (
-                <article key={`${item.name}-${index}`} className="testimonial-card">
-                  <div
-                    className="avatar"
-                    role="img"
-                    aria-label={item.imageAlt || `Foto de ${item.name}`}
-                    style={{
-                      '--avatar-tone': item.tone,
-                      '--avatar-image': item.image ? `url(${item.image})` : undefined,
-                    }}
-                  >
-                    {!item.image
-                      ? item.name
-                          .split(' ')
-                          .map((word) => word[0])
-                          .join('')
-                      : null}
-                  </div>
-                  <div>
-                    <p className="testimonial-text">"{item.text}"</p>
-                    <p className="testimonial-name">{item.name}</p>
-                  </div>
-                </article>
+                <TestimonialCard key={`${item.name}-${index}`} item={item} />
               ))}
             </div>
           </div>
