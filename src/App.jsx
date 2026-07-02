@@ -249,8 +249,7 @@ function App() {
     damping: 24,
     mass: 0.25,
   })
-  // Short hold at the start keeps panel 1 centered while the section header
-  // scrolls away, then the sweep begins.
+  // Short hold at the start keeps panel 1 centered before the sweep begins.
   const trackX = useTransform(
     scrollYProgress,
     [0, 0.15, 1],
@@ -613,22 +612,22 @@ function App() {
         </div>
 
         <section className="section specialties-section" id="especialidades">
-          <div className="container">
-            <div className="section-header section-header--center" data-reveal>
-              <p className="eyebrow">Cuidado integral</p>
-              <h2>Especialidades</h2>
-              <p>
-                Ginecologia, obstetrícia e homeopatia — três caminhos que se
-                encontram no olhar integral sobre a saúde da mulher.
-              </p>
-            </div>
-          </div>
           <div
             className={`specialties-scroll${prefersReducedMotion ? ' is-static' : ''}`}
             style={{ '--specialty-steps': specialties.length }}
             ref={specialtiesScrollRef}
           >
             <div className="specialties-sticky">
+              <div className="container">
+                <div className="section-header section-header--center" data-reveal>
+                  <p className="eyebrow">Cuidado integral</p>
+                  <h2>Especialidades</h2>
+                  <p>
+                    Ginecologia, obstetrícia e homeopatia — três caminhos que se
+                    encontram no olhar integral sobre a saúde da mulher.
+                  </p>
+                </div>
+              </div>
               <motion.div
                 className="specialties-track"
                 ref={specialtiesTrackRef}
