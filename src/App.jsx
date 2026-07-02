@@ -597,19 +597,19 @@ function App() {
               </div>
             </div>
           </div>
-        </section>
 
-        <div className="ribbon" aria-hidden="true">
-          <div className="ribbon-track">
-            {/* Two identical halves so the -50% marquee loops seamlessly. */}
-            {[...ribbonItems, ...ribbonItems].map((item, index) => (
-              <span key={`${item}-${index}`} className="ribbon-item">
-                {item}
-                <i>✦</i>
-              </span>
-            ))}
+          <div className="ribbon" aria-hidden="true">
+            <div className="ribbon-track">
+              {/* Two identical halves so the -50% marquee loops seamlessly. */}
+              {[...ribbonItems, ...ribbonItems].map((item, index) => (
+                <span key={`${item}-${index}`} className="ribbon-item">
+                  {item}
+                  <i>✦</i>
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
         <section className="section specialties-section" id="especialidades">
           <div

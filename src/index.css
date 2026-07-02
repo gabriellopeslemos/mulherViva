@@ -198,8 +198,15 @@ p {
 .hero {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  padding: var(--section-pad) 0 96px;
+  padding: var(--section-pad) 0 0;
+}
+
+.hero .ribbon {
+  position: relative;
+  z-index: 2;
 }
 
 .hero-blob-layer {
@@ -213,6 +220,8 @@ p {
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 64px;
   align-items: center;
+  align-content: center;
+  flex: 1;
   position: relative;
   z-index: 2;
 }
@@ -438,20 +447,11 @@ p {
 }
 
 @media (min-width: 981px) {
-  .hero {
-    min-height: 110vh;
-  }
-
-  .hero,
   .section:not(.specialties-section) {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-  }
-
-  .hero,
-  .section:not(.specialties-section) {
     padding: clamp(56px, 10vh, 120px) 0;
   }
 
@@ -466,7 +466,7 @@ p {
 }
 
 .specialties-section {
-  padding: var(--section-pad) 0 0;
+  padding: clamp(24px, 4vh, 48px) 0 0;
 }
 
 .specialties-section .section-header {
@@ -635,7 +635,8 @@ p {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: clamp(24px, 5vh, 56px);
   gap: clamp(20px, 4vh, 40px);
   overflow-x: clip;
 }
