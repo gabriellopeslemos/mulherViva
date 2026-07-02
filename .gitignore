@@ -33,3 +33,4 @@ backend/*.db
 .pytest_cache
 
 .claude/settings.local.json
+.env.development
