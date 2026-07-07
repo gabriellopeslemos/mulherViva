@@ -10,11 +10,13 @@ if __package__ in (None, ""):
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .routers import admin, auth, public
+from .routers.admin import UPLOADS_DIR
 from .seed import seed
 from .services.instagram import sync_instagram
 
@@ -24,14 +26,20 @@ IG_SYNC_INTERVAL_SECONDS = 24 * 60 * 60
 
 REMINDER_INTERVAL_SECONDS = 60 * 60
 
-# Lightweight additive migrations (no Alembic): column name -> SQL type.
-_APPOINTMENT_COLUMNS = {
-    "client_email": "VARCHAR(150)",
-    "client_phone": "VARCHAR(150)",
-    "reason": "VARCHAR(500)",
-    "is_first_visit": "BOOLEAN DEFAULT FALSE",
-    "token": "VARCHAR(64)",
-    "reminder_sent_at": "DATETIME",
+# Lightweight additive migrations (no Alembic): table -> {column name -> SQL type}.
+_TABLE_COLUMNS = {
+    "appointments": {
+        "client_email": "VARCHAR(150)",
+        "client_phone": "VARCHAR(150)",
+        "reason": "VARCHAR(500)",
+        "is_first_visit": "BOOLEAN DEFAULT FALSE",
+        "token": "VARCHAR(64)",
+        "reminder_sent_at": "DATETIME",
+    },
+    "blog_posts": {
+        "status": "VARCHAR(10) NOT NULL DEFAULT 'published'",
+        "pinned": "BOOLEAN NOT NULL DEFAULT 0",
+    },
 }
 
 
@@ -42,18 +50,19 @@ def _ensure_columns() -> None:
     these columns existed would lack them. This runs the minimal ALTER TABLEs.
     """
     inspector = inspect(engine)
-    if "appointments" not in inspector.get_table_names():
-        return
-    existing = {col["name"] for col in inspector.get_columns("appointments")}
-    missing = {k: v for k, v in _APPOINTMENT_COLUMNS.items() if k not in existing}
-    if not missing:
-        return
+    existing_tables = set(inspector.get_table_names())
     with engine.begin() as conn:
-        for name, sql_type in missing.items():
-            conn.execute(
-                text(f"ALTER TABLE appointments ADD COLUMN {name} {sql_type}")
-            )
-    logger.info("Added missing appointment columns: %s", ", ".join(missing))
+        for table, columns in _TABLE_COLUMNS.items():
+            if table not in existing_tables:
+                continue
+            existing = {col["name"] for col in inspector.get_columns(table)}
+            missing = {k: v for k, v in columns.items() if k not in existing}
+            for name, sql_type in missing.items():
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"))
+            if missing:
+                logger.info(
+                    "Added missing %s columns: %s", table, ", ".join(missing)
+                )
 
 
 async def _instagram_sync_loop() -> None:
@@ -131,6 +140,11 @@ async def lifespan(app: FastAPI):
     _ensure_columns()
     with SessionLocal() as db:
         seed(db)
+    if get_settings().dev_auth_bypass:
+        logger.warning(
+            "DEV_AUTH_BYPASS ativo: /api/auth/dev-login emite token de admin "
+            "sem Google. NUNCA habilite em producao."
+        )
     tasks = []
     if get_settings().ig_auto_sync:
         tasks.append(asyncio.create_task(_instagram_sync_loop()))
@@ -153,6 +167,9 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(public.router)
 app.include_router(admin.router)
+
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 
 @app.get("/health")

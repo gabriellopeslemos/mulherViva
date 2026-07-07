@@ -30,6 +30,7 @@ backend/.venv
 backend/.env
 backend/**/__pycache__
 backend/*.db
+backend/uploads/
 .pytest_cache
 
 .claude/settings.local.json

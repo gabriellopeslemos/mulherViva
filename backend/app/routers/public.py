@@ -1,3 +1,4 @@
+import re
 import secrets
 from datetime import date as date_type
 from datetime import datetime, timedelta
@@ -317,7 +318,10 @@ def join_waitlist(body: WaitlistIn, response: Response, db: Session = Depends(ge
 
 
 def _excerpt(body: str, limit: int = 180) -> str:
-    text = " ".join(body.split())
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", body)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"[*_`>#]", "", text)
+    text = " ".join(text.split())
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
@@ -327,10 +331,12 @@ def list_blog(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ):
-    total = db.scalar(select(func.count(BlogPost.id)))
+    published = BlogPost.status == "published"
+    total = db.scalar(select(func.count(BlogPost.id)).where(published))
     posts = db.scalars(
         select(BlogPost)
-        .order_by(BlogPost.published_at.desc())
+        .where(published)
+        .order_by(BlogPost.pinned.desc(), BlogPost.published_at.desc())
         .limit(limit)
         .offset(offset)
     )
@@ -343,6 +349,8 @@ def list_blog(
             source=p.source,
             image_url=p.image_url,
             permalink=p.permalink,
+            status=p.status,
+            pinned=p.pinned,
             published_at=p.published_at,
         )
         for p in posts
@@ -353,6 +361,6 @@ def list_blog(
 @router.get("/blog/{post_id}", response_model=BlogPostOut)
 def get_blog_post(post_id: int, db: Session = Depends(get_db)):
     post = db.get(BlogPost, post_id)
-    if post is None:
+    if post is None or post.status != "published":
         raise HTTPException(status_code=404, detail="Post nao encontrado")
     return post

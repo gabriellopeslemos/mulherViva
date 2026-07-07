@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link, Route, Routes } from 'react-router-dom'
 import {
   motion,
   useInView,
@@ -16,6 +17,8 @@ import BlogPanel from './components/BlogPanel'
 import BookingSection from './components/BookingSection'
 import ManageBooking from './components/ManageBooking'
 import FallbackImage from './components/FallbackImage'
+import BlogPage from './pages/BlogPage'
+import PostPage from './pages/PostPage'
 import { api, clearToken, getToken } from './lib/api'
 import { useAvailableImage } from './lib/useAvailableImage'
 import {
@@ -202,7 +205,7 @@ function TestimonialCard({ item }) {
   )
 }
 
-function App() {
+function Landing() {
   // null = fechado | 'hub' | 'agenda' | 'blog'
   const [adminScreen, setAdminScreen] = useState(null)
   const [manageToken, setManageToken] = useState(() =>
@@ -386,7 +389,9 @@ function App() {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
     }
-  }, [])
+    // Blog cards are keyed by post.id and replace the fallback DOM nodes once
+    // the real posts load, so this must re-scan for new [data-reveal] elements.
+  }, [blogPosts])
 
   useEffect(() => {
     if (prefersReducedMotion) {
@@ -776,6 +781,9 @@ function App() {
                 Artigos, reflexões e orientações clínicas escritas com calma —
                 para você ler no seu tempo.
               </p>
+              <Link className="card-link" to="/blog">
+                Ver todas as publicações &rarr;
+              </Link>
             </div>
             <div className="card-grid blog-grid">
               {blogPosts.map((post, index) => (
@@ -800,15 +808,10 @@ function App() {
                   </div>
                   <h3>{post.title}</h3>
                   <p>{post.text}</p>
-                  {post.permalink ? (
-                    <a
-                      className="card-link"
-                      href={post.permalink}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                  {post.id ? (
+                    <Link className="card-link" to={`/blog/${post.id}`}>
                       Ler post &rarr;
-                    </a>
+                    </Link>
                   ) : (
                     <span className="card-link">Ler post</span>
                   )}
@@ -921,6 +924,17 @@ function App() {
         </div>
       </footer>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/blog/:id" element={<PostPage />} />
+      <Route path="*" element={<Landing />} />
+    </Routes>
   )
 }
 

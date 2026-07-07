@@ -1,12 +1,12 @@
 import { useState } from 'react'
 
 const navLinks = [
-  { label: 'Sobre', href: '#sobre' },
-  { label: 'Abordagem', href: '#abordagem' },
-  { label: 'Especialidades', href: '#especialidades' },
-  { label: 'Depoimentos', href: '#depoimentos' },
-  { label: 'Blog', href: '#blog' },
-  { label: 'Endereço', href: '#endereco' },
+  { label: 'Sobre', href: '/#sobre' },
+  { label: 'Abordagem', href: '/#abordagem' },
+  { label: 'Especialidades', href: '/#especialidades' },
+  { label: 'Depoimentos', href: '/#depoimentos' },
+  { label: 'Blog', href: '/#blog' },
+  { label: 'Endereço', href: '/#endereco' },
 ]
 
 function FloatingNavbar({ onOpenAgenda }) {
@@ -16,7 +16,7 @@ function FloatingNavbar({ onOpenAgenda }) {
     <header className="fixed inset-x-0 top-0 z-50 w-full">
       <nav className="w-full border-b border-[#e8d4d8] bg-[#fffdfc]/80 shadow-[0_8px_30px_rgba(98,44,70,0.08)] backdrop-blur-md">
         <div className="mx-auto flex w-[min(96%,_1180px)] items-center justify-between gap-6 py-3">
-          <a href="#inicio" className="flex items-center gap-3" aria-label="Voltar ao início">
+          <a href="/#inicio" className="flex items-center gap-3" aria-label="Voltar ao início">
             <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#9a4067] to-[#74284a] font-serif text-sm font-semibold text-white">
               MV
             </span>
@@ -47,7 +47,7 @@ function FloatingNavbar({ onOpenAgenda }) {
               Login
             </button>
             <a
-              href="#agendamento"
+              href="/#agendamento"
               className="rounded-full bg-[#9a4067] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(154,64,103,0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#74284a] hover:shadow-[0_14px_30px_rgba(116,40,74,0.4)]"
             >
               Agendar consulta
@@ -92,7 +92,7 @@ function FloatingNavbar({ onOpenAgenda }) {
           </div>
           <div className="mt-4 grid gap-2 border-t border-[#f0e2e6] pt-4">
             <a
-              href="#agendamento"
+              href="/#agendamento"
               className="rounded-full bg-[#9a4067] px-4 py-3 text-center text-sm font-bold text-white shadow-[0_10px_24px_rgba(154,64,103,0.35)] transition-colors duration-200 hover:bg-[#74284a]"
               onClick={() => setIsOpen(false)}
             >

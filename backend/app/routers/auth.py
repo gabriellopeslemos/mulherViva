@@ -18,6 +18,21 @@ def google_login(body: GoogleLoginRequest):
     return TokenResponse(access_token=create_access_token(email))
 
 
+@router.post("/dev-login", response_model=TokenResponse)
+def dev_login():
+    """Issue an admin token without Google. Only exists when DEV_AUTH_BYPASS=true."""
+    settings = get_settings()
+    if not settings.dev_auth_bypass:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    emails = settings.allowed_admin_emails_list
+    if not emails:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="ALLOWED_ADMIN_EMAILS vazio",
+        )
+    return TokenResponse(access_token=create_access_token(emails[0]))
+
+
 @router.get("/me", response_model=MeResponse)
 def me(email: str = Depends(get_current_admin)):
     return MeResponse(email=email)

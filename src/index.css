@@ -1002,6 +1002,103 @@ a.card-link:hover {
   align-self: center;
 }
 
+/* ---- blog list / post pages ---- */
+
+.blog-page__empty {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+  color: var(--text-soft);
+}
+
+.blog-page__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+a.blog-card {
+  color: inherit;
+}
+
+.blog-card__thumb {
+  margin: -24px -24px 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.blog-card__thumb img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.post-body-container {
+  max-width: 760px;
+}
+
+.post-cover {
+  margin-bottom: 24px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.post-cover img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.post-page h1 {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 40px);
+  margin: 12px 0 28px;
+}
+
+.post-body {
+  color: var(--text);
+  line-height: 1.8;
+}
+
+.post-body p {
+  margin: 0 0 20px;
+}
+
+.post-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+}
+
+.post-body a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.post-body h1,
+.post-body h2,
+.post-body h3 {
+  font-family: var(--serif);
+  margin: 32px 0 14px;
+}
+
+.post-body ul,
+.post-body ol {
+  margin: 0 0 20px;
+  padding-left: 24px;
+}
+
+.post-body blockquote {
+  margin: 0 0 20px;
+  padding-left: 18px;
+  border-left: 3px solid var(--line);
+  color: var(--text-soft);
+  font-style: italic;
+}
+
 .address-grid {
   position: relative;
   display: grid;

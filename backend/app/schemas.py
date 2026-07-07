@@ -1,4 +1,5 @@
 from datetime import date as date_type, datetime, time
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -245,6 +246,8 @@ class BlogPostIn(BaseModel):
     tag: str | None = Field(default=None, max_length=60)
     image_url: str | None = None
     published_at: datetime | None = None
+    status: Literal["draft", "published", "archived"] = "draft"
+    pinned: bool = False
 
 
 class BlogPostUpdate(BaseModel):
@@ -253,6 +256,8 @@ class BlogPostUpdate(BaseModel):
     tag: str | None = Field(default=None, max_length=60)
     image_url: str | None = None
     published_at: datetime | None = None
+    status: Literal["draft", "published", "archived"] | None = None
+    pinned: bool | None = None
 
 
 class BlogPostListItem(BaseModel):
@@ -265,6 +270,8 @@ class BlogPostListItem(BaseModel):
     source: str
     image_url: str | None
     permalink: str | None
+    status: str
+    pinned: bool
     published_at: datetime
 
 
@@ -278,12 +285,18 @@ class BlogPostOut(BaseModel):
     source: str
     image_url: str | None
     permalink: str | None
+    status: str
+    pinned: bool
     published_at: datetime
 
 
 class BlogListResponse(BaseModel):
     total: int
     items: list[BlogPostListItem]
+
+
+class UploadOut(BaseModel):
+    url: str
 
 
 # ---- instagram ----

@@ -1,7 +1,9 @@
 import secrets
+import uuid
 from datetime import date as date_type
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -33,12 +35,23 @@ from ..schemas import (
     SettingsUpdate,
     SpecialtyOut,
     SpecialtyUpdate,
+    UploadOut,
     WaitlistOut,
 )
 from ..services import notifications, waitlist
 from ..services.instagram import sync_instagram
 from ..services.settings import get_bool_setting, get_int_setting, set_setting
 from ..services.slots import has_overlap
+
+UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+
+_UPLOAD_EXTENSIONS = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 def _appt_snapshot(db: Session, appointment: Appointment) -> dict:
@@ -300,6 +313,14 @@ def update_specialty(
 
 # ---- blog ----
 
+@router.get("/blog", response_model=list[BlogPostOut])
+def list_all_posts(db: Session = Depends(get_db)):
+    query = select(BlogPost).order_by(
+        BlogPost.pinned.desc(), BlogPost.published_at.desc()
+    )
+    return list(db.scalars(query))
+
+
 @router.post("/blog", response_model=BlogPostOut, status_code=status.HTTP_201_CREATED)
 def create_post(body: BlogPostIn, db: Session = Depends(get_db)):
     data = body.model_dump(exclude_unset=True)
@@ -325,6 +346,24 @@ def delete_post(post_id: int, db: Session = Depends(get_db)):
     post = _get_or_404(db, BlogPost, post_id, "Post")
     db.delete(post)
     db.commit()
+
+
+# ---- uploads ----
+
+@router.post("/uploads", response_model=UploadOut, status_code=status.HTTP_201_CREATED)
+async def upload_image(file: UploadFile = File(...)):
+    ext = _UPLOAD_EXTENSIONS.get(file.content_type)
+    if ext is None:
+        raise HTTPException(
+            status_code=415, detail="Formato de imagem nao suportado"
+        )
+    contents = await file.read()
+    if len(contents) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Imagem excede o tamanho maximo de 5MB")
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    (UPLOADS_DIR / filename).write_bytes(contents)
+    return UploadOut(url=f"/uploads/{filename}")
 
 
 # ---- settings ----

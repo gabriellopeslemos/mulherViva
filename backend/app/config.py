@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 720
     google_client_id: str = ""
     allowed_admin_emails: str = ""
+    # Dev only: enables /api/auth/dev-login, which issues an admin token
+    # without Google. Must stay false in production.
+    dev_auth_bypass: bool = False
     database_url: str = "sqlite:///./mulherviva.db"
     cors_origins: str = "http://localhost:5173"
     ig_access_token: str = ""

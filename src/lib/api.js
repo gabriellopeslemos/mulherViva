@@ -23,8 +23,9 @@ export class ApiError extends Error {
 }
 
 async function request(path, { method = 'GET', body, auth = false } = {}) {
+  const isFormData = body instanceof FormData
   const headers = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
   if (auth) {
     const token = getToken()
     if (token) headers.Authorization = `Bearer ${token}`
@@ -33,7 +34,7 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -56,4 +57,10 @@ export const api = {
   post: (path, body, opts) => request(path, { ...opts, method: 'POST', body }),
   patch: (path, body, opts) => request(path, { ...opts, method: 'PATCH', body }),
   delete: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
+  upload: (path, formData, opts) => request(path, { ...opts, method: 'POST', body: formData }),
+}
+
+export function resolveMediaUrl(url) {
+  if (!url) return url
+  return url.startsWith('/') ? `${BASE_URL}${url}` : url
 }

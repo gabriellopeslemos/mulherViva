@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { api } from '../lib/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { api, resolveMediaUrl } from '../lib/api'
 import { ConfirmDialog, Modal } from './agenda/Sheets'
 import '../styles/agenda.css'
 import '../styles/admin.css'
@@ -23,6 +24,12 @@ const IconTrash = () => (
   </svg>
 )
 
+const STATUS_LABELS = {
+  draft: 'Rascunho',
+  published: 'Publicado',
+  archived: 'Arquivado',
+}
+
 function fmtPostDate(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -36,6 +43,11 @@ function excerpt(body, limit = 160) {
   return text.length <= limit ? text : `${text.slice(0, limit - 3)}...`
 }
 
+const markdownComponents = {
+  a: (props) => <a {...props} target="_blank" rel="noreferrer" />,
+  img: ({ src, ...props }) => <img {...props} src={resolveMediaUrl(src)} loading="lazy" />,
+}
+
 function PostForm({ initial, onSubmit, onClose }) {
   const [form, setForm] = useState({
     title: initial?.title || '',
@@ -43,13 +55,101 @@ function PostForm({ initial, onSubmit, onClose }) {
     body: initial?.body || '',
     image_url: initial?.image_url || '',
     pinned: initial?.pinned || false,
+    status: initial?.status || 'draft',
   })
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [uploadingInline, setUploadingInline] = useState(false)
+  const [mode, setMode] = useState('edit')
+  const textareaRef = useRef(null)
+  const coverFileRef = useRef(null)
+  const inlineFileRef = useRef(null)
 
   const set = (field) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm((f) => ({ ...f, [field]: value }))
+  }
+
+  const wrapSelection = (before, after = before) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const { selectionStart, selectionEnd, value } = textarea
+    const selected = value.slice(selectionStart, selectionEnd)
+    const next =
+      value.slice(0, selectionStart) + before + selected + after + value.slice(selectionEnd)
+    setForm((f) => ({ ...f, body: next }))
+    requestAnimationFrame(() => {
+      textarea.focus()
+      textarea.setSelectionRange(
+        selectionStart + before.length,
+        selectionStart + before.length + selected.length,
+      )
+    })
+  }
+
+  const insertAtCursor = (text) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const { selectionStart, selectionEnd, value } = textarea
+    const next = value.slice(0, selectionStart) + text + value.slice(selectionEnd)
+    setForm((f) => ({ ...f, body: next }))
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const pos = selectionStart + text.length
+      textarea.setSelectionRange(pos, pos)
+    })
+  }
+
+  const applyLink = () => {
+    const url = window.prompt('URL do link:')
+    if (!url) return
+    const textarea = textareaRef.current
+    const selected = textarea
+      ? textarea.value.slice(textarea.selectionStart, textarea.selectionEnd)
+      : ''
+    if (selected) {
+      wrapSelection('[', `](${url})`)
+    } else {
+      insertAtCursor(`[texto](${url})`)
+    }
+  }
+
+  const uploadFile = async (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const result = await api.upload('/api/admin/uploads', fd, { auth: true })
+    return result.url
+  }
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingCover(true)
+    try {
+      const url = await uploadFile(file)
+      setForm((f) => ({ ...f, image_url: url }))
+    } catch (err) {
+      setError(err.detail || 'Não foi possível enviar a imagem.')
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  const handleInlineUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingInline(true)
+    try {
+      const url = await uploadFile(file)
+      insertAtCursor(`![](${url})`)
+    } catch (err) {
+      setError(err.detail || 'Não foi possível enviar a imagem.')
+    } finally {
+      setUploadingInline(false)
+    }
   }
 
   const submit = async (e) => {
@@ -63,6 +163,7 @@ function PostForm({ initial, onSubmit, onClose }) {
         body: form.body.trim(),
         image_url: form.image_url.trim() || null,
         pinned: form.pinned,
+        status: form.status,
       })
     } catch (err) {
       setError(err.detail || 'Não foi possível salvar a publicação.')
@@ -86,39 +187,126 @@ function PostForm({ initial, onSubmit, onClose }) {
             autoFocus
           />
         </label>
-        <label className="ag-field">
-          <span>
-            Tag <em>(opcional)</em>
-          </span>
-          <input
-            type="text"
-            value={form.tag}
-            onChange={set('tag')}
-            maxLength={60}
-            placeholder="Ex.: Saúde hormonal, Menopausa, Bem-estar"
-          />
-        </label>
-        <label className="ag-field">
+        <div className="ag-field-row">
+          <label className="ag-field">
+            <span>
+              Tag <em>(opcional)</em>
+            </span>
+            <input
+              type="text"
+              value={form.tag}
+              onChange={set('tag')}
+              maxLength={60}
+              placeholder="Ex.: Saúde hormonal, Menopausa, Bem-estar"
+            />
+          </label>
+          <label className="ag-field">
+            <span>Status</span>
+            <select value={form.status} onChange={set('status')}>
+              <option value="draft">Rascunho</option>
+              <option value="published">Publicado</option>
+              <option value="archived">Arquivado</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="ag-field">
           <span>Texto</span>
-          <textarea
-            value={form.body}
-            onChange={set('body')}
-            required
-            rows={8}
-            placeholder="Escreva o conteúdo da publicação"
-          />
-        </label>
+          <div className="bp-editor-tabs">
+            <button
+              type="button"
+              className={`bp-editor-tab${mode === 'edit' ? ' is-active' : ''}`}
+              onClick={() => setMode('edit')}
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              className={`bp-editor-tab${mode === 'preview' ? ' is-active' : ''}`}
+              onClick={() => setMode('preview')}
+            >
+              Pré-visualizar
+            </button>
+          </div>
+
+          {mode === 'edit' ? (
+            <>
+              <div className="bp-toolbar">
+                <button type="button" onClick={() => wrapSelection('**')} title="Negrito">
+                  <strong>B</strong>
+                </button>
+                <button type="button" onClick={() => wrapSelection('_')} title="Itálico">
+                  <em>I</em>
+                </button>
+                <button type="button" onClick={applyLink} title="Link">
+                  Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => inlineFileRef.current?.click()}
+                  disabled={uploadingInline}
+                  title="Inserir imagem"
+                >
+                  {uploadingInline ? 'Enviando…' : 'Imagem'}
+                </button>
+                <input
+                  ref={inlineFileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleInlineUpload}
+                />
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={form.body}
+                onChange={set('body')}
+                required
+                rows={10}
+                placeholder="Escreva o conteúdo da publicação em Markdown"
+              />
+            </>
+          ) : (
+            <div className="bp-preview post-body">
+              <ReactMarkdown components={markdownComponents}>
+                {form.body || '*Nada para pré-visualizar ainda.*'}
+              </ReactMarkdown>
+            </div>
+          )}
+        </div>
+
         <label className="ag-field">
           <span>
-            URL da imagem <em>(opcional)</em>
+            Imagem de capa <em>(opcional)</em>
           </span>
-          <input
-            type="url"
-            value={form.image_url}
-            onChange={set('image_url')}
-            placeholder="https://..."
-          />
+          <div className="bp-cover-row">
+            <input
+              type="url"
+              value={form.image_url}
+              onChange={set('image_url')}
+              placeholder="https://..."
+            />
+            <button
+              type="button"
+              className="ag-btn ag-btn--ghost ag-btn--sm"
+              onClick={() => coverFileRef.current?.click()}
+              disabled={uploadingCover}
+            >
+              {uploadingCover ? 'Enviando…' : 'Enviar imagem'}
+            </button>
+            <input
+              ref={coverFileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handleCoverUpload}
+            />
+          </div>
+          {form.image_url && (
+            <img className="bp-cover-preview" src={resolveMediaUrl(form.image_url)} alt="" />
+          )}
         </label>
+
         <label className="bp-form-check">
           <input type="checkbox" checked={form.pinned} onChange={set('pinned')} />
           <span>
@@ -132,7 +320,7 @@ function PostForm({ initial, onSubmit, onClose }) {
             Cancelar
           </button>
           <button type="submit" className="ag-btn ag-btn--primary" disabled={saving}>
-            {saving ? 'Salvando…' : initial ? 'Salvar alterações' : 'Publicar'}
+            {saving ? 'Salvando…' : 'Salvar'}
           </button>
         </div>
       </form>
@@ -227,6 +415,19 @@ export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
     }
   }
 
+  const changeStatus = async (post, status) => {
+    try {
+      const updated = await api.patch(`/api/admin/blog/${post.id}`, { status }, { auth: true })
+      setPosts((list) => sortPosts(list.map((p) => (p.id === post.id ? updated : p))))
+      showToast(
+        status === 'published' ? 'Publicação publicada.' : 'Publicação arquivada.',
+      )
+      onChanged?.()
+    } catch (err) {
+      if (!guard(err)) showToast(err.detail || 'Não foi possível atualizar.', 'error')
+    }
+  }
+
   const deletePost = async (post) => {
     setBusy(true)
     try {
@@ -296,6 +497,9 @@ export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
                       <IconPin /> Fixado
                     </span>
                   )}
+                  <span className={`bp-badge bp-badge--${post.status}`}>
+                    {STATUS_LABELS[post.status] || post.status}
+                  </span>
                   {post.tag && <span className="bp-badge">{post.tag}</span>}
                   {post.source === 'instagram' && (
                     <span className="bp-badge bp-badge--source">Instagram</span>
@@ -305,6 +509,23 @@ export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
                 <h3>{post.title}</h3>
                 <p className="bp-card__excerpt">{excerpt(post.body)}</p>
                 <div className="bp-card__actions">
+                  {post.status === 'published' ? (
+                    <button
+                      type="button"
+                      className="ag-btn ag-btn--ghost ag-btn--sm"
+                      onClick={() => changeStatus(post, 'archived')}
+                    >
+                      Arquivar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="ag-btn ag-btn--ghost ag-btn--sm"
+                      onClick={() => changeStatus(post, 'published')}
+                    >
+                      Publicar
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`ag-iconbtn${post.pinned ? ' is-active' : ''}`}

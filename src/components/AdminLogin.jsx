@@ -16,6 +16,8 @@ const T = {
 }
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+// import.meta.env.DEV garante que o botao de bypass nunca entra no build de producao.
+const DEV_BYPASS = import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYPASS === 'true'
 
 export default function AdminLogin({ onSuccess, onClose }) {
   const [error, setError] = useState(null)
@@ -33,6 +35,24 @@ export default function AdminLogin({ onSuccess, onClose }) {
         setError('Este e-mail não tem acesso ao painel')
       } else if (err.status === 401) {
         setError('Falha na verificação do Google')
+      } else {
+        setError('Não foi possível conectar ao servidor')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDevLogin = async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      const data = await api.post('/api/auth/dev-login')
+      setToken(data.access_token)
+      onSuccess()
+    } catch (err) {
+      if (err.status === 404) {
+        setError('Bypass desativado no backend (DEV_AUTH_BYPASS)')
       } else {
         setError('Não foi possível conectar ao servidor')
       }
@@ -113,6 +133,26 @@ export default function AdminLogin({ onSuccess, onClose }) {
             <div style={{ fontSize: 12, color: '#b05060', textAlign: 'center' }}>
               Login Google não configurado (defina VITE_GOOGLE_CLIENT_ID)
             </div>
+          )}
+          {DEV_BYPASS && (
+            <button
+              type="button"
+              onClick={handleDevLogin}
+              disabled={loading}
+              style={{
+                padding: '8px 20px',
+                borderRadius: 999,
+                border: `1px dashed ${T.accent}`,
+                background: 'transparent',
+                color: T.accent,
+                fontFamily: T.sans,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Entrar sem Google (dev)
+            </button>
           )}
           {loading && (
             <div style={{ fontSize: 12, color: T.textMuted }}>Entrando...</div>
