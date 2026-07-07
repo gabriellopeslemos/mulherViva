@@ -307,3 +307,15 @@ class InstagramSyncResult(BaseModel):
     skipped: int
     token_refreshed: bool
     error: str | None = None
+
+
+# ---- google calendar ----
+
+class GoogleCalendarStatusOut(BaseModel):
+    connected: bool
+    email: str | None = None
+    configured: bool
+
+
+class GoogleCalendarConnectOut(BaseModel):
+    auth_url: str

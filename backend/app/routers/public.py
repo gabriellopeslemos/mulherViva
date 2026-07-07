@@ -25,7 +25,7 @@ from ..schemas import (
     WaitlistIn,
     WaitlistOut,
 )
-from ..services import notifications, waitlist
+from ..services import google_calendar, notifications, waitlist
 from ..services.settings import get_bool_setting, get_int_setting
 from ..services.slots import get_available_slots, has_overlap
 
@@ -148,6 +148,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
+    google_calendar.schedule_sync(appointment.id)
 
     snapshot = _appt_snapshot(appointment, specialty.name)
     if auto_confirm:
@@ -198,6 +199,7 @@ def cancel_managed_booking(token: str, db: Session = Depends(get_db)):
     appointment.status = "cancelled"
     db.commit()
     db.refresh(appointment)
+    google_calendar.schedule_sync(appointment.id)
 
     specialty = db.get(Specialty, appointment.specialty_id)
     notifications.notify_booking_cancelled(
@@ -274,6 +276,7 @@ def reschedule_managed_booking(
     appointment.end_time = end
     db.commit()
     db.refresh(appointment)
+    google_calendar.schedule_sync(appointment.id)
 
     snapshot = _appt_snapshot(appointment, specialty.name)
     if appointment.status == "confirmed":

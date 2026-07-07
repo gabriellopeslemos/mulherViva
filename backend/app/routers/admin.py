@@ -38,7 +38,7 @@ from ..schemas import (
     UploadOut,
     WaitlistOut,
 )
-from ..services import notifications, waitlist
+from ..services import google_calendar, notifications, waitlist
 from ..services.instagram import sync_instagram
 from ..services.settings import get_bool_setting, get_int_setting, set_setting
 from ..services.slots import has_overlap
@@ -135,6 +135,7 @@ def create_appointment(body: AppointmentIn, db: Session = Depends(get_db)):
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
+    google_calendar.schedule_sync(appointment.id)
     if appointment.client_email and appointment.status == "confirmed":
         notifications.notify_status_change(
             _appt_snapshot(db, appointment), appointment.status
@@ -174,6 +175,7 @@ def update_appointment(
         )
     db.commit()
     db.refresh(appointment)
+    google_calendar.schedule_sync(appointment.id)
     if (
         appointment.client_email
         and appointment.status != previous_status
@@ -190,8 +192,10 @@ def update_appointment(
 @router.delete("/appointments/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
     appointment = _get_or_404(db, Appointment, appointment_id, "Consulta")
+    event_id = appointment.google_event_id
     db.delete(appointment)
     db.commit()
+    google_calendar.schedule_event_delete(event_id)
 
 
 # ---- availability rules ----

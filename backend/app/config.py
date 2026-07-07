@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-me"
     access_token_expire_minutes: int = 720
     google_client_id: str = ""
+    google_client_secret: str = ""
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/auth/google-calendar/callback"
+    timezone: str = "America/Sao_Paulo"
     allowed_admin_emails: str = ""
     # Dev only: enables /api/auth/dev-login, which issues an admin token
     # without Google. Must stay false in production.

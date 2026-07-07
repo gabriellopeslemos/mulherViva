@@ -10,6 +10,7 @@ import smtplib
 import threading
 from datetime import date, datetime, time, timezone
 from email.message import EmailMessage
+from urllib.parse import urlencode
 
 from ..config import get_settings
 
@@ -48,6 +49,27 @@ def _ics_escape(value: str) -> str:
         .replace(",", "\\,")
         .replace("\n", "\\n")
     )
+
+
+def google_calendar_link(appt: dict) -> str:
+    """calendar.google.com quick-add link: no OAuth, opens a pre-filled event."""
+    settings = get_settings()
+    start = datetime.combine(appt["date"], appt["start_time"])
+    end = datetime.combine(appt["date"], appt["end_time"])
+    location = (
+        "Online (videoconferência)"
+        if appt["type"] == "online"
+        else settings.clinic_address
+    )
+    params = {
+        "action": "TEMPLATE",
+        "text": f"Consulta — {appt['specialty_name']}",
+        "dates": f"{start.strftime('%Y%m%dT%H%M%S')}/{end.strftime('%Y%m%dT%H%M%S')}",
+        "ctz": settings.timezone,
+        "details": settings.clinic_name,
+        "location": location,
+    }
+    return "https://calendar.google.com/calendar/render?" + urlencode(params)
 
 
 def build_ics(appt: dict) -> str:
@@ -175,6 +197,8 @@ def notify_booking_confirmed(appt: dict) -> None:
         *_appt_lines(appt),
         *extra,
         *_manage_lines(appt),
+        "",
+        f"Adicionar ao Google Agenda: {google_calendar_link(appt)}",
         "",
         "Em anexo, um arquivo para adicionar a consulta ao seu calendário.",
         "",

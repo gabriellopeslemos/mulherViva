@@ -69,6 +69,7 @@ class Appointment(Base):
     is_first_visit: Mapped[bool] = mapped_column(Boolean, default=False)
     source: Mapped[str] = mapped_column(String(10), default="public")
     token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    google_event_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

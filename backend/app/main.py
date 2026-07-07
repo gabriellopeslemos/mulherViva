@@ -15,7 +15,7 @@ from sqlalchemy import inspect, text
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine
-from .routers import admin, auth, public
+from .routers import admin, auth, google_calendar, public
 from .routers.admin import UPLOADS_DIR
 from .seed import seed
 from .services.instagram import sync_instagram
@@ -35,6 +35,7 @@ _TABLE_COLUMNS = {
         "is_first_visit": "BOOLEAN DEFAULT FALSE",
         "token": "VARCHAR(64)",
         "reminder_sent_at": "DATETIME",
+        "google_event_id": "VARCHAR(128)",
     },
     "blog_posts": {
         "status": "VARCHAR(10) NOT NULL DEFAULT 'published'",
@@ -167,6 +168,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(public.router)
 app.include_router(admin.router)
+app.include_router(google_calendar.router)
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")

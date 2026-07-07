@@ -55,6 +55,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
   const [toast, setToast] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [reloadTick, setReloadTick] = useState(0)
+  const [gcal, setGcal] = useState(null)
 
   const days = useMemo(() => {
     if (view === 'day') return [toIso(anchor)]
@@ -99,6 +100,19 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         if (!guard(err)) setLoadError('Não foi possível carregar a agenda.')
       })
   }, [guard])
+
+  const refreshGcalStatus = useCallback(() => {
+    api
+      .get('/api/admin/google-calendar/status', { auth: true })
+      .then(setGcal)
+      .catch((err) => guard(err))
+  }, [guard])
+
+  useEffect(() => {
+    refreshGcalStatus()
+    window.addEventListener('focus', refreshGcalStatus)
+    return () => window.removeEventListener('focus', refreshGcalStatus)
+  }, [refreshGcalStatus])
 
   // Range data: appointments + overrides for the visible days.
   const rangeKey = `${days[0]}:${days[days.length - 1]}`
@@ -353,6 +367,32 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
     }
   }
 
+  const connectGoogleCalendar = async () => {
+    try {
+      const { auth_url } = await api.post('/api/admin/google-calendar/connect', null, {
+        auth: true,
+      })
+      window.open(auth_url, '_blank', 'noopener')
+      showToast('Conclua a autorização na nova aba.')
+    } catch (err) {
+      if (!guard(err)) showToast(err.detail || 'Não foi possível conectar.', 'error')
+    }
+  }
+
+  const disconnectGoogleCalendar = async () => {
+    setBusy(true)
+    try {
+      await api.delete('/api/admin/google-calendar/connection', { auth: true })
+      setModal(null)
+      refreshGcalStatus()
+      showToast('Google Agenda desconectada.')
+    } catch (err) {
+      if (!guard(err)) showToast(err.detail || 'Não foi possível desconectar.', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const openNewAppt = () => {
     const now = new Date()
     const startMin = snap(now.getHours() * 60 + now.getMinutes() + 60, 30)
@@ -435,6 +475,19 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
             </svg>
             <span className="ag-hide-mobile">Horários de atendimento</span>
           </button>
+          {gcal?.configured && (
+            <button
+              type="button"
+              className="ag-btn ag-btn--ghost ag-btn--sm"
+              onClick={() =>
+                gcal.connected
+                  ? setModal({ type: 'gcal-disconnect' })
+                  : connectGoogleCalendar()
+              }
+            >
+              {gcal.connected ? 'Google Agenda conectada' : 'Conectar Google Agenda'}
+            </button>
+          )}
           {!isMobile && (
             <button type="button" className="ag-btn ag-btn--primary ag-btn--sm" onClick={openNewAppt}>
               + Nova consulta
@@ -606,6 +659,18 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           busy={busy}
           onConfirm={() => deleteAppt(modal.appt)}
           onCancel={() => setModal({ type: 'appt-details', appt: modal.appt })}
+        />
+      )}
+
+      {modal?.type === 'gcal-disconnect' && (
+        <ConfirmDialog
+          title="Google Agenda"
+          message={`Conectado como ${gcal?.email}. Desconectar? Novas consultas deixarão de ser criadas na agenda até reconectar.`}
+          confirmLabel="Desconectar"
+          danger
+          busy={busy}
+          onConfirm={disconnectGoogleCalendar}
+          onCancel={() => setModal(null)}
         />
       )}
 
