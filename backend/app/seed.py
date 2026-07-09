@@ -7,7 +7,7 @@ from .models import AppSetting, Specialty
 SPECIALTIES = [
     ("Ginecologia Integrativa", "ginecologia-integrativa"),
     ("Obstetrícia Humanizada", "obstetricia-humanizada"),
-    ("Homeopatia Clínica", "homeopatia-clinica"),
+    ("Medicina Ortomolecular", "medicina-ortomolecular"),
 ]
 
 

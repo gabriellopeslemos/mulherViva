@@ -26,7 +26,7 @@ import {
   aboutImage as aboutPlaceholder,
   gynImage as gynPlaceholder,
   obstImage as obstPlaceholder,
-  homeoImage as homeoPlaceholder,
+  ortoImage as ortoPlaceholder,
   testimonialRandomOne as testimonialPlaceholderOne,
   testimonialRandomTwo as testimonialPlaceholderTwo,
   testimonialRandomThree as testimonialPlaceholderThree,
@@ -52,7 +52,7 @@ const IconGraduation = () => (
 const aboutTags = [
   'Medicina integrativa',
   'Obstetrícia humanizada',
-  'Homeopatia',
+  'Ortomolecular',
 ]
 
 const approachSteps = [
@@ -92,11 +92,11 @@ const specialties = [
     tone: '#f3dde6',
   },
   {
-    title: 'Homeopatia',
-    text: 'A homeopatia é uma especialidade médica que busca restabelecer o equilíbrio da saúde física, emocional, mental e energética do ser. Adota uma abordagem holística, considerando a paciente, sua história e relações como um todo.',
+    title: 'Ortomolecular',
+    text: 'A Medicina Ortomolecular é uma prática terapêutica complementar baseada na teoria de que doenças e o envelhecimento resultam de desequilíbrios bioquímicos e excesso de radicais livres no corpo. O objetivo é restaurar o equilíbrio molecular por meio de dietas, mudanças no estilo de vida e suplementação individualizada de vitaminas, minerais e aminoácidos.',
     image: '/images/m.jpg',
-    placeholder: homeoPlaceholder,
-    imageAlt: 'Atendimento de homeopatia em ambiente sereno',
+    placeholder: ortoPlaceholder,
+    imageAlt: 'Atendimento de medicina ortomolecular em ambiente sereno',
     tone: '#e9dded',
   },
 ]
@@ -152,7 +152,7 @@ const fallbackBlogPosts = [
 const ribbonItems = [
   'Ginecologia natural',
   'Obstetrícia humanizada',
-  'Homeopatia',
+  'Ortomolecular',
   'Medicina integrativa',
   'Escuta profunda',
   'Cuidado sem pressa',
@@ -548,7 +548,7 @@ function Landing() {
           <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
-              <p className="eyebrow">Ginecologia · Obstetrícia · Homeopatia</p>
+              <p className="eyebrow">Ginecologia · Obstetrícia · Ortomolecular</p>
               <h1>
                 Um novo olhar para a saúde feminina — <em>mais humano, mais completo</em>.
               </h1>
@@ -628,7 +628,7 @@ function Landing() {
                   <p className="eyebrow">Cuidado integral</p>
                   <h2>Especialidades</h2>
                   <p>
-                    Ginecologia, obstetrícia e homeopatia — três caminhos que se
+                    Ginecologia, obstetrícia e ortomolecular — três caminhos que se
                     encontram no olhar integral sobre a saúde da mulher.
                   </p>
                 </div>
