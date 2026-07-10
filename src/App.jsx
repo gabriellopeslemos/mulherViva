@@ -30,7 +30,6 @@ import {
   testimonialRandomOne as testimonialPlaceholderOne,
   testimonialRandomTwo as testimonialPlaceholderTwo,
   testimonialRandomThree as testimonialPlaceholderThree,
-  iphoneMapImage as iphoneMapPlaceholder,
 } from './lib/placeholderImages'
 
 const IconGraduation = () => (
@@ -229,7 +228,6 @@ function Landing() {
   const isAboutInView = useInView(aboutSectionRef, { once: true, amount: 0.3 })
   const heroImage = useAvailableImage('/images/hero-nobg.png', heroPlaceholder)
   const aboutImage = useAvailableImage('/images/about.png', aboutPlaceholder)
-  const iphoneMapImage = useAvailableImage('/images/iphone17map.png', iphoneMapPlaceholder)
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
   const { scrollYProgress: pageScrollProgress } = useScroll()
@@ -862,24 +860,28 @@ function Landing() {
                   </a>
                 </div>
               </div>
-              <div
-                className="device-showcase__device"
-                data-reveal
-                style={{ '--delay': '120ms' }}
-              >
-
-                <div
-                  className="device-showcase__frame"
-                  role="img"
-                  aria-label="Mapa com a localização do consultório em um iPhone"
+              <div className="map-block" data-reveal style={{ '--delay': '120ms' }}>
+                <iframe
+                  className="map-block__frame"
+                  src="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF&output=embed"
+                  title="Mapa com a localização do consultório"
+                  loading="lazy"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+                <a
+                  className="map-block__link"
+                  href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF"
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  <img
-                    className="device-showcase__image"
-                    src={iphoneMapImage}
-                    alt="Mapa com a localização do consultório no iPhone"
-                    loading="lazy"
-                  />
-                </div>
+                  
+                  <span className="map-block__info">
+                    <strong>Centro Médico Lúcio Costa</strong>
+                    <span>SGAS 610, Bloco 2, Sala 250, Brasília - DF</span>
+                  </span>
+                  <span className="map-block__cta">Ver no Maps &rarr;</span>
+                </a>
               </div>
             </div>
           </div>
