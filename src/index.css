@@ -1,25 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #faf5f2;
-  --bg-alt: linear-gradient(150deg, #56263f 0%, #6e3354 50%, #461f37 100%);
-  --surface: #fffdfc;
-  --surface-soft: #f6ecec;
-  --text-strong: #2b1421;
-  --text: #3a2230;
-  --text-soft: #5d4250;
-  --text-muted: #6d5260;
-  --accent: #9a4067;
-  --accent-strong: #74284a;
-  --accent-soft: #f7ebf0;
-  --accent-contrast: #fff7fb;
-  --gold: #b9854c;
-  --gold-soft: #ffd89c;
-  --line: #e8d4d8;
-  --blog-card-bg: #fffdfc;
-  --blog-card-line: #e8d4d8;
-  --shadow-sm: 0 10px 30px rgba(98, 44, 70, 0.07);
-  --shadow-lg: 0 30px 80px rgba(98, 44, 70, 0.13);
+  /* ---- brand palette: the only 5 colors the whole site should use ---- */
+  --palette-1: #74284a;
+  --palette-2: #9a4067;
+  --palette-3: #ca699d;
+  --palette-4: #e498b4;
+  --palette-5: #f3cbd3;
+
+  /* ---- semantic tokens, all derived from the palette above ----
+     Change a --palette-* value and every token below (and every file
+     that references these tokens) follows automatically. */
+  --bg: color-mix(in srgb, var(--palette-5) 18%, white);
+  --bg-alt: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--palette-1) 90%, black) 0%,
+    color-mix(in srgb, var(--palette-1) 80%, black) 50%,
+    color-mix(in srgb, var(--palette-1) 95%, black) 100%
+  );
+  --surface: color-mix(in srgb, var(--palette-5) 6%, white);
+  --surface-soft: color-mix(in srgb, var(--palette-5) 30%, white);
+  --text-strong: color-mix(in srgb, var(--palette-1) 65%, black);
+  --text: color-mix(in srgb, var(--palette-1) 45%, black);
+  --text-soft: color-mix(in srgb, var(--palette-1) 85%, white);
+  --text-muted: color-mix(in srgb, var(--palette-1) 72%, white);
+  --accent: var(--palette-2);
+  --accent-strong: var(--palette-1);
+  --accent-soft: color-mix(in srgb, var(--palette-5) 12%, white);
+  --accent-contrast: color-mix(in srgb, var(--palette-5) 6%, white);
+  --gold: var(--palette-3);
+  --gold-soft: var(--palette-4);
+  --line: color-mix(in srgb, var(--palette-4) 35%, white);
+  --blog-card-bg: var(--surface);
+  --blog-card-line: var(--line);
+  --shadow-sm: 0 10px 30px color-mix(in srgb, var(--palette-1) 7%, transparent);
+  --shadow-lg: 0 30px 80px color-mix(in srgb, var(--palette-1) 13%, transparent);
   --radius-xl: 30px;
   --radius-lg: 22px;
   --radius-md: 16px;
@@ -53,18 +68,18 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(1200px 800px at 80% -10%, #fffdfc 0%, transparent 60%),
-    radial-gradient(900px 900px at -10% 10%, #f5e3e4 0%, transparent 55%),
+    radial-gradient(1200px 800px at 80% -10%, var(--surface) 0%, transparent 60%),
+    radial-gradient(900px 900px at -10% 10%, color-mix(in srgb, var(--palette-5) 50%, white) 0%, transparent 55%),
     var(--bg);
 }
 
 ::selection {
-  background: rgba(154, 64, 103, 0.2);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
   color: var(--text-strong);
 }
 
 :focus-visible {
-  outline: 3px solid rgba(154, 64, 103, 0.55);
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -107,12 +122,12 @@ p {
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #74284a 0%, #9a4067 45%, #e9c4d3 100%);
+  background: linear-gradient(90deg, var(--accent-strong) 0%, var(--accent) 45%, var(--gold-soft) 100%);
   transform-origin: 0 50%;
   z-index: 60;
   opacity: 0.85;
   pointer-events: none;
-  box-shadow: 0 0 12px rgba(154, 64, 103, 0.25);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ---- scroll reveal ---- */
@@ -182,12 +197,12 @@ p {
 .btn-outline:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
-  background: rgba(154, 64, 103, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .hero-bg {
   position: relative;
-  background: #f3e4e8;
+  background: color-mix(in srgb, var(--palette-5) 50%, white);
   overflow: hidden;
 }
 
@@ -318,8 +333,8 @@ p {
   transform: translateZ(18px);
   backface-visibility: hidden;
   box-shadow:
-    0 28px 90px rgba(152, 126, 178, 0.18),
-    0 8px 28px rgba(152, 126, 178, 0.08);
+    0 28px 90px color-mix(in srgb, var(--accent-strong) 18%, transparent),
+    0 8px 28px color-mix(in srgb, var(--accent-strong) 8%, transparent);
   overflow: hidden;
   animation: blobMorph 16s ease-in-out infinite;
 }
@@ -462,7 +477,7 @@ p {
 }
 
 .section--soft {
-  background: linear-gradient(180deg, #f6e9ec 0%, var(--bg) 100%);
+  background: linear-gradient(180deg, var(--surface-soft) 0%, var(--bg) 100%);
 }
 
 .specialties-section {
@@ -615,7 +630,7 @@ p {
   padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background: rgba(255, 255, 255, 0.4);
+  background: color-mix(in srgb, var(--palette-5) 45%, transparent);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -742,7 +757,7 @@ p {
   .blog-card:hover {
     transform: translateY(-6px);
     border-color: var(--accent);
-    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(154, 64, 103, 0.22);
+    box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
   }
 
   .testimonial-card {
@@ -812,7 +827,7 @@ a.card-link:hover {
   position: relative;
   width: 6px;
   border-radius: 999px;
-  background: #eedade;
+  background: var(--line);
   overflow: hidden;
 }
 
@@ -820,7 +835,7 @@ a.card-link:hover {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #9a4067, #e3c4d0);
+  background: linear-gradient(180deg, var(--accent), var(--gold-soft));
   transform: scaleY(var(--approach-progress, 0));
   transform-origin: top;
   transition: transform 0.4s ease;
@@ -928,9 +943,9 @@ a.card-link:hover {
     --avatar-image,
     radial-gradient(
       circle at 30% 30%,
-      #ffffff 0%,
-      var(--avatar-tone, #e9d9e7) 70%,
-      #cdb7c9 100%
+      var(--accent-contrast) 0%,
+      var(--avatar-tone, var(--palette-5)) 70%,
+      var(--gold) 100%
     )
   );
   background-size: cover;
@@ -951,10 +966,10 @@ a.card-link:hover {
 }
 
 #blog .blog-card {
-  --text-strong: #1f1119;
-  --text: #2a1a24;
-  --text-soft: #4a3541;
-  --text-muted: #5b4552;
+  --text-strong: color-mix(in srgb, var(--palette-1) 80%, black);
+  --text: color-mix(in srgb, var(--palette-1) 60%, black);
+  --text-soft: var(--palette-1);
+  --text-muted: color-mix(in srgb, var(--palette-1) 85%, white);
   background: var(--blog-card-bg);
   border-color: var(--blog-card-line);
   color: var(--text);
@@ -988,9 +1003,9 @@ a.card-link:hover {
   gap: 5px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #f8ead9;
-  border: 1px solid #ecd4b4;
-  color: #8a5c2c;
+  background: var(--line);
+  border: 1px solid var(--gold-soft);
+  color: var(--text-strong);
 }
 
 .blog-pin svg {
@@ -1211,7 +1226,7 @@ a.blog-card {
   padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(154, 64, 103, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1240,11 +1255,11 @@ a.blog-card {
   background:
     radial-gradient(
       120% 140% at 85% -10%,
-      rgba(255, 216, 156, 0.14) 0%,
+      color-mix(in srgb, var(--gold-soft) 14%, transparent) 0%,
       transparent 55%
     ),
     var(--bg-alt);
-  color: #f7ebf0;
+  color: var(--accent-contrast);
 }
 
 .footer-brand {
@@ -1260,24 +1275,24 @@ a.blog-card {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #9a4067, #74284a);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   font-family: var(--serif);
   font-weight: 600;
   font-size: 14px;
-  color: #ffffff;
-  box-shadow: 0 10px 26px rgba(43, 20, 33, 0.4);
+  color: var(--accent-contrast);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--text-strong) 40%, transparent);
 }
 
 .footer-brand strong {
   display: block;
   font-size: 17px;
-  color: #ffffff;
+  color: var(--accent-contrast);
 }
 
 .footer-brand span:not(.footer-logo) {
   display: block;
   font-size: 13px;
-  color: #e3c8d6;
+  color: color-mix(in srgb, var(--palette-4) 55%, white);
 }
 
 .footer-cols {
@@ -1292,11 +1307,11 @@ a.blog-card {
   gap: 5px;
   align-content: start;
   font-size: 13px;
-  color: #ecd6e2;
+  color: color-mix(in srgb, var(--palette-4) 45%, white);
 }
 
 .footer-col a {
-  color: #ffffff;
+  color: var(--accent-contrast);
   font-weight: 600;
   width: fit-content;
   transition: color 0.25s ease;
@@ -1311,7 +1326,7 @@ a.blog-card {
   letter-spacing: 0.24em;
   font-size: 11px;
   font-weight: 600;
-  color: #d8aec4;
+  color: color-mix(in srgb, var(--palette-4) 82%, black);
   margin-bottom: 2px;
 }
 
@@ -1326,8 +1341,8 @@ a.blog-card {
   flex-wrap: wrap;
   margin-top: clamp(18px, 2.5vw, 26px);
   padding-top: clamp(12px, 1.6vw, 16px);
-  border-top: 1px solid rgba(255, 248, 252, 0.18);
-  color: #d8b8c9;
+  border-top: 1px solid color-mix(in srgb, var(--accent-contrast) 18%, transparent);
+  color: var(--line);
   font-size: 13px;
 }
 

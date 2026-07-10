@@ -81,7 +81,7 @@ const specialties = [
     image: '/images/exam.jpg',
     placeholder: gynPlaceholder,
     imageAlt: 'Médica realizando atendimento ginecológico acolhedor',
-    tone: '#f8ead9',
+    tone: 'color-mix(in srgb, var(--palette-5) 70%, white)',
   },
   {
     title: 'Obstetrícia',
@@ -89,7 +89,7 @@ const specialties = [
     image: '/images/hug.jpg',
     placeholder: obstPlaceholder,
     imageAlt: 'Gestante sendo acolhida em consulta de obstetrícia',
-    tone: '#f3dde6',
+    tone: 'color-mix(in srgb, var(--palette-4) 55%, white)',
   },
   {
     title: 'Ortomolecular',
@@ -97,7 +97,7 @@ const specialties = [
     image: '/images/m.jpg',
     placeholder: ortoPlaceholder,
     imageAlt: 'Atendimento de medicina ortomolecular em ambiente sereno',
-    tone: '#e9dded',
+    tone: 'color-mix(in srgb, var(--palette-3) 45%, white)',
   },
 ]
 
@@ -105,7 +105,7 @@ const testimonials = [
   {
     name: 'Luciana M.',
     text: 'Encontrei um cuidado profundo, sem julgamentos e com respeito real.',
-    tone: '#eaddea',
+    tone: 'color-mix(in srgb, var(--palette-3) 40%, white)',
     image: '/images/mulherRandom.jpg',
     placeholder: testimonialPlaceholderOne,
     imageAlt: 'Foto de Luciana',
@@ -113,7 +113,7 @@ const testimonials = [
   {
     name: 'Renata C.',
     text: 'A consulta foi serena e precisa. Senti que tudo foi explicado com calma.',
-    tone: '#e4d7e3',
+    tone: 'color-mix(in srgb, var(--palette-4) 45%, white)',
     image: '/images/mulherRandom2.jpg',
     placeholder: testimonialPlaceholderTwo,
     imageAlt: 'Foto de Renata',
@@ -121,7 +121,7 @@ const testimonials = [
   {
     name: 'Pedro F.',
     text: 'Um encontro entre ciência e sensibilidade que transformou meu olhar.',
-    tone: '#e9d4e6',
+    tone: 'color-mix(in srgb, var(--palette-2) 35%, white)',
     image: '/images/homemrandom.jpg',
     placeholder: testimonialPlaceholderThree,
     imageAlt: 'Foto de Pedro',
@@ -159,13 +159,13 @@ const ribbonItems = [
 ]
 
 const heroBlobDefs = [
-  { color: '#dfa9bf', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
-  { color: '#c98ba6', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
-  { color: '#e7bccd', blur: 75, w: 560, h: 440, baseX: 0.85, baseY: 0.85, phase: 2.5 },
-  { color: '#d295ac', blur: 85, w: 340, h: 300, baseX: 0.78, baseY: 0.10, phase: 3.8 },
-  { color: '#f0d0da', blur: 70, w: 460, h: 360, baseX: 0.15, baseY: 0.80, phase: 1.0 },
-  { color: '#bb7e96', blur: 100, w: 400, h: 320, baseX: 0.45, baseY: 0.30, phase: 2.1 },
-  { color: '#d9a4b7', blur: 80, w: 300, h: 260, baseX: 0.02, baseY: 0.45, phase: 0.7 },
+  { color: 'var(--palette-4)', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
+  { color: 'var(--palette-3)', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
+  { color: 'color-mix(in srgb, var(--palette-4) 60%, white)', blur: 75, w: 560, h: 440, baseX: 0.85, baseY: 0.85, phase: 2.5 },
+  { color: 'color-mix(in srgb, var(--palette-3) 70%, white)', blur: 85, w: 340, h: 300, baseX: 0.78, baseY: 0.10, phase: 3.8 },
+  { color: 'var(--palette-5)', blur: 70, w: 460, h: 360, baseX: 0.15, baseY: 0.80, phase: 1.0 },
+  { color: 'color-mix(in srgb, var(--palette-2) 55%, white)', blur: 100, w: 400, h: 320, baseX: 0.45, baseY: 0.30, phase: 2.1 },
+  { color: 'color-mix(in srgb, var(--palette-3) 55%, white)', blur: 80, w: 300, h: 260, baseX: 0.02, baseY: 0.45, phase: 0.7 },
 ]
 
 function formatPostDate(isoDate) {

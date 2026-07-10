@@ -3,7 +3,7 @@
 /* Light section: the booking UI is built as light cards with dark text, so it
    must NOT inherit the dark `.section.alt` palette (white-on-white). */
 .bk-section {
-  background: linear-gradient(180deg, #fbf2f5 0%, var(--bg) 60%);
+  background: linear-gradient(180deg, var(--surface-soft) 0%, var(--bg) 60%);
 }
 
 .bk-section .bk-header {
@@ -232,7 +232,7 @@
    a 1px anti-aliasing seam on the selected chip's border. Tint instead. */
 .bk-chip:hover {
   border-color: var(--accent);
-  background: #fbf2f5;
+  background: var(--surface-soft);
 }
 
 /* Transparent border, not accent: see .bk-filterbtn.is-active. */
@@ -343,7 +343,7 @@
 }
 
 .bk-calendar__day:not(.is-available) {
-  color: #b9a6b1;
+  color: color-mix(in srgb, var(--palette-3) 70%, white);
 }
 
 .bk-calendar__day.is-today {
@@ -351,14 +351,14 @@
 }
 
 .bk-calendar__day.is-available {
-  background: #f7ebf0;
+  background: var(--line);
   color: var(--accent-strong);
   font-weight: 600;
   cursor: pointer;
 }
 
 .bk-calendar__day.is-available:hover {
-  background: #f3e1e8;
+  background: color-mix(in srgb, var(--accent) 15%, white);
 }
 
 /* Transparent border (overrides .is-today's gray) + no shadow: see
@@ -454,7 +454,7 @@
    re-tint the background. No transform/shadow on hover (see .bk-specialty). */
 .bk-slot:not(.is-selected):hover {
   border-color: var(--accent);
-  background: #fbf2f5;
+  background: var(--surface-soft);
 }
 
 .bk-slot:not(.is-selected):hover .bk-slot__time {
@@ -565,7 +565,7 @@
 .bk-field textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(154, 64, 103, 0.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .bk-form__note {
@@ -594,7 +594,7 @@
 .bk-btn--primary {
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 12px 26px rgba(116, 40, 74, 0.3);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--accent-strong) 30%, transparent);
 }
 
 .bk-btn--primary:hover:not(:disabled) {
@@ -614,7 +614,7 @@
 }
 
 .bk-btn--ghost:hover {
-  background: #f7ebf0;
+  background: var(--line);
 }
 
 /* ---- summary rail ---- */
@@ -623,7 +623,7 @@
   position: sticky;
   top: 96px;
   padding: 26px 24px;
-  background: linear-gradient(160deg, #fffafb 0%, #f7ebf0 100%);
+  background: linear-gradient(160deg, var(--accent-contrast) 0%, var(--line) 100%);
 }
 
 .bk-summary h4 {
@@ -695,7 +695,7 @@
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-contrast);
-  box-shadow: 0 14px 30px rgba(116, 40, 74, 0.35);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--accent-strong) 35%, transparent);
 }
 
 .bk-success__badge svg {
@@ -750,7 +750,7 @@
 .bk-section button:focus-visible,
 .bk-field input:focus-visible,
 .bk-field textarea:focus-visible {
-  outline: 3px solid rgba(154, 64, 103, 0.5);
+  outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
   outline-offset: 2px;
 }
 
