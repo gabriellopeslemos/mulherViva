@@ -30,7 +30,19 @@ import {
   testimonialRandomOne as testimonialPlaceholderOne,
   testimonialRandomTwo as testimonialPlaceholderTwo,
   testimonialRandomThree as testimonialPlaceholderThree,
+  clinicPhotoImage as clinicPhotoPlaceholder,
 } from './lib/placeholderImages'
+
+// TODO: replace with real WhatsApp number
+const WHATSAPP_NUMBER = '5561999990000'
+const WHATSAPP_MESSAGE = 'Olá! Gostaria de agendar uma consulta.'
+const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
+
+const IconWhatsapp = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+    <path d="M16.02 3C9.4 3 4 8.38 4 15c0 2.36.68 4.55 1.86 6.4L4 29l7.78-1.83A11.9 11.9 0 0 0 16.02 27C22.63 27 28 21.62 28 15S22.63 3 16.02 3Zm0 21.7c-1.98 0-3.83-.55-5.4-1.5l-.39-.23-4.62 1.09 1.13-4.5-.25-.4A9.63 9.63 0 0 1 5.3 15c0-5.9 4.8-10.7 10.72-10.7 5.9 0 10.7 4.8 10.7 10.7s-4.8 10.7-10.7 10.7Zm5.86-8.02c-.32-.16-1.9-.94-2.2-1.04-.29-.11-.5-.16-.72.16-.21.32-.82 1.04-1 1.25-.19.21-.37.24-.69.08-.32-.16-1.34-.5-2.55-1.58-.94-.84-1.58-1.87-1.76-2.19-.19-.32-.02-.5.14-.65.14-.14.32-.37.48-.55.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.75-.99-2.39-.26-.63-.53-.54-.72-.55h-.62c-.21 0-.56.08-.85.4-.29.32-1.12 1.1-1.12 2.67 0 1.57 1.15 3.09 1.31 3.3.16.21 2.26 3.45 5.47 4.84.76.33 1.36.53 1.82.67.77.24 1.46.21 2.02.13.62-.09 1.9-.78 2.16-1.53.27-.75.27-1.4.19-1.53-.08-.13-.29-.21-.61-.37Z" />
+  </svg>
+)
 
 const IconGraduation = () => (
   <svg
@@ -157,6 +169,39 @@ const ribbonItems = [
   'Cuidado sem pressa',
 ]
 
+const faqItems = [
+  {
+    question: 'A consulta é coberta por convênio?',
+    answer:
+      'O atendimento é particular, com recibo detalhado para solicitação de reembolso junto ao seu convênio. // TODO: confirmar política de reembolso/convênios com a clínica',
+  },
+  {
+    question: 'Quanto tempo dura a consulta?',
+    answer:
+      'A primeira consulta costuma durar entre 60 e 90 minutos, tempo suficiente para uma escuta profunda e sem pressa. Retornos são mais breves, mas sempre respeitando o que você precisa trazer naquele momento.',
+  },
+  {
+    question: 'Como funciona a consulta online?',
+    answer:
+      'É feita por videochamada, com a mesma atenção e cuidado do atendimento presencial. Exames físicos e procedimentos, quando necessários, são combinados para um encontro presencial posterior.',
+  },
+  {
+    question: 'O que é medicina ortomolecular?',
+    answer:
+      'É uma abordagem complementar que busca equilibrar o organismo por meio de nutrição, estilo de vida e suplementação individualizada de vitaminas, minerais e aminoácidos, sempre integrada à avaliação clínica tradicional.',
+  },
+  {
+    question: 'Atende gestantes de alto risco?',
+    answer:
+      'Sim, gestações de maior complexidade são acompanhadas com atenção redobrada e, quando necessário, em conjunto com outros especialistas, mantendo o mesmo compromisso com um cuidado individualizado e humanizado.',
+  },
+  {
+    question: 'Como remarco ou cancelo minha consulta?',
+    answer:
+      'Após o agendamento você recebe um e-mail com um link pessoal de gerenciamento, pelo qual pode remarcar ou cancelar a qualquer momento, sem precisar ligar ou esperar retorno.',
+  },
+]
+
 const heroBlobDefs = [
   { color: 'var(--palette-4)', blur: 80, w: 520, h: 420, baseX: 0.08, baseY: 0.08, phase: 0.0 },
   { color: 'var(--palette-3)', blur: 90, w: 480, h: 380, baseX: 0.72, baseY: 0.45, phase: 1.3 },
@@ -201,6 +246,55 @@ function TestimonialCard({ item }) {
         <p className="testimonial-name">{item.name}</p>
       </div>
     </article>
+  )
+}
+
+function FaqAccordion() {
+  const [openIndex, setOpenIndex] = useState(0)
+
+  return (
+    <div className="faq-list">
+      {faqItems.map((item, index) => {
+        const isOpen = openIndex === index
+        return (
+          <div
+            key={item.question}
+            className="faq-item"
+            data-reveal
+            style={{ '--delay': `${index * 70}ms` }}
+          >
+            <h3 className="faq-item__heading">
+              <button
+                type="button"
+                className="faq-question"
+                aria-expanded={isOpen}
+                aria-controls={`faq-panel-${index}`}
+                id={`faq-trigger-${index}`}
+                onClick={() => setOpenIndex(isOpen ? -1 : index)}
+              >
+                <span>{item.question}</span>
+                <span className="faq-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+            </h3>
+            <div
+              className="faq-answer"
+              id={`faq-panel-${index}`}
+              role="region"
+              aria-labelledby={`faq-trigger-${index}`}
+              data-open={isOpen}
+            >
+              <div className="faq-answer__inner">
+                <p>{item.answer}</p>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -770,6 +864,91 @@ function Landing() {
           </div>
         </section>
 
+        <section className="section section--soft" id="duvidas">
+          <div className="container">
+            <div className="section-header section-header--center" data-reveal>
+              <p className="eyebrow">Dúvidas frequentes</p>
+              <h2>Perguntas que ouvimos com carinho.</h2>
+              <p>
+                Reunimos aqui as dúvidas mais comuns antes de uma primeira
+                consulta — se algo ainda não estiver claro, é só chamar.
+              </p>
+            </div>
+            <FaqAccordion />
+          </div>
+        </section>
+
+        <BookingSection />
+
+        <section className="section" id="endereco">
+          <div className="container">
+
+            <div className="address-grid address-grid--device">
+              <div className="address-content" data-reveal ref={addressContentRef}>
+                <p className="address-eyebrow">Consultório</p>
+                <h3 className="address-title" ref={addressTitleRef}>
+                  Centro Médico Lúcio Costa
+                </h3>
+                <p className="address-lead">
+                  Um espaço sereno, discreto e preparado para consultas sem pressa.
+                </p>
+                <div className="address-details address-details--spread">
+                  <div className="address-item">
+                    <span className="address-label">Endereço</span>
+                    <span className="address-value">SGAS 610, Bloco 2, Sala 250</span>
+                    <span className="address-subvalue">Brasília - DF</span>
+                  </div>
+                  <div className="address-item">
+                    <span className="address-label">Atendimento</span>
+                    <span className="address-value">Presencial e online</span>
+                  </div>
+                </div>
+                <div className="address-tags">
+                  <span className="address-tag">Entrada pela L3</span>
+                  <span className="address-tag">Recepção acolhedora</span>
+                </div>
+                <div className="address-photo" data-reveal style={{ '--delay': '160ms' }}>
+                  <FallbackImage
+                    src="/images/centroLucioCosta.png"
+                    fallback={clinicPhotoPlaceholder}
+                    alt="Fachada e recepção do Centro Médico Lúcio Costa, consultório da Dra. Luciana da Silva Lopes"
+                    loading="lazy"
+                  />
+                  <span className="address-photo__caption">Nosso espaço de acolhimento</span>
+                </div>
+                <div className="address-actions">
+                  <a className="btn btn-primary" href="#agendamento">
+                    Agendar consulta
+                  </a>
+                </div>
+              </div>
+              <div className="map-block" data-reveal style={{ '--delay': '120ms' }}>
+                <iframe
+                  className="map-block__frame"
+                  src="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF&output=embed"
+                  title="Mapa com a localização do consultório"
+                  loading="lazy"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+                <a
+                  className="map-block__link"
+                  href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+
+                  <span className="map-block__info">
+                    <strong>Centro Médico Lúcio Costa</strong>
+                    <span>SGAS 610, Bloco 2, Sala 250, Brasília - DF</span>
+                  </span>
+                  <span className="map-block__cta">Ver no Maps &rarr;</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="section" id="blog">
           <div className="container">
             <div className="section-header" data-reveal>
@@ -818,77 +997,22 @@ function Landing() {
             </div>
           </div>
         </section>
-
-        <section className="section" id="endereco">
-          <div className="container">
-            
-            <div className="address-grid address-grid--device">
-              <div className="address-content" data-reveal ref={addressContentRef}>
-                <p className="address-eyebrow">Consultório</p>
-                <h3 className="address-title" ref={addressTitleRef}>
-                  Centro Médico Lúcio Costa
-                </h3>
-                <p className="address-lead">
-                  Um espaço sereno, discreto e preparado para consultas sem pressa.
-                </p>
-                <div className="address-details address-details--spread">
-                  <div className="address-item">
-                    <span className="address-label">Endereço</span>
-                    <span className="address-value">SGAS 610, Bloco 2, Sala 250</span>
-                    <span className="address-subvalue">Brasília - DF</span>
-                  </div>
-                  <div className="address-item">
-                    <span className="address-label">Atendimento</span>
-                    <span className="address-value">Presencial e online</span>
-                  </div>
-                </div>
-                <div className="address-tags">
-                  <span className="address-tag">Entrada pela L3</span>
-                  <span className="address-tag">Recepção acolhedora</span>
-                </div>
-                <div className="address-actions">
-                  <a className="btn btn-primary" href="#agendamento">
-                    Agendar consulta
-                  </a>
-                  <a
-                    className="btn btn-outline"
-                    href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Ver no Maps
-                  </a>
-                </div>
-              </div>
-              <div className="map-block" data-reveal style={{ '--delay': '120ms' }}>
-                <iframe
-                  className="map-block__frame"
-                  src="https://www.google.com/maps?q=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF&output=embed"
-                  title="Mapa com a localização do consultório"
-                  loading="lazy"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
-                <a
-                  className="map-block__link"
-                  href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  
-                  <span className="map-block__info">
-                    <strong>Centro Médico Lúcio Costa</strong>
-                    <span>SGAS 610, Bloco 2, Sala 250, Brasília - DF</span>
-                  </span>
-                  <span className="map-block__cta">Ver no Maps &rarr;</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <BookingSection />
       </main>
+
+      {!adminScreen && (
+        <a
+          className="whatsapp-fab"
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Conversar no WhatsApp"
+          data-reveal
+          style={{ '--delay': '400ms' }}
+        >
+          {/* TODO: replace with real WhatsApp number */}
+          <IconWhatsapp />
+        </a>
+      )}
 
       <footer className="site-footer">
         <div className="footer-panel" data-reveal>
@@ -905,6 +1029,10 @@ function Landing() {
                 <span className="footer-col__label">Contato</span>
                 <a href="tel:+5561999990000">+55 61 99999-0000</a>
                 <a href="mailto:contato@mulherviva.org">contato@mulherviva.org</a>
+                {/* TODO: replace with real WhatsApp number */}
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                  WhatsApp
+                </a>
                 <span>Atendimento das 8h às 18h</span>
               </div>
               <div className="footer-col">
