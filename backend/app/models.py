@@ -1,13 +1,33 @@
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, Time
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    Time,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
+from .timeutils import utcnow
 
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+__all__ = [
+    "AppSetting",
+    "Appointment",
+    "AvailabilityOverride",
+    "AvailabilityRule",
+    "BlogPost",
+    "ContactMessage",
+    "Specialty",
+    "WaitlistEntry",
+    "utcnow",
+]
 
 
 class Specialty(Base):
@@ -49,9 +69,27 @@ class AvailabilityOverride(Base):
     reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
 
+# Two appointments may never start at the same moment. Enforced by the database
+# so that concurrent booking requests — which can both pass the application-level
+# availability check before either commits — cannot double-book a slot.
+ACTIVE_SLOT_PREDICATE = "status != 'cancelled'"
+
+UNIQUE_SLOT_INDEX = Index(
+    "uq_appointments_active_slot",
+    "date",
+    "start_time",
+    unique=True,
+    sqlite_where=text(ACTIVE_SLOT_PREDICATE),
+    postgresql_where=text(ACTIVE_SLOT_PREDICATE),
+)
+
+
 class Appointment(Base):
     __tablename__ = "appointments"
-    __table_args__ = (Index("ix_appointments_date_start", "date", "start_time"),)
+    __table_args__ = (
+        Index("ix_appointments_date_start", "date", "start_time"),
+        UNIQUE_SLOT_INDEX,
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     specialty_id: Mapped[int] = mapped_column(ForeignKey("specialties.id"))
@@ -108,6 +146,22 @@ class BlogPost(Base):
     published_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class ContactMessage(Base):
+    """A message sent from the public contact form."""
+
+    __tablename__ = "contact_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150))
+    email: Mapped[str] = mapped_column(String(150))
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    subject: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    message: Mapped[str] = mapped_column(Text)
+    preferred_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    handled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class AppSetting(Base):

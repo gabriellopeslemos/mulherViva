@@ -1,6 +1,31 @@
 from datetime import date as date_type, datetime, time
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# Free-text bodies are stored as TEXT, so without an explicit ceiling a single
+# request could push an arbitrarily large blob into the database.
+MAX_BODY_LENGTH = 20_000
+
+SAFE_URL_SCHEMES = {"http", "https"}
+
+
+def _validate_url(value: str | None) -> str | None:
+    """Reject anything that is not a plain http(s) URL.
+
+    Stored URLs are rendered as image sources and links in the browser, so
+    permitting `javascript:` or `data:` here would turn the admin blog editor
+    into a stored-XSS vector for every visitor.
+    """
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    parsed = urlparse(value)
+    if parsed.scheme.lower() not in SAFE_URL_SCHEMES or not parsed.netloc:
+        raise ValueError("URL deve comecar com http:// ou https://")
+    return value
 
 
 # ---- auth ----
@@ -241,18 +266,22 @@ class SettingsUpdate(BaseModel):
 
 class BlogPostIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    body: str
+    body: str = Field(max_length=MAX_BODY_LENGTH)
     tag: str | None = Field(default=None, max_length=60)
-    image_url: str | None = None
+    image_url: str | None = Field(default=None, max_length=2048)
     published_at: datetime | None = None
+
+    _check_image_url = field_validator("image_url")(_validate_url)
 
 
 class BlogPostUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
-    body: str | None = None
+    body: str | None = Field(default=None, max_length=MAX_BODY_LENGTH)
     tag: str | None = Field(default=None, max_length=60)
-    image_url: str | None = None
+    image_url: str | None = Field(default=None, max_length=2048)
     published_at: datetime | None = None
+
+    _check_image_url = field_validator("image_url")(_validate_url)
 
 
 class BlogPostListItem(BaseModel):
@@ -284,6 +313,46 @@ class BlogPostOut(BaseModel):
 class BlogListResponse(BaseModel):
     total: int
     items: list[BlogPostListItem]
+
+
+# ---- contact form ----
+
+class ContactIn(BaseModel):
+    name: str = Field(min_length=2, max_length=150)
+    email: str = Field(pattern=EMAIL_RE, max_length=150)
+    phone: str | None = Field(default=None, max_length=40)
+    subject: str | None = Field(default=None, max_length=150)
+    message: str = Field(min_length=5, max_length=2000)
+    preferred_date: date_type | None = None
+
+
+class ContactMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
+    phone: str | None
+    subject: str | None
+    message: str
+    preferred_date: date_type | None
+    handled: bool
+    created_at: datetime
+
+
+class ContactMessageUpdate(BaseModel):
+    handled: bool
+
+
+class GenericAckOut(BaseModel):
+    """Response for public writes that must not echo anything back.
+
+    Returning only a fixed message keeps unauthenticated endpoints from
+    confirming whether a record already existed.
+    """
+
+    ok: bool = True
+    message: str
 
 
 # ---- instagram ----

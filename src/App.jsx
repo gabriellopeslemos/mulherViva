@@ -13,8 +13,12 @@ import FloatingNavbar from './components/FloatingNavbar'
 import AgendaPanel from './components/AgendaPanel'
 import AdminLogin from './components/AdminLogin'
 import BookingSection from './components/BookingSection'
+import ContactSection from './components/ContactSection'
 import ManageBooking from './components/ManageBooking'
-import { api, clearToken, getToken } from './lib/api'
+import BlogPostModal from './components/BlogPostModal'
+import ErrorBoundary from './components/ErrorBoundary'
+import { api, clearToken, getToken, setUnauthorizedHandler } from './lib/api'
+import { clinic, fullAddress, mapsUrl } from './lib/siteConfig'
 import {
   heroImage,
   aboutImage,
@@ -45,45 +49,45 @@ const IconGraduation = () => (
 
 const aboutTags = [
   'Medicina integrativa',
-  'Obstetricia humanizada',
+  'Obstetrícia humanizada',
   'Homeopatia',
 ]
 
 const approachSteps = [
   {
     title: 'Escuta profunda e individualizada',
-    text: 'Tempo, presenca e dialogo para compreender a mulher inteira.',
+    text: 'Tempo, presença e diálogo para compreender a mulher inteira.',
   },
   {
-    title: 'Avaliacao clinica completa',
-    text: 'Exames, historico e sinais sutis alinhados ao contexto pessoal.',
+    title: 'Avaliação clínica completa',
+    text: 'Exames, histórico e sinais sutis alinhados ao contexto pessoal.',
   },
   {
-    title: 'Integracao entre ciencia e terapias complementares',
-    text: 'Recursos baseados em evidencia com sensibilidade e coerencia.',
+    title: 'Integração entre ciência e terapias complementares',
+    text: 'Recursos baseados em evidência com sensibilidade e coerência.',
   },
   {
     title: 'Plano de cuidado personalizado',
-    text: 'Caminho claro, pratico e acolhedor para cada objetivo.',
+    text: 'Caminho claro, prático e acolhedor para cada objetivo.',
   },
 ]
 
 const specialties = [
   {
     title: 'Ginecologia',
-    text: 'Ginecologia natural, integrativa, preventiva, baseada no olhar integral da mulher. A historia, sinais, sintomas, exame fisico e, quando necessario, exames complementares sao cuidadosamente avaliados.',
+    text: 'Ginecologia natural, integrativa, preventiva, baseada no olhar integral da mulher. A história, sinais, sintomas, exame físico e, quando necessário, exames complementares são cuidadosamente avaliados.',
     image: gynImage,
     imageAlt: 'Foto de ginecologia',
   },
   {
-    title: 'Obstetricia',
-    text: 'Com o minimo de intervencoes possivel, atendo gestantes e suas familias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistencia.',
+    title: 'Obstetrícia',
+    text: 'Com o mínimo de intervenções possível, atendo gestantes e suas famílias, individualizando condutas e trabalhando em corresponsabilidade. A busca pelo nascimento natural, respeitoso e humanizado norteia a minha assistência.',
     image: obstImage,
-    imageAlt: 'Foto de obstetricia',
+    imageAlt: 'Foto de obstetrícia',
   },
   {
     title: 'Homeopatia',
-    text: 'A homeopatia e uma especialidade medica que busca restabelecer o equilibrio da saude fisica, emocional, mental e energetica do ser. Adota uma abordagem holistica, considerando o paciente, sua historia e relacoes como um todo.',
+    text: 'A homeopatia é uma especialidade médica que busca restabelecer o equilíbrio da saúde física, emocional, mental e energética do ser. Adota uma abordagem holística, considerando o paciente, sua história e relações como um todo.',
     image: homeoImage,
     imageAlt: 'Foto de homeopatia',
   },
@@ -99,14 +103,14 @@ const testimonials = [
   },
   {
     name: 'Renata C.',
-    text: 'A consulta foi serena e precisa, senti que tudo foi explicado com calma.',
+    text: 'A consulta foi serena e precisa; senti que tudo foi explicado com calma.',
     tone: '#e4d7e3',
     image: testimonialRandomTwo,
     imageAlt: 'Foto de Renata',
   },
   {
-    name: 'Pedro F.',
-    text: 'Um encontro entre ciencia e sensibilidade que transformou meu olhar.',
+    name: 'Patricia F.',
+    text: 'Um encontro entre ciência e sensibilidade que transformou meu olhar.',
     tone: '#e9d4e6',
     image: testimonialRandomThree,
     imageAlt: 'Foto de Patricia',
@@ -115,20 +119,20 @@ const testimonials = [
 
 const fallbackBlogPosts = [
   {
-    title: 'Equilibrio hormonal no dia a dia',
-    text: 'Ajustes simples de sono, alimentacao e rotina para reduzir oscilacoes.',
+    title: 'Equilíbrio hormonal no dia a dia',
+    text: 'Ajustes simples de sono, alimentação e rotina para reduzir oscilações.',
     date: 'Abril 2026',
-    tag: 'Saude hormonal',
+    tag: 'Saúde hormonal',
   },
   {
     title: 'Menopausa com clareza e suporte',
     text: 'Sinais, cuidados integrativos e escolhas conscientes para cada fase.',
-    date: 'Marco 2026',
+    date: 'Março 2026',
     tag: 'Menopausa',
   },
   {
     title: 'Autocuidado emocional feminino',
-    text: 'Praticas para regular estresse, ansiedade e fortalecer a vitalidade.',
+    text: 'Práticas para regular estresse, ansiedade e fortalecer a vitalidade.',
     date: 'Fevereiro 2026',
     tag: 'Bem-estar',
   },
@@ -209,6 +213,7 @@ function App() {
   )
   const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
   const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
+  const [openPostId, setOpenPostId] = useState(null)
   const [activeSpecialtyIndex, setActiveSpecialtyIndex] = useState(0)
   const specialtiesScrollRef = useRef(null)
   const addressContentRef = useRef(null)
@@ -248,6 +253,13 @@ function App() {
     [0, entryHold, 1 - exitHold, 1],
     [0, 0, 1, 1],
   )
+
+  // An expired or revoked admin session must drop the panel from anywhere,
+  // not only from the components that happen to catch the 401 themselves.
+  useEffect(() => {
+    setUnauthorizedHandler(() => setIsAdminAuthed(false))
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
   useEffect(() => {
     api
@@ -474,13 +486,21 @@ function App() {
       <FloatingNavbar onOpenAgenda={() => setShowAgenda(true)} />
 
       {manageToken && (
-        <ManageBooking
-          token={manageToken}
-          onClose={() => {
-            setManageToken(null)
-            window.history.replaceState(null, '', window.location.pathname)
-          }}
-        />
+        <ErrorBoundary>
+          <ManageBooking
+            token={manageToken}
+            onClose={() => {
+              setManageToken(null)
+              window.history.replaceState(null, '', window.location.pathname)
+            }}
+          />
+        </ErrorBoundary>
+      )}
+
+      {openPostId && (
+        <ErrorBoundary>
+          <BlogPostModal postId={openPostId} onClose={() => setOpenPostId(null)} />
+        </ErrorBoundary>
       )}
 
       {showAgenda && !isAdminAuthed && (
@@ -504,15 +524,18 @@ function App() {
           <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
-              <p className="eyebrow">Integracao clinica e espiritualidade consciente</p>
-              <h1>Um novo olhar para a saude feminina - mais humano, mais completo.</h1>
+              <p className="eyebrow">Integração clínica e espiritualidade consciente</p>
+              <h1>Um novo olhar para a saúde feminina — mais humano, mais completo.</h1>
               <p className="lead">
                 Medicina integrativa para mulheres que buscam um cuidado profundo,
                 personalizado e consciente.
               </p>
               <div className="hero-actions">
-                <a className="btn btn-primary" href="#contato">
+                <a className="btn btn-primary" href="#agendamento">
                   Agendar consulta
+                </a>
+                <a className="btn btn-outline" href="#contato">
+                  Falar com a equipe
                 </a>
               </div>
             </div>
@@ -532,7 +555,7 @@ function App() {
                       className="hero-media__image"
                       style={{ backgroundImage: `url(${heroImage})` }}
                       role="img"
-                      aria-label="Luz natural em consultorio acolhedor"
+                      aria-label="Luz natural em consultório acolhedor"
                     />
                   </div>
                 </motion.div>
@@ -580,7 +603,7 @@ function App() {
                 <div
                   className="about-photo"
                   role="img"
-                  aria-label="Retrato da medica"
+                  aria-label="Retrato da médica"
                   style={{ backgroundImage: `url(${aboutImage})` }}
                 />
                 <div className="about-badge">
@@ -589,19 +612,19 @@ function App() {
                   </span>
                   <div>
                       <strong>{prefersReducedMotion ? 20 : years}+ anos</strong>
-                      <span>Experiencia medica</span>
+                      <span>Experiência médica</span>
                     </div>
                 </div>
               </motion.div>
               <div className="about-content">
                 <p className="about-label">SOBRE MIM</p>
-                <h2>Presenca clinica com rigor e sensibilidade.</h2>
+                <h2>Presença clínica com rigor e sensibilidade.</h2>
                 <p>
                   Atendo mulheres em todas as fases da vida, com escuta profunda e
-                  condutas individualizadas que respeitam historia e contexto.
+                  condutas individualizadas que respeitam história e contexto.
                 </p>
                 <p>
-                  A integracao entre ciencia, terapias complementares e
+                  A integração entre ciência, terapias complementares e
                   espiritualidade consciente cria um cuidado sofisticado e humano.
                 </p>
                 <div className="about-tags">
@@ -620,10 +643,10 @@ function App() {
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Abordagem</p>
-              <h2>Um caminho claro, sensivel e cientifico.</h2>
+              <h2>Um caminho claro, sensível e científico.</h2>
               <p>
-                O atendimento e conduzido com profundidade clinica e
-                espiritualidade equilibrada, sem perder o rigor tecnico.
+                O atendimento é conduzido com profundidade clínica e
+                espiritualidade equilibrada, sem perder o rigor técnico.
               </p>
             </div>
             <div className="approach-body">
@@ -655,7 +678,7 @@ function App() {
             <div className="section-header" data-reveal>
               <p className="eyebrow">Depoimentos</p>
               <h2>Relatos reais de mulheres que se sentiram vistas.</h2>
-              <p>Cuidado profundo que transforma a relacao com o corpo.</p>
+              <p>Cuidado profundo que transforma a relação com o corpo.</p>
             </div>
           </div>
           <div className="carousel" aria-label="Depoimentos das pacientes">
@@ -694,8 +717,8 @@ function App() {
               <p className="eyebrow">Blog</p>
               <h2>Posts recentes para apoiar sua jornada.</h2>
               <p>
-                Espaco reservado para novos artigos, reflexoes e orientacoes
-                clinicas.
+                Espaço reservado para novos artigos, reflexões e orientações
+                clínicas.
               </p>
             </div>
             <div className="card-grid blog-grid">
@@ -712,17 +735,18 @@ function App() {
                   </div>
                   <h3>{post.title}</h3>
                   <p>{post.text}</p>
-                  {post.permalink ? (
-                    <a
-                      className="card-link"
-                      href={post.permalink}
-                      target="_blank"
-                      rel="noreferrer"
+                  {post.id ? (
+                    <button
+                      className="card-link card-link--button"
+                      type="button"
+                      onClick={() => setOpenPostId(post.id)}
                     >
                       Ler post &rarr;
-                    </a>
+                    </button>
                   ) : (
-                    <span className="card-link">Ler post</span>
+                    // Fallback copy shown before the API responds — there is no
+                    // post to open yet, so it must not look clickable.
+                    <span className="card-link is-placeholder">Em breve</span>
                   )}
                 </article>
               ))}
@@ -735,18 +759,20 @@ function App() {
             
             <div className="address-grid address-grid--device">
               <div className="address-content" data-reveal ref={addressContentRef}>
-                <p className="address-eyebrow">Consultorio</p>
+                <p className="address-eyebrow">Consultório</p>
                 <h3 className="address-title" ref={addressTitleRef}>
-                  Centro Medico Lucio Costa
+                  {clinic.building}
                 </h3>
                 <p className="address-lead">
-                  Um espaco sereno, discreto e preparado para consultas profundas.
+                  Um espaço sereno, discreto e preparado para consultas profundas.
                 </p>
                 <div className="address-details address-details--spread">
                   <div className="address-item">
-                    <span className="address-label">Endereco</span>
-                    <span className="address-value">SGAS 610, Bloco 2, Sala 250</span>
-                    <span className="address-subvalue">Brasilia - DF</span>
+                    <span className="address-label">Endereço</span>
+                    <span className="address-value">{clinic.street}</span>
+                    <span className="address-subvalue">
+                      {clinic.city} - {clinic.state}
+                    </span>
                   </div>
                   <div className="address-item">
                     <span className="address-label">Atendimento</span>
@@ -755,17 +781,17 @@ function App() {
                 </div>
                 <div className="address-tags">
                   <span className="address-tag">Entrada pela L3</span>
-                  <span className="address-tag">Recepcao</span>
+                  <span className="address-tag">Recepção</span>
                 </div>
                 <div className="address-actions">
-                  <a className="btn btn-primary" href="#contato">
+                  <a className="btn btn-primary" href="#agendamento">
                     Agendar consulta
                   </a>
                   <a
                     className="btn btn-outline"
-                    href="https://www.google.com/maps/search/?api=1&query=Centro%20Medico%20Lucio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250%2C%20Brasilia%20-%20DF"
+                    href={mapsUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noreferrer noopener"
                   >
                     Ver no Maps
                   </a>
@@ -780,12 +806,12 @@ function App() {
                 <div
                   className="device-showcase__frame"
                   role="img"
-                  aria-label="Mapa do consultorio em um iPhone"
+                  aria-label="Mapa do consultório em um iPhone"
                 >
                   <img
                     className="device-showcase__image"
                     src={iphoneMapImage}
-                    alt="Mapa do consultorio no iPhone"
+                    alt="Mapa do consultório no iPhone"
                     loading="lazy"
                   />
                 </div>
@@ -794,155 +820,35 @@ function App() {
           </div>
         </section>
 
-        <BookingSection />
+        {/* Both talk to the API; a failure in one must not blank the page. */}
+        <ErrorBoundary>
+          <BookingSection />
+        </ErrorBoundary>
 
-        <section className="section appointment-section" id="contato">
-          <div className="container">
-            <div className="appointment-card" data-reveal>
-              <aside className="appointment-aside">
-                <p className="appointment-label">Agendamento</p>
-                <h2>Vamos conversar?</h2>
-                <p className="appointment-copy">
-                  Preencha o formulario e nossa equipe entrara em contato para
-                  confirmar o melhor horario.
-                </p>
-                <div className="appointment-divider" aria-hidden="true" />
-                <div className="appointment-contacts">
-                  <div className="appointment-contact">
-                    <span className="appointment-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" role="img" focusable="false">
-                        <path
-                          d="M12 3.5a8.5 8.5 0 0 1 7.3 12.9L20 20l-3.8-1.3A8.5 8.5 0 1 1 12 3.5z"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinejoin="round"
-                        />
-                        <circle cx="12" cy="11" r="3" fill="currentColor" />
-                      </svg>
-                    </span>
-                    <div>
-                      <strong>Consultorio Rio de Janeiro</strong>
-                      <span>Atendimento presencial e online</span>
-                    </div>
-                  </div>
-                  <div className="appointment-contact">
-                    <span className="appointment-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" role="img" focusable="false">
-                        <path
-                          d="M6.4 5.6c.3-.4.8-.6 1.3-.4l3 1.2c.4.2.7.6.7 1.1v2c0 .4-.2.8-.6 1l-1.5.9c.8 1.6 2.1 2.9 3.7 3.7l.9-1.5c.2-.4.6-.6 1-.6h2c.5 0 .9.3 1.1.7l1.2 3c.2.5 0 1-.4 1.3-.9.7-2 1.1-3.2 1-2.8-.3-5.4-1.8-7.6-4-2.2-2.2-3.7-4.8-4-7.6-.1-1.2.3-2.3 1-3.2z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </span>
-                    <div>
-                      <strong>+55 21 99999-0000</strong>
-                      <span>Atendimento das 8h as 18h</span>
-                    </div>
-                  </div>
-                  <div className="appointment-contact">
-                    <span className="appointment-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" role="img" focusable="false">
-                        <rect
-                          x="3"
-                          y="5"
-                          width="18"
-                          height="14"
-                          rx="2"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                        />
-                        <path
-                          d="M4 7l8 6 8-6"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <div>
-                      <strong>contato@mulherviva.org</strong>
-                      <span>Respondemos em ate 24h</span>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-              <form className="appointment-form">
-                <div className="appointment-grid">
-                  <label className="field" htmlFor="nome">
-                    <span>Nome</span>
-                    <input id="nome" name="nome" type="text" placeholder="Seu nome" />
-                  </label>
-                  <label className="field" htmlFor="telefone">
-                    <span>Telefone</span>
-                    <input
-                      id="telefone"
-                      name="telefone"
-                      type="tel"
-                      placeholder="(00) 00000-0000"
-                    />
-                  </label>
-                  <label className="field span-2" htmlFor="email">
-                    <span>E-mail</span>
-                    <input id="email" name="email" type="email" placeholder="Seu e-mail" />
-                  </label>
-                  <label className="field" htmlFor="data">
-                    <span>Data preferida</span>
-                    <input id="data" name="data" type="text" placeholder="dd/mm/aaaa" />
-                  </label>
-                  <label className="field" htmlFor="especialidade">
-                    <span>Especialidade</span>
-                    <select id="especialidade" name="especialidade">
-                      <option>Medicina Integrativa</option>
-                      <option>Obstetricia Humanizada</option>
-                      <option>Homeopatia</option>
-                    </select>
-                  </label>
-                  <label className="field span-2" htmlFor="mensagem">
-                    <span>Mensagem (opcional)</span>
-                    <textarea
-                      id="mensagem"
-                      name="mensagem"
-                      placeholder="Conte um pouco sobre o que voce precisa"
-                    />
-                  </label>
-                </div>
-                <div className="appointment-actions">
-                  <button className="appointment-submit" type="submit">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <rect
-                        x="3"
-                        y="5"
-                        width="18"
-                        height="16"
-                        rx="2"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                      <path
-                        d="M8 3v4M16 3v4M3 10h18"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Solicitar agendamento
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </section>
+        <ErrorBoundary>
+          <ContactSection />
+        </ErrorBoundary>
       </main>
 
       <footer className="site-footer">
         <div className="container footer-inner">
-          <p>Mulher Viva - Medicina Integrativa da Saude Feminina</p>
-          <p>Copyright {year}. Todos os direitos reservados.</p>
+          <div className="footer-brand">
+            <p className="footer-name">
+              {clinic.name} — {clinic.tagline}
+            </p>
+            <p className="footer-doctor">{clinic.doctor}</p>
+          </div>
+          <div className="footer-contact">
+            <p>{fullAddress}</p>
+            <p>
+              <a href={`tel:${clinic.phoneE164}`}>{clinic.phoneDisplay}</a>
+              {' · '}
+              <a href={`mailto:${clinic.email}`}>{clinic.email}</a>
+            </p>
+          </div>
+          <p className="footer-legal">
+            &copy; {year} {clinic.name}. Todos os direitos reservados.
+          </p>
         </div>
       </footer>
     </div>

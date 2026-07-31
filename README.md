@@ -142,67 +142,166 @@ python -m uvicorn app.main:app --reload
 
 ## Variáveis de ambiente
 
-### Frontend (`.env.development`)
+Todas as variáveis estão documentadas com comentários nos arquivos de exemplo:
 
-```env
-VITE_API_URL=http://localhost:8000
-VITE_GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
-```
+| Arquivo | Para quê |
+|---------|----------|
+| `.env.example` | Frontend (desenvolvimento) |
+| `.env.production.example` | Frontend (build de produção) |
+| `backend/.env.example` | Backend (todas as opções) |
 
-### Backend (`backend/.env`)
+Copie cada um removendo o sufixo `.example` e preencha os valores.
 
-```env
-# Segurança
-SECRET_KEY=gere-com-openssl-rand-hex-32
-ACCESS_TOKEN_EXPIRE_MINUTES=720
+> **Atenção:** tudo com prefixo `VITE_` é embutido no bundle e fica **visível
+> para qualquer visitante**. Nunca coloque segredos nesses arquivos. O
+> *Client ID* do Google é público por design; o *Client Secret* não deve
+> aparecer em lugar nenhum do projeto.
 
-# Google OAuth
-GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
-ALLOWED_ADMIN_EMAILS=admin@exemplo.com,outro@exemplo.com
+### Variáveis obrigatórias em produção
 
-# Banco de dados
-DATABASE_URL=sqlite:///./mulherviva.db
+A API **se recusa a iniciar** se alguma destas estiver insegura. Isso é
+proposital: evita subir para a internet uma instalação com os padrões de
+desenvolvimento.
 
-# CORS
-CORS_ORIGINS=http://localhost:5173
-
-# Política de agendamento
-MIN_BOOKING_LEAD_HOURS=2
-BUFFER_MINUTES=0
-CANCELLATION_WINDOW_HOURS=12
-MAX_BOOKING_ADVANCE_DAYS=60
-
-# E-mail (desabilitado por padrão)
-NOTIFICATIONS_ENABLED=false
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_USE_TLS=true
-EMAIL_FROM=Mulher Viva <no-reply@mulherviva.com.br>
-PUBLIC_BASE_URL=http://localhost:5173
-
-# Instagram (opcional)
-IG_ACCESS_TOKEN=
-IG_AUTO_SYNC=false
-
-# Dados da clínica
-CLINIC_NAME=Mulher Viva — Dra. Luciana Lopes
-CLINIC_ADDRESS=Centro Médico Lúcio Costa
-```
+| Variável | Regra |
+|----------|-------|
+| `ENVIRONMENT` | Precisa ser `production` para ativar as validações |
+| `SECRET_KEY` | Mínimo de 32 caracteres e diferente do padrão (`openssl rand -hex 32`) |
+| `GOOGLE_CLIENT_ID` | Preenchido — sem ele o login do painel não funciona |
+| `ALLOWED_ADMIN_EMAILS` | Ao menos um e-mail, senão ninguém acessa o painel |
+| `CORS_ORIGINS` | Domínios reais em `https`. Não aceita `*` |
+| `PUBLIC_BASE_URL` | Precisa usar `https://` (vai nos links dos e-mails) |
+| `SMTP_HOST` | Obrigatório quando `NOTIFICATIONS_ENABLED=true` |
 
 ---
 
-## Build para produção
+## Deploy em produção
+
+### Opção A — Docker Compose (recomendado)
 
 ```bash
-# Frontend — gera arquivos em dist/
-npm run build
+# 1. Configure o backend
+cp backend/.env.example backend/.env
+#    Edite backend/.env:
+#      ENVIRONMENT=production
+#      SECRET_KEY=$(openssl rand -hex 32)
+#      GOOGLE_CLIENT_ID, ALLOWED_ADMIN_EMAILS, CORS_ORIGINS, PUBLIC_BASE_URL
 
-# Backend — use um servidor ASGI em produção
-pip install gunicorn
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
+# 2. Configure o build do frontend
+export VITE_API_URL=https://api.seudominio.com.br
+export VITE_GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
+
+# 3. Suba
+docker compose up -d --build
 ```
+
+Sobe dois contêineres:
+
+- **api** — FastAPI sob Gunicorn/Uvicorn em `127.0.0.1:8000`, banco em volume nomeado
+- **web** — build estático servido por nginx em `127.0.0.1:8080`
+
+Ambos escutam **apenas em localhost** de propósito. Coloque um proxy com TLS
+(Caddy, Traefik, nginx do host ou Cloudflare Tunnel) na frente — nenhum dos
+dois termina HTTPS sozinho.
+
+### Opção B — Host estático + API separada
+
+O frontend é um site estático; a pasta `dist/` serve em qualquer host.
+
+```bash
+cp .env.production.example .env.production   # e preencha
+npm ci && npm run build                      # gera dist/
+```
+
+O host **precisa** de fallback SPA (toda rota serve `index.html`), senão o link
+de autoatendimento `/?manage=<token>` enviado por e-mail quebra ao recarregar:
+
+- **Netlify** — já incluso em `public/_redirects`
+- **Vercel** — já incluso em `vercel.json`
+- **nginx próprio** — use o `nginx.conf` do repositório
+- **Apache** — `FallbackResource /index.html`
+
+Para a API, use o `backend/Dockerfile` ou rode direto:
+
+```bash
+cd backend
+pip install -r requirements.txt
+gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:8000
+```
+
+> **Sobre `-w 1`:** o limitador de requisições e o loop de lembretes vivem na
+> memória do processo. Cada worker extra teria a própria cópia dos dois (o
+> limite efetivo vira `N × limite`, e os lembretes seriam enviados N vezes).
+> Para escalar, use mais contêineres atrás do proxy — não mais workers.
+
+### Checklist antes de publicar
+
+- [ ] `backend/.env` com `ENVIRONMENT=production` e `SECRET_KEY` gerado
+- [ ] `GOOGLE_CLIENT_ID` idêntico no backend e no frontend
+- [ ] Origens autorizadas no Google Cloud Console incluem o domínio do site
+- [ ] `CORS_ORIGINS` e `PUBLIC_BASE_URL` apontando para os domínios reais em `https`
+- [ ] `ALLOWED_HOSTS` preenchido se a API estiver exposta diretamente
+- [ ] `TRUST_PROXY_HEADERS=true` **somente** se houver um proxy reverso confiável na frente
+- [ ] `connect-src` no `nginx.conf` atualizado para o domínio real da API
+- [ ] Domínio real substituído em `index.html` (canonical/OG), `public/robots.txt` e `public/sitemap.xml`
+- [ ] SMTP configurado e `NOTIFICATIONS_ENABLED=true` (sem isso não sai nenhum e-mail)
+- [ ] TLS ativo, e `Strict-Transport-Security` descomentado no `nginx.conf`
+- [ ] Rotina de backup do banco definida (veja abaixo)
+- [ ] Fotos reais substituindo os placeholders (veja "Imagens")
+- [ ] Telefone, e-mail e endereço conferidos em `src/lib/siteConfig.js`
+- [ ] Disponibilidade semanal cadastrada no painel (sem regras, nenhum horário aparece)
+
+---
+
+## Segurança
+
+O que já está implementado:
+
+| Proteção | Como funciona |
+|----------|---------------|
+| Validação de configuração | A API não inicia em produção com chave padrão, CORS aberto ou URL sem HTTPS |
+| Autenticação | Google SSO verificado no servidor + JWT; o e-mail é reconferido na allowlist a cada requisição, então remover um admin revoga o acesso na hora |
+| Rate limiting | Por IP, com limite mais rígido para login, agendamento, lista de espera e contato |
+| Cabeçalhos HTTP | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, CSP, HSTS (produção) |
+| Agendamento duplo | Índice único no banco — a checagem de disponibilidade sozinha não é atômica |
+| Vazamento de dados | A lista de espera devolve sempre a mesma resposta, sem confirmar se um e-mail já está cadastrada nem devolver os dados salvos |
+| XSS armazenado | URLs de imagem/link só aceitam `http(s)`, bloqueando `javascript:` |
+| Injeção de cabeçalho | Valores vindos do formulário têm CR/LF removidos antes de virarem cabeçalho de e-mail |
+| Docs da API | `/docs` e `/openapi.json` desativados em produção |
+
+### Ainda recomendado
+
+- **Backup**: com SQLite, agende `sqlite3 mulherviva.db ".backup /backup/mv-$(date +%F).db"`.
+  Para volume maior, migre para PostgreSQL trocando `DATABASE_URL`.
+- **LGPD**: o sistema guarda nome, e-mail, telefone e motivo da consulta.
+  Publique uma política de privacidade e defina por quanto tempo os dados ficam armazenados.
+- **Monitoramento**: `/health` (vivo) e `/health/ready` (banco acessível) já estão prontos para o healthcheck do orquestrador.
+
+---
+
+## Imagens
+
+As imagens são placeholders SVG gerados em `src/lib/placeholderImages.js`.
+Para usar fotos reais, coloque os arquivos em `src/assets/` e troque os imports
+em `src/App.jsx`. Use WebP/AVIF e mantenha cada arquivo abaixo de ~200 kB.
+
+Dados da clínica (telefone, e-mail, endereço, WhatsApp) ficam centralizados em
+`src/lib/siteConfig.js` — edite só esse arquivo.
+
+---
+
+## Testes
+
+```bash
+# Backend
+cd backend && pip install -r requirements-dev.txt && python -m pytest -q
+
+# Frontend
+npm run lint && npm run build
+```
+
+O CI (`.github/workflows/ci.yml`) roda os dois a cada push e PR, e ainda
+verifica que a API realmente se recusa a iniciar com `SECRET_KEY` padrão.
 
 ---
 

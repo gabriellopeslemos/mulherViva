@@ -40,6 +40,11 @@ def manage_url(token: str | None) -> str | None:
     return f"{base}/?manage={token}"
 
 
+def _header_safe(value: str) -> str:
+    """Strip CR/LF so a user-supplied value cannot inject extra mail headers."""
+    return value.replace("\r", " ").replace("\n", " ").strip()
+
+
 def _ics_escape(value: str) -> str:
     """Escape a TEXT value per RFC 5545 (backslash, semicolon, comma, newline)."""
     return (
@@ -86,6 +91,7 @@ def _send(
     subject: str,
     body: str,
     ics: str | None = None,
+    reply_to: str | None = None,
 ) -> bool:
     settings = get_settings()
     if not settings.notifications_enabled:
@@ -95,9 +101,13 @@ def _send(
         return False
 
     msg = EmailMessage()
-    msg["Subject"] = subject
+    # Header values come from user input in the contact flow; a newline would
+    # otherwise let a sender inject extra headers (e.g. Bcc) into the message.
+    msg["Subject"] = _header_safe(subject)
     msg["From"] = settings.email_from
-    msg["To"] = to
+    msg["To"] = _header_safe(to)
+    if reply_to:
+        msg["Reply-To"] = _header_safe(reply_to)
     msg.set_content(body)
     if ics:
         msg.add_attachment(
@@ -121,8 +131,16 @@ def _send(
         return False
 
 
-def _send_async(to: str, subject: str, body: str, ics: str | None = None) -> None:
-    threading.Thread(target=_send, args=(to, subject, body, ics), daemon=True).start()
+def _send_async(
+    to: str,
+    subject: str,
+    body: str,
+    ics: str | None = None,
+    reply_to: str | None = None,
+) -> None:
+    threading.Thread(
+        target=_send, args=(to, subject, body, ics, reply_to), daemon=True
+    ).start()
 
 
 def _appt_lines(appt: dict) -> list[str]:
@@ -228,6 +246,40 @@ def notify_reminder(appt: dict) -> bool:
         settings.clinic_name,
     ])
     return _send(appt.get("client_email"), "Lembrete: sua consulta é amanhã", body)
+
+
+def notify_contact_message(entry: dict) -> None:
+    """Forward a contact-form message to the clinic's inbox.
+
+    Sent to the clinic, not the visitor, so the visitor's address goes in
+    Reply-To rather than From — putting an unverified third-party address in
+    From is what gets a domain flagged by SPF/DKIM checks.
+    """
+    settings = get_settings()
+    inbox = settings.contact_inbox
+    if not inbox:
+        logger.warning("No CONTACT_EMAIL configured; contact message not forwarded")
+        return
+    preferred = entry.get("preferred_date")
+    lines = [
+        "Nova mensagem pelo formulario de contato do site.",
+        "",
+        f"Nome: {entry['name']}",
+        f"E-mail: {entry['email']}",
+    ]
+    if entry.get("phone"):
+        lines.append(f"Telefone: {entry['phone']}")
+    if entry.get("subject"):
+        lines.append(f"Assunto: {entry['subject']}")
+    if preferred:
+        lines.append(f"Data preferida: {_format_date_pt(preferred)}")
+    lines += ["", "Mensagem:", entry["message"], "", settings.clinic_name]
+    _send_async(
+        inbox,
+        f"Contato pelo site — {entry['name']}",
+        "\n".join(lines),
+        reply_to=entry["email"],
+    )
 
 
 def notify_waitlist_slot(entry: dict) -> None:

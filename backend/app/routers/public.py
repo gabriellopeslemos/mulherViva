@@ -1,20 +1,24 @@
+import logging
 import secrets
 from datetime import date as date_type
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..database import get_db
-from ..models import Appointment, BlogPost, Specialty, WaitlistEntry
+from ..models import Appointment, BlogPost, ContactMessage, Specialty, WaitlistEntry
 from ..schemas import (
     AppointmentOut,
     BlogListResponse,
     BlogPostListItem,
     BlogPostOut,
     BookingIn,
+    ContactIn,
+    GenericAckOut,
     ManageAppointmentOut,
     RescheduleIn,
     SlotOut,
@@ -22,15 +26,21 @@ from ..schemas import (
     SlotsResponse,
     SpecialtyOut,
     WaitlistIn,
-    WaitlistOut,
 )
 from ..services import notifications, waitlist
 from ..services.settings import get_bool_setting, get_int_setting
 from ..services.slots import get_available_slots, has_overlap
+from ..timeutils import local_now, utcnow
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["public"])
 
 MAX_PENDING_PER_CONTACT_PER_DAY = 3
+
+MAX_MESSAGES_PER_EMAIL_PER_DAY = 5
+
+SLOT_TAKEN = "Horario indisponivel"
 
 
 def _appt_snapshot(appointment: Appointment, specialty_name: str) -> dict:
@@ -58,7 +68,7 @@ def _can_modify(appointment: Appointment, window_hours: int) -> bool:
     if appointment.status in ("cancelled", "completed", "no_show"):
         return False
     start_dt = datetime.combine(appointment.date, appointment.start_time)
-    return datetime.now() <= start_dt - timedelta(hours=window_hours)
+    return local_now() <= start_dt - timedelta(hours=window_hours)
 
 
 @router.get("/specialties", response_model=list[SpecialtyOut])
@@ -101,7 +111,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
         select(func.count(Appointment.id)).where(
             Appointment.client_contact == body.client_phone,
             Appointment.status == "pending",
-            func.date(Appointment.created_at) == datetime.utcnow().date(),
+            func.date(Appointment.created_at) == utcnow().date(),
         )
     )
     if pending_today >= MAX_PENDING_PER_CONTACT_PER_DAY:
@@ -117,14 +127,12 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
     if slot is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Horario indisponivel",
+            detail=SLOT_TAKEN,
         )
     start, end = slot
 
     if has_overlap(db, body.date, start, end):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Horario indisponivel"
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=SLOT_TAKEN)
 
     auto_confirm = get_bool_setting(db, "auto_confirm_bookings", False)
     appointment = Appointment(
@@ -145,7 +153,15 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
         source="public",
     )
     db.add(appointment)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two requests raced for the same slot: both passed the availability
+        # check above, and the unique index let only one of them commit. The
+        # loser gets the same answer as any other unavailable slot.
+        db.rollback()
+        logger.info("Booking race lost for %s %s", body.date, start)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=SLOT_TAKEN)
     db.refresh(appointment)
 
     snapshot = _appt_snapshot(appointment, specialty.name)
@@ -262,16 +278,21 @@ def reschedule_managed_booking(
     ).get(body.date, [])
     slot = next(((s, e) for s, e in day_slots if s == body.start), None)
     if slot is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Horario indisponivel")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=SLOT_TAKEN)
     start, end = slot
     if has_overlap(db, body.date, start, end, exclude_id=appointment.id):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Horario indisponivel")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=SLOT_TAKEN)
 
     freed_date = appointment.date
     appointment.date = body.date
     appointment.start_time = start
     appointment.end_time = end
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Someone else took the target slot between the check and the commit.
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=SLOT_TAKEN)
     db.refresh(appointment)
 
     snapshot = _appt_snapshot(appointment, specialty.name)
@@ -293,8 +314,10 @@ def reschedule_managed_booking(
     )
 
 
-@router.post("/waitlist", response_model=WaitlistOut, status_code=status.HTTP_201_CREATED)
-def join_waitlist(body: WaitlistIn, response: Response, db: Session = Depends(get_db)):
+@router.post(
+    "/waitlist", response_model=GenericAckOut, status_code=status.HTTP_201_CREATED
+)
+def join_waitlist(body: WaitlistIn, db: Session = Depends(get_db)):
     specialty = db.get(Specialty, body.specialty_id)
     if specialty is None or not specialty.active:
         raise HTTPException(status_code=404, detail="Especialidade nao encontrada")
@@ -305,15 +328,55 @@ def join_waitlist(body: WaitlistIn, response: Response, db: Session = Depends(ge
             WaitlistEntry.active == True,  # noqa: E712
         )
     )
-    if existing is not None:
-        # Already on the list — report 200 instead of a misleading 201 Created.
-        response.status_code = status.HTTP_200_OK
-        return existing
-    entry = WaitlistEntry(**body.model_dump())
-    db.add(entry)
+    # This endpoint is unauthenticated, so the response must never reveal
+    # anything about an existing entry: echoing the stored record would let
+    # anyone probe whether a given e-mail is on the list and read back the
+    # name, phone and notes attached to it. Duplicate and first-time requests
+    # get byte-identical acknowledgements.
+    if existing is None:
+        db.add(WaitlistEntry(**body.model_dump()))
+        db.commit()
+    return GenericAckOut(
+        message="Tudo certo! Avisaremos por e-mail assim que um horario abrir."
+    )
+
+
+@router.post(
+    "/contact", response_model=GenericAckOut, status_code=status.HTTP_201_CREATED
+)
+def submit_contact(body: ContactIn, db: Session = Depends(get_db)):
+    """Store a contact-form message and forward it to the clinic's inbox."""
+    sent_today = db.scalar(
+        select(func.count(ContactMessage.id)).where(
+            ContactMessage.email == body.email,
+            func.date(ContactMessage.created_at) == utcnow().date(),
+        )
+    )
+    if sent_today >= MAX_MESSAGES_PER_EMAIL_PER_DAY:
+        raise HTTPException(
+            status_code=429,
+            detail="Voce ja enviou varias mensagens hoje. "
+            "Aguarde nosso retorno ou ligue para a clinica.",
+        )
+
+    message = ContactMessage(**body.model_dump())
+    db.add(message)
     db.commit()
-    db.refresh(entry)
-    return entry
+    db.refresh(message)
+
+    notifications.notify_contact_message(
+        {
+            "name": message.name,
+            "email": message.email,
+            "phone": message.phone,
+            "subject": message.subject,
+            "message": message.message,
+            "preferred_date": message.preferred_date,
+        }
+    )
+    return GenericAckOut(
+        message="Mensagem recebida! Nossa equipe entrara em contato em breve."
+    )
 
 
 def _excerpt(body: str, limit: int = 180) -> str:

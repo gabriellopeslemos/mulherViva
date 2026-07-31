@@ -1,6 +1,19 @@
+/**
+ * Inline SVG stand-ins for the clinic's real photography.
+ *
+ * Replace these with actual images before launch — see README ("Imagens").
+ */
+
 function makePlaceholder(width, height, bg, label) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="${bg}"/><text x="${Math.floor(width / 2)}" y="${Math.floor(height / 2)}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="16" fill="rgba(255,255,255,0.6)">${label}</text></svg>`
-  return `data:image/svg+xml;base64,${btoa(svg)}`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${bg}"/><text x="${Math.floor(
+    width / 2,
+  )}" y="${Math.floor(
+    height / 2,
+  )}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="16" fill="rgba(255,255,255,0.6)">${label}</text></svg>`
+  // btoa only accepts Latin-1, so accented labels ("Obstetrícia") round-trip as
+  // mojibake and anything above U+00FF throws outright. Percent-encoding keeps
+  // the data URI valid for any UTF-8 label and skips the base64 step entirely.
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 
 export const heroImage = makePlaceholder(600, 750, '#c4a0b8', 'Foto')

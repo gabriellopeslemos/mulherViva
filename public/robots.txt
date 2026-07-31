@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Substitua pelo dominio real do site antes do lancamento.
+Sitemap: https://www.mulherviva.com.br/sitemap.xml

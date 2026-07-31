@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Appointment, AvailabilityOverride, AvailabilityRule, Specialty
+from ..timeutils import local_now, local_today
 from .settings import get_int_setting
 
 Interval = tuple[time, time]
@@ -138,7 +139,7 @@ def get_available_slots(
             db, "max_booking_advance_days", settings.max_booking_advance_days
         )
     if max_advance_days > 0:
-        date_to = min(date_to, date.today() + timedelta(days=max_advance_days))
+        date_to = min(date_to, local_today() + timedelta(days=max_advance_days))
 
     rules = list(
         db.scalars(
@@ -165,7 +166,7 @@ def get_available_slots(
         appt_query = appt_query.where(Appointment.id != exclude_appointment_id)
     appointments = list(db.scalars(appt_query))
 
-    now = datetime.now()
+    now = local_now()
     result: dict[date, list[Interval]] = {}
     day = date_from
     while day <= date_to:

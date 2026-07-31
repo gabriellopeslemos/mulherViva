@@ -3,6 +3,7 @@ from datetime import date as date_type
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_admin
@@ -13,6 +14,7 @@ from ..models import (
     AvailabilityOverride,
     AvailabilityRule,
     BlogPost,
+    ContactMessage,
     Specialty,
     WaitlistEntry,
 )
@@ -28,6 +30,8 @@ from ..schemas import (
     BlogPostIn,
     BlogPostOut,
     BlogPostUpdate,
+    ContactMessageOut,
+    ContactMessageUpdate,
     InstagramSyncResult,
     SettingsOut,
     SettingsUpdate,
@@ -66,6 +70,24 @@ def _get_or_404(db: Session, model, obj_id: int, name: str):
     if obj is None:
         raise HTTPException(status_code=404, detail=f"{name} nao encontrado(a)")
     return obj
+
+
+def _commit_slot(db: Session) -> None:
+    """Commit an appointment write, translating the slot-uniqueness violation.
+
+    The database refuses two active appointments with the same date and start
+    time. `force` can override the application's overlap check, but not this —
+    an exact-time collision is always reported instead of silently written.
+    """
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ja existe uma consulta ativa comecando exatamente neste horario. "
+            "Ajuste o horario de inicio ou cancele a outra consulta.",
+        )
 
 
 # ---- appointments ----
@@ -120,7 +142,7 @@ def create_appointment(body: AppointmentIn, db: Session = Depends(get_db)):
         source="admin",
     )
     db.add(appointment)
-    db.commit()
+    _commit_slot(db)
     db.refresh(appointment)
     if appointment.client_email and appointment.status == "confirmed":
         notifications.notify_status_change(
@@ -159,7 +181,7 @@ def update_appointment(
             status_code=status.HTTP_409_CONFLICT,
             detail="Conflito com outra consulta neste horario",
         )
-    db.commit()
+    _commit_slot(db)
     db.refresh(appointment)
     if (
         appointment.client_email
@@ -385,6 +407,40 @@ def list_waitlist(
 def delete_waitlist_entry(entry_id: int, db: Session = Depends(get_db)):
     entry = _get_or_404(db, WaitlistEntry, entry_id, "Lista de espera")
     db.delete(entry)
+    db.commit()
+
+
+# ---- contact messages ----
+
+@router.get("/contact-messages", response_model=list[ContactMessageOut])
+def list_contact_messages(
+    unhandled_only: bool = False,
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    query = select(ContactMessage).order_by(ContactMessage.created_at.desc())
+    if unhandled_only:
+        query = query.where(ContactMessage.handled == False)  # noqa: E712
+    return list(db.scalars(query.limit(limit)))
+
+
+@router.patch("/contact-messages/{message_id}", response_model=ContactMessageOut)
+def update_contact_message(
+    message_id: int, body: ContactMessageUpdate, db: Session = Depends(get_db)
+):
+    message = _get_or_404(db, ContactMessage, message_id, "Mensagem")
+    message.handled = body.handled
+    db.commit()
+    db.refresh(message)
+    return message
+
+
+@router.delete(
+    "/contact-messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def delete_contact_message(message_id: int, db: Session = Depends(get_db)):
+    message = _get_or_404(db, ContactMessage, message_id, "Mensagem")
+    db.delete(message)
     db.commit()
 
 

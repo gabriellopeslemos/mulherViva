@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push supersedes an in-flight run for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: https://api.example.com
+          VITE_GOOGLE_CLIENT_ID: ci-placeholder.apps.googleusercontent.com
+
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Production config guard is wired up
+        # The app must refuse to boot with the default secret key. If this ever
+        # starts succeeding, the guard has been broken and an insecure deploy
+        # would go out unnoticed.
+        env:
+          ENVIRONMENT: production
+          SECRET_KEY: change-me
+          GOOGLE_CLIENT_ID: x.apps.googleusercontent.com
+          ALLOWED_ADMIN_EMAILS: admin@example.com
+          CORS_ORIGINS: https://example.com
+          PUBLIC_BASE_URL: https://example.com
+        run: |
+          if python -c "from app.main import create_app; create_app()" 2>/dev/null; then
+            echo "::error::A aplicacao iniciou com SECRET_KEY padrao em producao"
+            exit 1
+          fi
+          echo "OK: boot recusado com SECRET_KEY padrao"

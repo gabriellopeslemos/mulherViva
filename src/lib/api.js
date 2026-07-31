@@ -1,28 +1,65 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Trailing slashes here would produce `//api/...` once joined with a path.
+const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
 
 const TOKEN_KEY = 'mv_admin_token'
 
+// A request that never settles leaves the UI stuck on "Carregando..." forever.
+const DEFAULT_TIMEOUT_MS = 15000
+
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch {
+    // Safari in private mode throws on storage access.
+    return null
+  }
 }
 
 export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token)
+  try {
+    localStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    // Non-fatal: the session just will not survive a reload.
+  }
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    // Nothing to clean up.
+  }
 }
 
 export class ApiError extends Error {
   constructor(status, detail) {
     super(detail || `Erro ${status}`)
+    this.name = 'ApiError'
     this.status = status
     this.detail = detail
   }
 }
 
-async function request(path, { method = 'GET', body, auth = false } = {}) {
+// Lets the app react to an expired session from anywhere, so every caller does
+// not have to special-case 401.
+let onUnauthorized = null
+
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler
+}
+
+/** FastAPI returns `detail` as a string, or as a list of validation errors. */
+function readDetail(data) {
+  if (!data) return undefined
+  if (typeof data.detail === 'string') return data.detail
+  if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg
+  return undefined
+}
+
+async function request(
+  path,
+  { method = 'GET', body, auth = false, timeout = DEFAULT_TIMEOUT_MS } = {},
+) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (auth) {
@@ -30,19 +67,39 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
     if (token) headers.Authorization = `Bearer ${token}`
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeout)
+
+  let res
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new ApiError(
+        0,
+        'A conexão demorou demais. Verifique sua internet e tente novamente.',
+      )
+    }
+    throw new ApiError(0, 'Não foi possível conectar ao servidor.')
+  } finally {
+    clearTimeout(timer)
+  }
 
   if (!res.ok) {
     let detail
     try {
-      const data = await res.json()
-      detail = typeof data.detail === 'string' ? data.detail : undefined
+      detail = readDetail(await res.json())
     } catch {
       // non-JSON error body
+    }
+    if (res.status === 401 && auth) {
+      clearToken()
+      onUnauthorized?.()
     }
     throw new ApiError(res.status, detail)
   }

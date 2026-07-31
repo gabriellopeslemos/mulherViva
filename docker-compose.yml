@@ -1,0 +1,43 @@
+# Mulher Viva — stack completa (API + site).
+#
+#   1. cp backend/.env.example backend/.env   e preencha os valores
+#   2. defina ENVIRONMENT=production e um SECRET_KEY real no backend/.env
+#   3. docker compose up -d --build
+#
+# Coloque um proxy com TLS (Caddy, Traefik, nginx do host ou Cloudflare) na
+# frente: nenhum dos dois servicos termina HTTPS sozinho.
+
+services:
+  api:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      # Guarda o SQLite no volume nomeado; ignorado se DATABASE_URL apontar
+      # para PostgreSQL.
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/mulherviva.db}
+      # A API fica atras do proxy do compose, entao o IP real chega pelo header.
+      TRUST_PROXY_HEADERS: "true"
+    volumes:
+      - api-data:/data
+    ports:
+      # Exposto apenas em localhost — quem publica na internet e o proxy TLS.
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      args:
+        # Precisam ser passados no BUILD: o Vite embute estes valores no bundle.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:8080:80"
+    restart: unless-stopped
+
+volumes:
+  api-data:

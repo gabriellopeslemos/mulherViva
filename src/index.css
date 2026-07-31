@@ -440,6 +440,22 @@ p {
   --line: rgba(255, 248, 252, 0.55);
 }
 
+/* `.section.alt` flips the text tokens to light-on-dark for its own gradient
+   background. Cards that sit inside it but paint their own LIGHT surface would
+   otherwise inherit those light values and render near-invisible text — the
+   booking chips came out at a 1.03:1 contrast ratio. Restore the dark-on-light
+   tokens wherever a light surface is nested. */
+.section.alt .booking-flow,
+.section.alt .booking-confirmation,
+.section.alt .booking-waitlist,
+.section.alt .blog-card {
+  --text-strong: #1f1119;
+  --text: #2a1a24;
+  --text-soft: #4a3541;
+  --text-muted: #5b4552;
+  --line: #dcc7d2;
+}
+
 .specialties-section {
   padding: 0;
 }
@@ -1588,5 +1604,283 @@ p {
 @media (max-width: 720px) {
   .booking-form__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Componentes adicionados na preparacao para producao
+   ============================================================ */
+
+/* ---- Error boundary ---- */
+.error-boundary {
+  width: min(560px, calc(100% - 32px));
+  margin: 48px auto;
+  padding: clamp(24px, 5vw, 40px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
+.error-boundary h2 {
+  font-family: var(--serif);
+  color: var(--accent-strong);
+  margin: 0;
+}
+
+.error-boundary p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+/* ---- "Ler post" como botao real ---- */
+.card-link--button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
+.card-link--button:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Placeholder mostrado antes de a API responder: nao e clicavel, entao nao
+   deve parecer um link. */
+.card-link.is-placeholder {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---- Leitor de post ---- */
+.blog-modal {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.blog-modal__image {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+.blog-modal__body {
+  display: grid;
+  gap: 14px;
+  color: var(--text-soft);
+  line-height: 1.7;
+  /* Legendas do Instagram vem com URLs longas sem espacos. */
+  overflow-wrap: anywhere;
+}
+
+.blog-modal__body p {
+  margin: 0;
+  white-space: pre-line;
+}
+
+/* ---- Contato ---- */
+.appointment-inline-link {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Os cartoes de contato agora sao links (tel:, mailto:, WhatsApp). */
+a.appointment-contact {
+  border-radius: var(--radius-md);
+  padding: 6px;
+  margin: -6px;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+a.appointment-contact:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+a.appointment-contact:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.appointment-success {
+  display: grid;
+  gap: 14px;
+  align-content: center;
+  justify-items: start;
+}
+
+.appointment-success h3 {
+  font-family: var(--serif);
+  font-size: clamp(20px, 3vw, 26px);
+  color: var(--accent-strong);
+  margin: 0;
+}
+
+.appointment-success p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+/* ---- Rodape ---- */
+.footer-inner {
+  align-items: flex-start;
+}
+
+.footer-name {
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.footer-doctor,
+.footer-contact p,
+.footer-legal {
+  margin: 4px 0 0;
+}
+
+.footer-contact a:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.footer-legal {
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+/* ============================================================
+   Ajustes de responsividade
+   ============================================================ */
+
+/* A navbar e fixa; sem isto o link "#inicio" e os saltos de ancora escondem o
+   topo de cada secao atras dela. */
+:root {
+  --nav-height: 88px;
+}
+
+html {
+  scroll-padding-top: var(--nav-height);
+}
+
+/* Nenhum conteudo pode gerar rolagem horizontal. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+/* Palavras longas (e-mails, URLs) nao podem estourar o container. */
+h1,
+h2,
+h3,
+p,
+a {
+  overflow-wrap: break-word;
+}
+
+/* Espaco para a barra de navegacao inferior do iOS. */
+.site-footer {
+  padding-bottom: calc(48px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 980px) {
+  .footer-inner {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --nav-height: 76px;
+  }
+
+  /* O hero comeca abaixo da navbar flutuante. */
+  .hero {
+    min-height: auto;
+    padding-top: calc(var(--nav-height) + 24px);
+  }
+
+  /* O scroll-jack das especialidades depende de altura de viewport: em telas
+     baixas ele prende a rolagem por tempo demais. */
+  .specialties-sticky {
+    min-height: auto;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .address-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .address-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .booking-confirmation__actions,
+  .manage-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .manage-actions .btn,
+  .booking-confirmation__actions .btn {
+    width: 100%;
+  }
+
+  /* Alvos de toque com no minimo ~44px, conforme as diretrizes de acessibilidade. */
+  .booking-chip,
+  .btn,
+  .appointment-submit {
+    min-height: 44px;
+  }
+
+  .manage-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .blog-modal,
+  .manage-card {
+    max-height: calc(100vh - 24px);
+  }
+}
+
+/* Telas bem estreitas (iPhone SE e similares). */
+@media (max-width: 380px) {
+  .booking-chips {
+    gap: 6px;
+  }
+
+  .booking-chip {
+    font-size: 12px;
   }
 }

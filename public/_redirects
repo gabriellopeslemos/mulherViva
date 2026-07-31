@@ -1,0 +1,4 @@
+# SPA fallback for Netlify-style static hosts: every path must serve index.html
+# so a deep link (e.g. the /?manage=<token> self-service link sent by e-mail)
+# does not 404 on a hard refresh.
+/*  /index.html  200

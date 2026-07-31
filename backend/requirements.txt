@@ -1,9 +1,14 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-pydantic-settings
-PyJWT
-google-auth
-requests
-httpx
-pytest
+# Pinned so a production build is reproducible and cannot pull in a breaking
+# release without an explicit, reviewed bump.
+fastapi==0.141.1
+uvicorn[standard]==0.52.0
+gunicorn==23.0.0
+SQLAlchemy==2.0.51
+pydantic==2.13.4
+pydantic-settings==2.14.2
+PyJWT==2.13.0
+google-auth==2.56.2
+requests==2.34.2
+httpx==0.28.1
+# Only needed when DATABASE_URL points at PostgreSQL; harmless otherwise.
+psycopg[binary]==3.2.12

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { clinic } from '../lib/siteConfig'
 
 const navLinks = [
   { label: 'Sobre', href: '#sobre' },
@@ -6,52 +7,79 @@ const navLinks = [
   { label: 'Especialidades', href: '#especialidades' },
   { label: 'Depoimentos', href: '#depoimentos' },
   { label: 'Blog', href: '#blog' },
-  { label: 'Endereco', href: '#endereco' },
+  { label: 'Endereço', href: '#endereco' },
 ]
+
+// The booking flow lives in #agendamento. #contato is the general-enquiry form
+// and is a different destination — pointing "Agendar consulta" at it used to
+// drop visitors on a form that cannot book anything.
+const BOOKING_HREF = '#agendamento'
 
 function FloatingNavbar({ onOpenAgenda }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const loginMenuRef = useRef(null)
+  const headerRef = useRef(null)
 
   useEffect(() => {
-    if (!isLoginOpen) {
-      return
+    if (!isLoginOpen && !isOpen) {
+      return undefined
     }
 
     const handlePointerDown = (event) => {
-      if (!loginMenuRef.current) {
-        return
-      }
-
-      if (!loginMenuRef.current.contains(event.target)) {
+      if (
+        isLoginOpen &&
+        loginMenuRef.current &&
+        !loginMenuRef.current.contains(event.target)
+      ) {
         setIsLoginOpen(false)
+      }
+      if (isOpen && headerRef.current && !headerRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsLoginOpen(false)
+        setIsOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handlePointerDown)
     document.addEventListener('touchstart', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('touchstart', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isLoginOpen])
+  }, [isLoginOpen, isOpen])
+
+  const openAgenda = () => {
+    setIsLoginOpen(false)
+    setIsOpen(false)
+    onOpenAgenda?.()
+  }
 
   return (
-    <header className="fixed top-5 left-1/2 z-50 w-[min(96%,_1100px)] -translate-x-1/2">
-      <nav className="flex items-center justify-between gap-6 rounded-full border border-white/40 bg-purple-200/70 px-6 py-3 shadow-lg backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-purple-500/20 text-sm font-semibold text-purple-900">
+    <header
+      ref={headerRef}
+      className="fixed top-4 left-1/2 z-50 w-[min(96%,_1100px)] -translate-x-1/2 sm:top-5"
+    >
+      <nav className="flex items-center justify-between gap-4 rounded-full border border-white/40 bg-purple-200/70 px-4 py-2.5 shadow-lg backdrop-blur-md sm:gap-6 sm:px-6 sm:py-3">
+        <a href="#inicio" className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-purple-500/20 text-sm font-semibold text-purple-900">
             MV
           </span>
-          <div className="hidden flex-col sm:flex">
-            <span className="text-sm font-semibold text-purple-950">Mulher Viva</span>
-            <span className="text-xs text-purple-700">Dra. Luciana da Silva Lopes</span>
-          </div>
-        </div>
+          <span className="hidden flex-col sm:flex">
+            <span className="text-sm font-semibold text-purple-950">{clinic.name}</span>
+            <span className="text-xs text-purple-700">{clinic.doctor}</span>
+          </span>
+        </a>
 
-        <div className="hidden flex-1 items-center justify-center gap-5 text-sm font-medium text-purple-900 md:flex">
+        <div className="hidden flex-1 items-center justify-center gap-4 text-sm font-medium text-purple-900 lg:flex">
           {navLinks.map((link) => (
             <a
               key={link.href}
@@ -63,7 +91,7 @@ function FloatingNavbar({ onOpenAgenda }) {
           ))}
         </div>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
           <div className="relative" ref={loginMenuRef}>
             <button
               type="button"
@@ -78,7 +106,7 @@ function FloatingNavbar({ onOpenAgenda }) {
             <div
               id="login-popover"
               role="dialog"
-              aria-label="Opcoes de login"
+              aria-label="Opções de login"
               aria-hidden={!isLoginOpen}
               className={`login-popover absolute right-0 top-full mt-3 origin-top-right rounded-2xl border border-white/70 bg-white/90 p-3 shadow-lg backdrop-blur-md transition-all duration-200 ease-out ${
                 isLoginOpen
@@ -86,7 +114,12 @@ function FloatingNavbar({ onOpenAgenda }) {
                   : 'pointer-events-none -translate-y-2 opacity-0'
               }`}
             >
-              <button type="button" className="gsi-material-button" onClick={() => { setIsLoginOpen(false); onOpenAgenda?.() }}>
+              <button
+                type="button"
+                className="gsi-material-button"
+                tabIndex={isLoginOpen ? 0 : -1}
+                onClick={openAgenda}
+              >
                 <div className="gsi-material-button-state"></div>
                 <div className="gsi-material-button-content-wrapper">
                   <div className="gsi-material-button-icon">
@@ -96,6 +129,7 @@ function FloatingNavbar({ onOpenAgenda }) {
                       viewBox="0 0 48 48"
                       xmlnsXlink="http://www.w3.org/1999/xlink"
                       style={{ display: 'block' }}
+                      aria-hidden="true"
                     >
                       <path
                         fill="#EA4335"
@@ -117,20 +151,19 @@ function FloatingNavbar({ onOpenAgenda }) {
                     </svg>
                   </div>
                   <span className="gsi-material-button-contents">Entrar com Google</span>
-                  <span style={{ display: 'none' }}>Entrar com Google</span>
                 </div>
               </button>
             </div>
           </div>
           <a
             href="#contato"
-            className="rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-semibold text-purple-900 transition-all duration-200 hover:bg-white"
+            className="hidden rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-semibold text-purple-900 transition-all duration-200 hover:bg-white lg:inline-block"
           >
             Contato
           </a>
           <a
-            href="#contato"
-            className="rounded-full bg-[#5e2f52] px-5 py-2 text-sm font-semibold text-white !text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            href={BOOKING_HREF}
+            className="rounded-full bg-[#5e2f52] px-5 py-2 text-sm font-semibold !text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#4b2542] hover:shadow-md"
           >
             Agendar Consulta
           </a>
@@ -138,27 +171,43 @@ function FloatingNavbar({ onOpenAgenda }) {
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/70 text-purple-900 transition-colors duration-200 hover:bg-white md:hidden"
-          aria-label="Abrir menu"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/70 text-purple-900 transition-colors duration-200 hover:bg-white md:hidden"
+          aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
           aria-expanded={isOpen}
+          aria-controls="mobile-menu"
           onClick={() => setIsOpen((value) => !value)}
         >
-          <span className="relative block h-4 w-5">
-            <span className="absolute left-0 top-0 h-0.5 w-full rounded bg-current" />
-            <span className="absolute left-0 top-1.5 h-0.5 w-full rounded bg-current" />
-            <span className="absolute left-0 top-3 h-0.5 w-full rounded bg-current" />
-          </span>
+          {isOpen ? (
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <span className="relative block h-4 w-5">
+              <span className="absolute left-0 top-0 h-0.5 w-full rounded bg-current" />
+              <span className="absolute left-0 top-1.5 h-0.5 w-full rounded bg-current" />
+              <span className="absolute left-0 top-3 h-0.5 w-full rounded bg-current" />
+            </span>
+          )}
         </button>
       </nav>
 
       {isOpen ? (
-        <div className="mt-3 rounded-3xl border border-white/50 bg-white/80 p-4 shadow-lg backdrop-blur-md md:hidden">
-          <div className="grid gap-3 text-sm font-medium text-purple-900">
+        <div
+          id="mobile-menu"
+          className="mt-3 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-3xl border border-white/50 bg-white/95 p-4 shadow-lg backdrop-blur-md md:hidden"
+        >
+          <div className="grid gap-1 text-sm font-medium text-purple-900">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="rounded-2xl px-3 py-2 transition-colors duration-200 hover:bg-purple-100"
+                className="rounded-2xl px-3 py-3 transition-colors duration-200 hover:bg-purple-100"
                 onClick={() => setIsOpen(false)}
               >
                 {link.label}
@@ -168,21 +217,21 @@ function FloatingNavbar({ onOpenAgenda }) {
           <div className="mt-4 flex flex-col gap-3">
             <button
               type="button"
-              className="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-900 transition-colors duration-200 hover:bg-purple-100"
-              onClick={() => setIsOpen(false)}
+              className="rounded-full border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-900 transition-colors duration-200 hover:bg-purple-100"
+              onClick={openAgenda}
             >
               Login
             </button>
             <a
               href="#contato"
-              className="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-900 transition-colors duration-200 hover:bg-purple-100"
+              className="rounded-full border border-purple-200 bg-purple-50 px-4 py-3 text-center text-sm font-semibold text-purple-900 transition-colors duration-200 hover:bg-purple-100"
               onClick={() => setIsOpen(false)}
             >
               Contato
             </a>
             <a
-              href="#contato"
-              className="rounded-full bg-[#b6ff00] px-4 py-2 text-sm font-semibold text-white !text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              href={BOOKING_HREF}
+              className="rounded-full bg-[#5e2f52] px-4 py-3 text-center text-sm font-semibold !text-white shadow-sm transition-all duration-200 hover:bg-[#4b2542] hover:shadow-md"
               onClick={() => setIsOpen(false)}
             >
               Agendar Consulta
