@@ -298,6 +298,28 @@ function FaqAccordion() {
   )
 }
 
+// Ambient color blobs for the page-level glow layer (.page-glow-layer).
+// `top` is a percentage of the FULL page height, so positions are approximate
+// by design — the goal is even ambient distribution, not pixel alignment with
+// sections. Sides alternate, sizes and palette tones vary. The hero (~top 10%)
+// paints its own opaque background, so blobs start below it.
+const pageGlows = [
+  { top: '9%', left: '-8%', size: 620, color: 'var(--palette-4)', mix: 60 },
+  { top: '17%', right: '-10%', size: 520, color: 'var(--palette-5)', mix: 85 },
+  { top: '25%', left: '-6%', size: 380, color: 'var(--palette-3)', mix: 45 },
+  { top: '33%', right: '-8%', size: 600, color: 'var(--palette-4)', mix: 55 },
+  { top: '42%', left: '-10%', size: 480, color: 'var(--palette-2)', mix: 40 },
+  // boundary glows (right side): centered on section transitions, measured
+  // against the live page height so the seams read as one continuous surface.
+  { top: '46.5%', right: '-7%', size: 520, color: 'var(--palette-3)', mix: 62 }, // sobre → abordagem
+  { top: '54%', right: '-8%', size: 480, color: 'var(--palette-2)', mix: 48 }, // abordagem → depoimentos
+  { top: '60%', left: '-8%', size: 620, color: 'var(--palette-4)', mix: 60 },
+  { top: '69.4%', right: '-8%', size: 520, color: 'var(--palette-3)', mix: 60 }, // duvidas → agendamento
+  { top: '78%', left: '-6%', size: 340, color: 'var(--palette-2)', mix: 38 },
+  { top: '86%', right: '-8%', size: 600, color: 'var(--palette-3)', mix: 48 },
+  { top: '94%', left: '-10%', size: 440, color: 'var(--palette-4)', mix: 55 },
+]
+
 function Landing() {
   // null = fechado | 'hub' | 'agenda' | 'blog'
   const [adminScreen, setAdminScreen] = useState(null)
@@ -585,6 +607,21 @@ function Landing() {
 
   return (
     <div className="page">
+      <div className="page-glow-layer" aria-hidden="true">
+        {pageGlows.map((glow, index) => (
+          <div
+            key={index}
+            className="page-glow"
+            style={{
+              top: glow.top,
+              width: `${glow.size}px`,
+              height: `${glow.size}px`,
+              ...(glow.left ? { left: glow.left } : { right: glow.right }),
+              '--glow-color': `color-mix(in srgb, ${glow.color} ${glow.mix}%, transparent)`,
+            }}
+          />
+        ))}
+      </div>
       <motion.div
         className="scroll-progress"
         style={{ scaleX: pageProgressSpring }}
@@ -730,14 +767,13 @@ function Landing() {
                 ref={specialtiesTrackRef}
                 style={{ x: prefersReducedMotion ? 0 : trackX }}
               >
-                {specialties.map((item, index) => (
+                {specialties.map((item) => (
                   <article
                     key={item.title}
                     className="specialty-card"
                     style={{ '--card-tone': item.tone }}
                   >
                     <div className="specialty-card__content">
-                      <p className="specialty-card__number">[0{index + 1}]</p>
                       <h3>{item.title}</h3>
                       <p>{item.text}</p>
                       <a className="card-link" href="#agendamento">
@@ -949,7 +985,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section" id="blog">
+        <section className="section section--soft" id="blog">
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Blog</p>

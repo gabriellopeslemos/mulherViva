@@ -3,7 +3,16 @@
 /* Light section: the booking UI is built as light cards with dark text, so it
    must NOT inherit the dark `.section.alt` palette (white-on-white). */
 .bk-section {
-  background: linear-gradient(180deg, var(--surface-soft) 0%, var(--bg) 60%);
+  /* Translucent tint (not opaque --bg) so the page-level glow layer and the
+     body's base gradient stay visible behind the booking cards, which are
+     themselves opaque and keep the form fully readable. */
+  /* Single smooth fade — a plateau between fade stops reads as a hard edge. */
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--surface-soft) 60%, transparent) 30%,
+    transparent 70%
+  );
 }
 
 .bk-section .bk-header {

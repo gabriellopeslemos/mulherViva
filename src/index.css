@@ -67,10 +67,20 @@ html {
 
 body {
   margin: 0;
+  /* Base canvas: instead of one flat --bg, a very subtle full-height drift
+     between warm palette-5/palette-4 tints over white. All stops stay in the
+     10–26% mix range so dark plum text keeps full contrast everywhere. */
   background:
     radial-gradient(1200px 800px at 80% -10%, var(--surface) 0%, transparent 60%),
     radial-gradient(900px 900px at -10% 10%, color-mix(in srgb, var(--palette-5) 50%, white) 0%, transparent 55%),
-    var(--bg);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--palette-5) 22%, white) 0%,
+      color-mix(in srgb, var(--palette-4) 13%, white) 28%,
+      color-mix(in srgb, var(--palette-5) 26%, white) 52%,
+      color-mix(in srgb, var(--palette-4) 11%, white) 76%,
+      color-mix(in srgb, var(--palette-5) 20%, white) 100%
+    );
 }
 
 ::selection {
@@ -111,9 +121,35 @@ p {
 }
 
 .page {
+  position: relative;
+  /* Own stacking context so the z-index:-1 glow layer paints above the body
+     background but below every child of .page (content, navbar, fab). */
+  isolation: isolate;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* ---- page-level ambient glow layer ----
+   One decorative full-page layer (rendered as an aria-hidden div in the
+   Landing component) instead of per-section glows, so color drifts freely
+   across section boundaries and the page reads as one continuous surface.
+   Individual blobs get top/left|right/size/color inline via CSS vars.
+   overflow: hidden lives ONLY here — never on sections — so it cannot clip
+   the specialties sticky track or any section content. */
+.page-glow-layer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.page-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
 }
 
 .scroll-progress {
@@ -202,7 +238,14 @@ p {
 
 .hero-bg {
   position: relative;
-  background: color-mix(in srgb, var(--palette-5) 50%, white);
+  /* Fade the hero tint out at the bottom so there's no hard line where the
+     hero ends and the specialties section begins. */
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--palette-5) 50%, white) 0%,
+    color-mix(in srgb, var(--palette-5) 50%, white) 78%,
+    transparent 100%
+  );
   overflow: hidden;
 }
 
@@ -423,7 +466,15 @@ p {
 }
 
 .section--soft {
-  background: linear-gradient(180deg, var(--surface-soft) 0%, var(--bg) 100%);
+  /* One continuous fade (no constant plateau): a flat tint segment between
+     two fade stops reads as a visible full-width edge against the neighboring
+     sections. Kept translucent so the page glow layer shimmers through. */
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--surface-soft) 55%, transparent) 50%,
+    transparent 100%
+  );
 }
 
 .specialties-section {
@@ -611,13 +662,13 @@ p {
 
 .specialty-card {
   width: min(78vw, 1060px);
-  border-radius: clamp(24px, 3vw, 40px);
+  border-radius: clamp(16px, 2vw, 28px);
   background: var(--card-tone, var(--surface-soft));
   padding: clamp(24px, 3vw, 48px);
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: clamp(24px, 3.5vw, 56px);
-  align-items: center;
+  align-items: stretch;
   box-shadow: var(--shadow-sm);
 }
 
@@ -630,9 +681,9 @@ p {
 }
 
 .specialty-card__content {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
-  align-content: center;
 }
 
 .specialty-card__content h3 {
@@ -648,7 +699,26 @@ p {
 }
 
 .specialty-card .card-link {
-  margin-top: 6px;
+  margin-top: auto;
+  display: block;
+  width: 100%;
+  padding: 16px 24px;
+  text-align: center;
+  background: var(--accent-strong);
+  color: white;
+  border-radius: 14px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+}
+
+.specialty-card a.card-link:hover {
+  background: var(--accent);
+  transform: none;
+  color: white;
+}
+
+.specialty-card__media {
+  align-self: start;
 }
 
 .specialty-card__media img {
