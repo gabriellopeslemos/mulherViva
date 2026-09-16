@@ -863,67 +863,6 @@ a.card-link:hover {
   color: var(--accent);
 }
 
-.approach-body {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 32px;
-  position: relative;
-}
-
-.approach-line {
-  position: relative;
-  width: 6px;
-  border-radius: 999px;
-  background: var(--line);
-  overflow: hidden;
-}
-
-.approach-line::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, var(--accent), var(--gold-soft));
-  transform: scaleY(var(--approach-progress, 0));
-  transform-origin: top;
-  transition: transform 0.4s ease;
-}
-
-.approach-steps {
-  display: grid;
-  gap: 26px;
-}
-
-.approach-step {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  align-items: flex-start;
-}
-
-.step-number {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  display: grid;
-  place-items: center;
-  font-weight: 600;
-  color: var(--accent-strong);
-}
-
-.approach-step h3 {
-  margin: 0 0 8px;
-  font-family: var(--serif);
-}
-
-.approach-step p {
-  margin: 0;
-  color: var(--text-soft);
-  line-height: 1.6;
-}
-
-
 .carousel {
   overflow: hidden;
   padding: 12px 0 0;
@@ -1599,10 +1538,6 @@ a.blog-card {
 
   .hero-media__image {
     height: 320px;
-  }
-
-  .approach-body {
-    grid-template-columns: 24px 1fr;
   }
 
   .specialty-card {

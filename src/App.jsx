@@ -66,25 +66,6 @@ const aboutTags = [
   'Ortomolecular',
 ]
 
-const approachSteps = [
-  {
-    title: 'Escuta profunda e individualizada',
-    text: 'Tempo de consulta de verdade: presença e diálogo para compreender a mulher inteira, não apenas o sintoma.',
-  },
-  {
-    title: 'Avaliação clínica completa',
-    text: 'Exames, histórico e sinais sutis interpretados dentro do seu contexto de vida.',
-  },
-  {
-    title: 'Integração entre ciência e terapias complementares',
-    text: 'Recursos baseados em evidência, aplicados com sensibilidade e coerência.',
-  },
-  {
-    title: 'Plano de cuidado personalizado',
-    text: 'Um caminho claro, prático e acolhedor, construído junto com você.',
-  },
-]
-
 const specialties = [
   {
     title: 'Ginecologia',
@@ -547,28 +528,12 @@ function Landing() {
     const parallaxElements = Array.from(
       document.querySelectorAll('[data-parallax]'),
     )
-    const approachSection = document.querySelector('[data-approach]')
-
     const handleScroll = () => {
       const scrollY = window.scrollY
       parallaxElements.forEach((element) => {
         const speed = Number(element.dataset.parallax || 0.08)
         element.style.transform = `translateY(${scrollY * speed}px)`
       })
-
-      if (approachSection) {
-        const rect = approachSection.getBoundingClientRect()
-        const viewHeight = window.innerHeight
-        const total = rect.height + viewHeight
-        const progress = Math.min(
-          1,
-          Math.max(0, (viewHeight - rect.top) / total),
-        )
-        approachSection.style.setProperty(
-          '--approach-progress',
-          progress.toFixed(3),
-        )
-      }
     }
 
     handleScroll()
@@ -950,40 +915,6 @@ function Landing() {
             </div>
           </div>
         </section>
-
-        <section className="section section--soft" id="abordagem" data-approach>
-          <div className="container">
-            <div className="section-header" data-reveal>
-              <p className="eyebrow">Abordagem</p>
-              <h2>Como é cuidar e ser cuidada por aqui.</h2>
-              <p>
-                O atendimento é conduzido com profundidade clínica e
-                acolhimento, sem abrir mão do rigor técnico.
-              </p>
-            </div>
-            <div className="approach-body">
-              <div className="approach-line" aria-hidden="true" />
-              <div className="approach-steps">
-                {approachSteps.map((step, index) => (
-                  <article
-                    key={step.title}
-                    className="approach-step"
-                    data-reveal
-                    style={{ '--delay': `${index * 120}ms` }}
-                  >
-                    <div className="step-number">0{index + 1}</div>
-                    <div>
-                      <h3>{step.title}</h3>
-                      <p>{step.text}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        
 
         <section className="section" id="depoimentos">
           <div className="container">
