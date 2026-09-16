@@ -352,6 +352,12 @@ function Landing() {
   const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
   const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
   const [blogTick, setBlogTick] = useState(0)
+  // Same reasoning as the booking section: this preview sits far below the
+  // fold and already renders `fallbackBlogPosts` immediately, so the fetch is
+  // pure progressive enhancement — deferring it until the section nears the
+  // viewport keeps it out of the initial critical request chain.
+  const blogSectionRef = useRef(null)
+  const [shouldLoadBlog, setShouldLoadBlog] = useState(false)
   // The track renders many back-to-back copies of `specialties` so stepping
   // past the last card keeps sliding into a real (duplicate) next card
   // instead of jumping — and so a burst of rapid clicks (each one redirects
@@ -491,6 +497,26 @@ function Landing() {
   }, [trackIndex, prefersReducedMotion])
 
   useEffect(() => {
+    const node = blogSectionRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setShouldLoadBlog(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoadBlog(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '600px 0px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!shouldLoadBlog && blogTick === 0) return
     api
       .get('/api/blog?limit=6')
       .then((data) => {
@@ -508,7 +534,7 @@ function Landing() {
         )
       })
       .catch(() => {})
-  }, [blogTick])
+  }, [shouldLoadBlog, blogTick])
 
   useEffect(() => {
     if (prefersReducedMotion || !startYearsCount) return undefined
@@ -1068,7 +1094,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section section--soft" id="blog">
+        <section className="section section--soft" id="blog" ref={blogSectionRef}>
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Blog</p>

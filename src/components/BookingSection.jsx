@@ -149,12 +149,39 @@ export default function BookingSection() {
   // calendar and slot list to one kind of consultation.
   const [modalityFilter, setModalityFilter] = useState(null)
 
+  // The section sits far below the fold, but the fetches it kicks off were
+  // firing at mount time regardless — showing up as an early, slow leg of the
+  // page's critical request chain. Deferring them until the section is about
+  // to scroll into view removes them from that chain entirely.
+  const sectionRef = useRef(null)
+  const [shouldLoad, setShouldLoad] = useState(false)
+
   useEffect(() => {
+    const node = sectionRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setShouldLoad(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '600px 0px' },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!shouldLoad) return
     api
       .get('/api/specialties')
       .then(setSpecialties)
       .catch(() => setUnavailable(true))
-  }, [])
+  }, [shouldLoad])
 
   const specialty = specialties.find((s) => s.id === specialtyId) || null
   const monthPart = `${cursor.getFullYear()}-${cursor.getMonth()}`
@@ -394,7 +421,7 @@ export default function BookingSection() {
   const selectedDateObj = selectedDate ? parseIso(selectedDate) : null
 
   return (
-    <section className="section bk-section" id="agendamento" tabIndex={-1}>
+    <section className="section bk-section" id="agendamento" tabIndex={-1} ref={sectionRef}>
       <div className="container">
         <motion.div
           className="section-header bk-header"
