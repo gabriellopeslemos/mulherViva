@@ -416,6 +416,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           </div>
         </div>
 
+        {view !== 'list' && (
         <div className="ag-topbar__nav">
           <button
             type="button"
@@ -441,6 +442,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
             </svg>
           </button>
         </div>
+        )}
 
         <div className="ag-topbar__right">
           <div className="ag-segment ag-segment--views" role="radiogroup" aria-label="Visualização">
