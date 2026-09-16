@@ -1,0 +1,10 @@
+{
+  "description": "Manage and organize medical appointment schedules efficiently with an intuitive admin panel designed for healthcare providers to streamline bookings.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

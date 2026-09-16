@@ -863,9 +863,15 @@ a.card-link:hover {
   color: var(--accent);
 }
 
+.carousel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .carousel {
   overflow: hidden;
-  padding: 12px 0 0;
+  padding: 12px 0;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
 }
@@ -874,6 +880,15 @@ a.card-link:hover {
   display: flex;
   width: max-content;
   animation: marquee 38s linear infinite;
+}
+
+/* Second row runs slower for a layered, non-uniform marquee effect. */
+.carousel-track--row1 {
+  animation-duration: 32s;
+}
+
+.carousel-track--row2 {
+  animation-duration: 52s;
 }
 
 .carousel:hover .carousel-track {
@@ -898,13 +913,14 @@ a.card-link:hover {
   max-width: 380px;
   margin-right: 24px;
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
   box-shadow: var(--shadow-sm);
 }
 
 .testimonial-text {
-  margin: 0 0 10px;
+  margin: 0;
   font-family: var(--serif);
   font-style: italic;
   font-size: 16px;
@@ -912,9 +928,26 @@ a.card-link:hover {
   line-height: 1.65;
 }
 
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.testimonial-author__meta {
+  display: flex;
+  flex-direction: column;
+}
+
 .testimonial-name {
   margin: 0;
   font-weight: 600;
+}
+
+.testimonial-role {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-soft);
 }
 
 .faq-list {
@@ -1602,8 +1635,12 @@ a.blog-card {
     align-items: flex-start;
   }
 
-  .carousel-track {
-    animation-duration: 44s;
+  .carousel-track--row1 {
+    animation-duration: 38s;
+  }
+
+  .carousel-track--row2 {
+    animation-duration: 58s;
   }
 
 }

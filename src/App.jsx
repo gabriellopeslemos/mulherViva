@@ -98,9 +98,10 @@ const specialties = [
 const SPECIALTIES_LOOP_COPIES = 13
 const specialtiesLoop = Array.from({ length: SPECIALTIES_LOOP_COPIES }, () => specialties).flat()
 
-const testimonials = [
+const testimonialsRowOne = [
   {
     name: 'Luciana M.',
+    role: 'Paciente · Ginecologia',
     text: 'Encontrei um cuidado profundo, sem julgamentos e com respeito real.',
     tone: 'color-mix(in srgb, var(--palette-3) 40%, white)',
     image: '/images/mulherRandom.jpg',
@@ -109,6 +110,7 @@ const testimonials = [
   },
   {
     name: 'Renata C.',
+    role: 'Paciente · Obstetrícia',
     text: 'A consulta foi serena e precisa. Senti que tudo foi explicado com calma.',
     tone: 'color-mix(in srgb, var(--palette-4) 45%, white)',
     image: '/images/mulherRandom2.jpg',
@@ -117,11 +119,42 @@ const testimonials = [
   },
   {
     name: 'Pedro F.',
+    role: 'Paciente · Medicina ortomolecular',
     text: 'Um encontro entre ciência e sensibilidade que transformou meu olhar.',
     tone: 'color-mix(in srgb, var(--palette-2) 35%, white)',
     image: '/images/homemrandom.jpg',
     placeholder: testimonialPlaceholderThree,
     imageAlt: 'Foto de Pedro',
+  },
+]
+
+const testimonialsRowTwo = [
+  {
+    name: 'Camila S.',
+    role: 'Paciente · Ginecologia',
+    text: 'Me senti acolhida do início ao fim, com uma escuta que eu nunca tinha tido.',
+    tone: 'color-mix(in srgb, var(--palette-5) 40%, white)',
+    image: '/images/mulherRandom2.jpg',
+    placeholder: testimonialPlaceholderTwo,
+    imageAlt: 'Foto de Camila',
+  },
+  {
+    name: 'Beatriz A.',
+    role: 'Paciente · Medicina integrativa',
+    text: 'Cuidado individualizado de verdade, sem pressa e com muita clareza nas explicações.',
+    tone: 'color-mix(in srgb, var(--palette-2) 40%, white)',
+    image: '/images/mulherRandom.jpg',
+    placeholder: testimonialPlaceholderOne,
+    imageAlt: 'Foto de Beatriz',
+  },
+  {
+    name: 'Marcelo T.',
+    role: 'Paciente · Obstetrícia',
+    text: 'Indiquei para toda a minha família pela qualidade do atendimento e atenção aos detalhes.',
+    tone: 'color-mix(in srgb, var(--palette-3) 45%, white)',
+    image: '/images/homemrandom.jpg',
+    placeholder: testimonialPlaceholderThree,
+    imageAlt: 'Foto de Marcelo',
   },
 ]
 
@@ -211,25 +244,28 @@ function TestimonialCard({ item }) {
 
   return (
     <article className="testimonial-card">
-      <div
-        className="avatar"
-        role="img"
-        aria-label={item.imageAlt || `Foto de ${item.name}`}
-        style={{
-          '--avatar-tone': item.tone,
-          '--avatar-image': resolvedImage ? `url(${resolvedImage})` : undefined,
-        }}
-      >
-        {!resolvedImage
-          ? item.name
-              .split(' ')
-              .map((word) => word[0])
-              .join('')
-          : null}
-      </div>
-      <div>
-        <p className="testimonial-text">"{item.text}"</p>
-        <p className="testimonial-name">{item.name}</p>
+      <p className="testimonial-text">"{item.text}"</p>
+      <div className="testimonial-author">
+        <div
+          className="avatar"
+          role="img"
+          aria-label={item.imageAlt || `Foto de ${item.name}`}
+          style={{
+            '--avatar-tone': item.tone,
+            '--avatar-image': resolvedImage ? `url(${resolvedImage})` : undefined,
+          }}
+        >
+          {!resolvedImage
+            ? item.name
+                .split(' ')
+                .map((word) => word[0])
+                .join('')
+            : null}
+        </div>
+        <div className="testimonial-author__meta">
+          <p className="testimonial-name">{item.name}</p>
+          {item.role ? <p className="testimonial-role">{item.role}</p> : null}
+        </div>
       </div>
     </article>
   )
@@ -924,13 +960,22 @@ function Landing() {
               <p>Cuidado profundo transforma a relação com o próprio corpo.</p>
             </div>
           </div>
-          <div className="carousel" aria-label="Depoimentos das pacientes">
-            <div className="carousel-track">
-              {/* Two identical halves (each repeats the list enough to span the
-                  viewport) so the -50% marquee loops seamlessly and forever. */}
-              {[...testimonials, ...testimonials, ...testimonials, ...testimonials].map((item, index) => (
-                <TestimonialCard key={`${item.name}-${index}`} item={item} />
-              ))}
+          <div className="carousel-stack">
+            <div className="carousel" aria-label="Depoimentos das pacientes">
+              <div className="carousel-track carousel-track--row1">
+                {/* Two identical halves (each repeats the list enough to span the
+                    viewport) so the -50% marquee loops seamlessly and forever. */}
+                {[...testimonialsRowOne, ...testimonialsRowOne, ...testimonialsRowOne, ...testimonialsRowOne].map((item, index) => (
+                  <TestimonialCard key={`row1-${item.name}-${index}`} item={item} />
+                ))}
+              </div>
+            </div>
+            <div className="carousel" aria-label="Depoimentos das pacientes">
+              <div className="carousel-track carousel-track--row2">
+                {[...testimonialsRowTwo, ...testimonialsRowTwo, ...testimonialsRowTwo, ...testimonialsRowTwo].map((item, index) => (
+                  <TestimonialCard key={`row2-${item.name}-${index}`} item={item} />
+                ))}
+              </div>
             </div>
           </div>
         </section>
