@@ -256,10 +256,10 @@
 .ag-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
-  padding: 8px clamp(12px, 2.4vw, 24px);
-  font-size: 0.8rem;
+  padding: 14px clamp(12px, 2.4vw, 24px);
+  font-size: 0.88rem;
   color: var(--text-muted);
   background: var(--surface);
   border-bottom: 1px solid var(--line);
@@ -305,11 +305,46 @@
   padding: 1px 7px;
 }
 
+.ag-legend__right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-left: auto;
+}
+
+.ag-legend__today {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ag-legend__today svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  transition: transform 0.18s ease;
+}
+
+.ag-legend__today:hover {
+  color: var(--accent);
+}
+
+.ag-legend__today:hover svg {
+  transform: translateX(2px);
+}
+
 .ag-legend__toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
   cursor: pointer;
   user-select: none;
 }
@@ -1463,5 +1498,172 @@
   .ag-modal {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- month view ---------- */
+
+.ag-month {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 clamp(8px, 1.6vw, 18px) 12px;
+}
+
+.ag-month__head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 8px 0 6px;
+}
+
+.ag-month__head span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ag-month__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden auto;
+  background: var(--surface);
+}
+
+.ag-month__week {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  min-height: 96px;
+}
+
+.ag-month__week + .ag-month__week {
+  border-top: 1px solid var(--line);
+}
+
+.ag-month__day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  min-width: 0;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.ag-month__day + .ag-month__day {
+  border-left: 1px solid var(--line);
+}
+
+.ag-month__day:hover {
+  background: var(--surface-soft);
+}
+
+.ag-month__day.is-outside {
+  background: color-mix(in srgb, var(--surface-soft) 55%, var(--surface));
+}
+
+.ag-month__day.is-outside .ag-month__num {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.ag-month__num {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.ag-month__day.is-today .ag-month__num {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.ag-month__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ag-month__chip {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ag-month__chip em {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.ag-month__chip--confirmed {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.ag-month__chip--pending {
+  background: #fdf3dd;
+  color: #7a5817;
+  border: 1px dashed #c8973a;
+}
+
+.ag-month__chip--cancelled {
+  background: #efe7eb;
+  color: #8a7682;
+  text-decoration: line-through;
+}
+
+.ag-month__more {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0 6px;
+}
+
+@media (max-width: 760px) {
+  .ag-month__week {
+    min-height: 72px;
+  }
+
+  .ag-month__chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+
+  .ag-month__chip {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;
+  }
+
+  .ag-month__more {
+    padding: 0;
   }
 }

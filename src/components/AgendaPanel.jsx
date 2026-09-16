@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import TimeGrid from './agenda/TimeGrid'
 import ListView from './agenda/ListView'
+import MonthGrid from './agenda/MonthGrid'
 import {
   ApptDetails,
   ApptForm,
@@ -57,6 +58,15 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
   const [gcal, setGcal] = useState(null)
 
   const days = useMemo(() => {
+    if (view === 'month') {
+      const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+      const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
+      const start = startOfWeek(first)
+      const end = addDays(startOfWeek(last), 6)
+      const out = []
+      for (let d = start; d <= end; d = addDays(d, 1)) out.push(toIso(d))
+      return out
+    }
     if (view !== 'week') return [toIso(anchor)]
     const monday = startOfWeek(anchor)
     return Array.from({ length: 7 }, (_, i) => toIso(addDays(monday, i)))
@@ -334,8 +344,17 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
 
   const navStep = view === 'week' ? 7 : 1
   const goToday = () => setAnchor(startOfToday())
+  const navigate = (dir) =>
+    setAnchor((d) =>
+      view === 'month'
+        ? new Date(d.getFullYear(), d.getMonth() + dir, 1)
+        : addDays(d, dir * navStep),
+    )
 
   const rangeLabel = useMemo(() => {
+    if (view === 'month') {
+      return `${MONTHS_LONG[anchor.getMonth()]} de ${anchor.getFullYear()}`
+    }
     if (view !== 'week') {
       const d = anchor
       return `${d.getDate()} de ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`
@@ -421,21 +440,41 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           <button
             type="button"
             className="ag-iconbtn"
-            onClick={() => setAnchor((d) => addDays(d, -navStep))}
-            aria-label={view === 'week' ? 'Semana anterior' : 'Dia anterior'}
+            onClick={() => navigate(-1)}
+            aria-label={
+              view === 'month' ? 'Mês anterior' : view === 'week' ? 'Semana anterior' : 'Dia anterior'
+            }
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m14.5 6-6 6 6 6" />
             </svg>
           </button>
-          <button type="button" className="ag-btn ag-btn--ghost ag-btn--sm" onClick={goToday}>
-            Hoje
-          </button>
+          <div className="ag-segment" role="radiogroup" aria-label="Período">
+            {[
+              ['week', isMobile ? 'Dia' : 'Semana'],
+              ['month', 'Mês'],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={value === 'month' ? view === 'month' : view !== 'month'}
+                className={
+                  (value === 'month' ? view === 'month' : view !== 'month') ? 'is-selected' : ''
+                }
+                onClick={() => setView(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="ag-iconbtn"
-            onClick={() => setAnchor((d) => addDays(d, navStep))}
-            aria-label={view === 'week' ? 'Próxima semana' : 'Próximo dia'}
+            onClick={() => navigate(1)}
+            aria-label={
+              view === 'month' ? 'Próximo mês' : view === 'week' ? 'Próxima semana' : 'Próximo dia'
+            }
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m9.5 6 6 6-6 6" />
@@ -454,8 +493,10 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
                   key={value}
                   type="button"
                   role="radio"
-                  aria-checked={view === value}
-                  className={view === value ? 'is-selected' : ''}
+                  aria-checked={value === 'list' ? view === 'list' : view !== 'list'}
+                  className={
+                    (value === 'list' ? view === 'list' : view !== 'list') ? 'is-selected' : ''
+                  }
                   onClick={() => setView(value)}
                 >
                   {label}
@@ -495,7 +536,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         </div>
       </header>
 
-      {isMobile && (
+      {isMobile && view === 'day' && (
         <div className="ag-daystrip" role="tablist" aria-label="Escolher dia">
           {dayStrip.map((d) => {
             const iso = toIso(d)
@@ -533,14 +574,22 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         <span className="ag-legend__item">
           <i className="ag-legend__dot ag-legend__dot--open" /> Extra
         </span>
-        <label className="ag-legend__toggle">
-          <input
-            type="checkbox"
-            checked={showCancelled}
-            onChange={(e) => setShowCancelled(e.target.checked)}
-          />
-          Mostrar canceladas
-        </label>
+        <div className="ag-legend__right">
+          <button type="button" className="ag-legend__today" onClick={goToday}>
+            Ir para data de hoje
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9.5 6 15.5 12 9.5 18" />
+            </svg>
+          </button>
+          <label className="ag-legend__toggle">
+            <input
+              type="checkbox"
+              checked={showCancelled}
+              onChange={(e) => setShowCancelled(e.target.checked)}
+            />
+            Mostrar canceladas
+          </label>
+        </div>
       </div>
       )}
 
@@ -559,6 +608,18 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           onOpen={(appt) => setModal({ type: 'appt-details', appt })}
           onEdit={(appt) => setModal({ type: 'appt-form', initial: appt, editId: appt.id })}
           onCancel={(appt) => setApptStatus(appt, 'cancelled')}
+        />
+      ) : view === 'month' ? (
+        <MonthGrid
+          days={days}
+          month={anchor.getMonth()}
+          appointments={visibleAppointments}
+          specialtiesById={specialtiesById}
+          onDayTap={(date) => {
+            setAnchor(date)
+            setView('week')
+          }}
+          onApptTap={(appt) => setModal({ type: 'appt-details', appt })}
         />
       ) : (
         <TimeGrid
