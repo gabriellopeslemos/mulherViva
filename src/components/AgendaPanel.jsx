@@ -40,9 +40,7 @@ function useMediaQuery(query) {
 
 export default function AgendaPanel({ onClose, onAuthExpired }) {
   const isMobile = useMediaQuery('(max-width: 760px)')
-  const [viewChoice, setView] = useState(() =>
-    window.matchMedia('(max-width: 760px)').matches ? 'day' : 'week',
-  )
+  const [viewChoice, setView] = useState('week')
   const view = isMobile && viewChoice === 'week' ? 'day' : viewChoice
   const [anchor, setAnchor] = useState(startOfToday)
   const [appointments, setAppointments] = useState([])
@@ -448,8 +446,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           <div className="ag-segment ag-segment--views" role="radiogroup" aria-label="Visualização">
               {[
                 ['list', 'Consultas'],
-                ['day', 'Dia'],
-                ...(isMobile ? [] : [['week', 'Semana']]),
+                ['week', 'Calendário'],
               ].map(([value, label]) => (
                 <button
                   key={value}
