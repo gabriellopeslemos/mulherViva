@@ -478,11 +478,11 @@ p {
 }
 
 .specialties-section {
-  padding: clamp(24px, 4vh, 48px) 0 0;
+  padding: clamp(56px, 10vh, 120px) 0;
 }
 
 .specialties-section .section-header {
-  margin-bottom: 0;
+  margin-bottom: clamp(32px, 5vh, 56px);
 }
 
 .section-header--center {
@@ -634,23 +634,17 @@ p {
   color: var(--text-muted);
 }
 
-/* Vertical scroll through this tall container drives the panels across the
-   viewport: in from the right edge, out past the left edge. */
-.specialties-scroll {
-  position: relative;
-  height: calc(var(--specialty-steps, 3) * 90vh);
-}
-
-.specialties-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+.specialties-carousel {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding-top: clamp(24px, 5vh, 56px);
-  gap: clamp(20px, 4vh, 40px);
-  overflow-x: clip;
+  gap: clamp(20px, 3vh, 32px);
+}
+
+.specialties-viewport {
+  position: relative;
+  width: min(100% - 32px, 1600px);
+  margin: 0 auto;
+  overflow: hidden;
 }
 
 .specialties-track {
@@ -661,7 +655,7 @@ p {
 }
 
 .specialty-card {
-  width: min(78vw, 1060px);
+  width: min(62vw, 980px);
   border-radius: clamp(16px, 2vw, 28px);
   background: var(--card-tone, var(--surface-soft));
   padding: clamp(24px, 3vw, 48px);
@@ -670,6 +664,64 @@ p {
   gap: clamp(24px, 3.5vw, 56px);
   align-items: stretch;
   box-shadow: var(--shadow-sm);
+  filter: blur(6px);
+  opacity: 0.5;
+  transition: filter 0.5s ease, opacity 0.5s ease;
+}
+
+.specialty-card.is-active {
+  filter: blur(0);
+  opacity: 1;
+}
+
+.specialties-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vw, 32px);
+}
+
+.specialties-nav__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--accent-strong);
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.specialties-nav__arrow:hover {
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+}
+
+.specialties-dots {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.specialties-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent-strong) 25%, transparent);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.specialties-dot:hover {
+  background: color-mix(in srgb, var(--accent-strong) 55%, transparent);
+}
+
+.specialties-dot.is-active {
+  background: var(--accent-strong);
+  transform: scale(1.2);
 }
 
 .specialty-card__number {
@@ -728,27 +780,6 @@ p {
   aspect-ratio: 5 / 4;
   max-height: min(52vh, 480px);
   display: block;
-}
-
-/* Reduced motion: no sticky theatrics — panels stack vertically. */
-.specialties-scroll.is-static {
-  height: auto;
-}
-
-.specialties-scroll.is-static .specialties-sticky {
-  position: static;
-  height: auto;
-}
-
-.specialties-scroll.is-static .specialties-track {
-  flex-direction: column;
-  width: min(100% - 48px, var(--max-width));
-  margin-inline: auto;
-  gap: clamp(24px, 4vw, 40px);
-}
-
-.specialties-scroll.is-static .specialty-card {
-  width: 100%;
 }
 
 .stat-card,

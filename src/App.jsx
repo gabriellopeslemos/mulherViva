@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import {
+  animate,
   motion,
   useInView,
   useMotionValue,
   useReducedMotion,
   useScroll,
   useSpring,
-  useTransform,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
 import AdminHub from './components/AdminHub'
@@ -111,6 +111,11 @@ const specialties = [
     tone: 'color-mix(in srgb, var(--palette-3) 45%, white)',
   },
 ]
+
+// Many back-to-back copies so the track always has a real card to slide into
+// on either side (even through a burst of rapid clicks) for a seamless loop.
+const SPECIALTIES_LOOP_COPIES = 13
+const specialtiesLoop = Array.from({ length: SPECIALTIES_LOOP_COPIES }, () => specialties).flat()
 
 const testimonials = [
   {
@@ -329,11 +334,23 @@ function Landing() {
   const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
   const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
   const [blogTick, setBlogTick] = useState(0)
-  const specialtiesScrollRef = useRef(null)
+  // The track renders many back-to-back copies of `specialties` so stepping
+  // past the last card keeps sliding into a real (duplicate) next card
+  // instead of jumping — and so a burst of rapid clicks (each one redirects
+  // the animation instead of being dropped) always has a real card to land
+  // on. trackIndex is an absolute index into that array; once the active
+  // card settles far from the middle copy it's silently re-centered by a
+  // whole number of copy-lengths (identical content, so the jump is invisible).
+  const specialtiesLoopMiddleStart =
+    specialties.length * Math.floor(SPECIALTIES_LOOP_COPIES / 2)
+  const [trackIndex, setTrackIndex] = useState(specialtiesLoopMiddleStart)
+  const trackIndexRef = useRef(specialtiesLoopMiddleStart)
+  const [stepPositions, setStepPositions] = useState([])
+  const trackX = useMotionValue(0)
   const specialtiesTrackRef = useRef(null)
-  // Pixel endpoints for the horizontal sweep: starts with the first panel
-  // centered, ends with the last one centered — then the page scrolls on.
-  const [trackRange, setTrackRange] = useState({ from: 0, to: 0 })
+  const isSpecialtySnappingRef = useRef(false)
+  const activeSpecialty =
+    ((trackIndex % specialties.length) + specialties.length) % specialties.length
   const addressContentRef = useRef(null)
   const addressTitleRef = useRef(null)
   const heroBlobLayerRef = useRef(null)
@@ -357,41 +374,103 @@ function Landing() {
     damping: 22,
     mass: 0.6,
   })
-  const { scrollYProgress } = useScroll({
-    target: specialtiesScrollRef,
-    offset: ['start start', 'end end'],
-  })
   const pageProgressSpring = useSpring(pageScrollProgress, {
     stiffness: 140,
     damping: 24,
     mass: 0.25,
   })
-  // Short hold at the start keeps panel 1 centered before the sweep begins.
-  const trackX = useTransform(
-    scrollYProgress,
-    [0, 0.15, 1],
-    [trackRange.from, trackRange.from, trackRange.to],
-  )
 
+  // Re-centers trackIndex into the middle copy of the loop, whatever copy it
+  // drifted to (a burst of rapid clicks can walk it several copies away
+  // before things settle) — content is identical across copies, so the jump
+  // is invisible.
+  const normalizeTrackIndex = () => {
+    const length = specialties.length
+    const current = trackIndexRef.current
+    if (current >= length && current < length * (SPECIALTIES_LOOP_COPIES - 1)) return
+    const real = ((current % length) + length) % length
+    const next = specialtiesLoopMiddleStart + real
+    if (next === current) return
+    trackIndexRef.current = next
+    setTrackIndex(next)
+    trackX.set(stepPositions[next] ?? 0)
+  }
+
+  const animateTrackTo = (index) => {
+    trackIndexRef.current = index
+    setTrackIndex(index)
+    const target = stepPositions[index] ?? 0
+    if (prefersReducedMotion) {
+      trackX.set(target)
+      return
+    }
+    isSpecialtySnappingRef.current = true
+    // animate() on the same motion value interrupts whatever spring is
+    // already running, so clicking again mid-transition just redirects it —
+    // no click is ever dropped, however fast they come in.
+    animate(trackX, target, {
+      type: 'spring',
+      stiffness: 260,
+      damping: 34,
+      onComplete: () => {
+        isSpecialtySnappingRef.current = false
+        normalizeTrackIndex()
+      },
+    })
+  }
+
+  const stepSpecialty = (delta) => {
+    animateTrackTo(trackIndexRef.current + delta)
+  }
+
+  const goToSpecialty = (targetIndex) => {
+    const length = specialties.length
+    const currentReal = ((trackIndexRef.current % length) + length) % length
+    const delta = (targetIndex - currentReal + length) % length
+    if (delta === 0) return
+    animateTrackTo(trackIndexRef.current + delta)
+  }
+
+  // Measure each card's centered x offset up front, then keep the track
+  // snapped to the active one whenever the layout changes (resize).
   useEffect(() => {
     const measure = () => {
       const track = specialtiesTrackRef.current
-      const first = track?.firstElementChild
-      const last = track?.lastElementChild
-      if (!track || !first || !last) return
-      // Rect deltas are immune to the track's current translation.
+      const cards = track ? Array.from(track.children) : []
+      if (!track || !cards.length) return
       const trackLeft = track.getBoundingClientRect().left
-      const lastRect = last.getBoundingClientRect()
-      const centerOf = (width) => (window.innerWidth - width) / 2
-      setTrackRange({
-        from: Math.max(0, centerOf(first.offsetWidth)),
-        to: centerOf(lastRect.width) - (lastRect.left - trackLeft),
+      // Center against the viewport's own width, not the window's — the
+      // viewport is its own centered, capped-width box, not always edge-to-edge.
+      const viewportWidth = track.parentElement.getBoundingClientRect().width
+      const centerOf = (width) => (viewportWidth - width) / 2
+      const positions = cards.map((card) => {
+        const rect = card.getBoundingClientRect()
+        return centerOf(rect.width) - (rect.left - trackLeft)
       })
+      setStepPositions(positions)
+      if (!isSpecialtySnappingRef.current) {
+        trackX.set(positions[trackIndexRef.current] ?? 0)
+      }
     }
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [])
+  }, [trackX])
+
+  // Autoplay: advance one specialty at a time on a timer, looping seamlessly.
+  // Restarts on every change so a manual click resets the pace. Reads
+  // stepSpecialty through a ref so the effect doesn't need it as a dependency.
+  const stepSpecialtyRef = useRef(stepSpecialty)
+  useEffect(() => {
+    stepSpecialtyRef.current = stepSpecialty
+  })
+  useEffect(() => {
+    if (prefersReducedMotion || specialties.length <= 1) return undefined
+    const timer = setInterval(() => {
+      stepSpecialtyRef.current(1)
+    }, 6000)
+    return () => clearInterval(timer)
+  }, [trackIndex, prefersReducedMotion])
 
   useEffect(() => {
     api
@@ -746,31 +825,25 @@ function Landing() {
         </section>
 
         <section className="section specialties-section" id="especialidades">
-          <div
-            className={`specialties-scroll${prefersReducedMotion ? ' is-static' : ''}`}
-            style={{ '--specialty-steps': specialties.length }}
-            ref={specialtiesScrollRef}
-          >
-            <div className="specialties-sticky">
-              <div className="container">
-                <div className="section-header section-header--center" data-reveal>
-                  <p className="eyebrow">Cuidado integral</p>
-                  <h2>Especialidades</h2>
-                  <p>
-                    Ginecologia, obstetrícia e ortomolecular — três caminhos que se
-                    encontram no olhar integral sobre a saúde da mulher.
-                  </p>
-                </div>
-              </div>
+          <div className="container">
+            <div className="section-header section-header--center" data-reveal>
+              <h2>Especialidades</h2>
+            </div>
+          </div>
+
+          <div className="specialties-carousel">
+            <div className="specialties-viewport">
               <motion.div
                 className="specialties-track"
                 ref={specialtiesTrackRef}
                 style={{ x: prefersReducedMotion ? 0 : trackX }}
               >
-                {specialties.map((item) => (
+                {specialtiesLoop.map((item, loopIndex) => (
                   <article
-                    key={item.title}
-                    className="specialty-card"
+                    key={loopIndex}
+                    className={`specialty-card${
+                      loopIndex === trackIndex ? ' is-active' : ''
+                    }`}
                     style={{ '--card-tone': item.tone }}
                   >
                     <div className="specialty-card__content">
@@ -791,6 +864,37 @@ function Landing() {
                   </article>
                 ))}
               </motion.div>
+            </div>
+
+            <div className="specialties-nav">
+              <button
+                type="button"
+                className="specialties-nav__arrow"
+                onClick={() => stepSpecialty(-1)}
+                aria-label="Especialidade anterior"
+              >
+                &larr;
+              </button>
+              <div className="specialties-dots">
+                {specialties.map((item, index) => (
+                  <button
+                    key={item.title}
+                    type="button"
+                    className={`specialties-dot${index === activeSpecialty ? ' is-active' : ''}`}
+                    onClick={() => goToSpecialty(index)}
+                    aria-label={`Ver especialidade ${item.title}`}
+                    aria-current={index === activeSpecialty}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                className="specialties-nav__arrow"
+                onClick={() => stepSpecialty(1)}
+                aria-label="Próxima especialidade"
+              >
+                &rarr;
+              </button>
             </div>
           </div>
         </section>
