@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import TimeGrid from './agenda/TimeGrid'
+import ListView from './agenda/ListView'
 import {
   ApptDetails,
   ApptForm,
@@ -42,7 +43,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
   const [viewChoice, setView] = useState(() =>
     window.matchMedia('(max-width: 760px)').matches ? 'day' : 'week',
   )
-  const view = isMobile ? 'day' : viewChoice
+  const view = isMobile && viewChoice === 'week' ? 'day' : viewChoice
   const [anchor, setAnchor] = useState(startOfToday)
   const [appointments, setAppointments] = useState([])
   const [overrides, setOverrides] = useState([])
@@ -58,7 +59,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
   const [gcal, setGcal] = useState(null)
 
   const days = useMemo(() => {
-    if (view === 'day') return [toIso(anchor)]
+    if (view !== 'week') return [toIso(anchor)]
     const monday = startOfWeek(anchor)
     return Array.from({ length: 7 }, (_, i) => toIso(addDays(monday, i)))
   }, [anchor, view])
@@ -333,11 +334,11 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
 
   /* ---------- header labels & navigation ---------- */
 
-  const navStep = view === 'day' ? 1 : 7
+  const navStep = view === 'week' ? 7 : 1
   const goToday = () => setAnchor(startOfToday())
 
   const rangeLabel = useMemo(() => {
-    if (view === 'day') {
+    if (view !== 'week') {
       const d = anchor
       return `${d.getDate()} de ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`
     }
@@ -422,7 +423,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
             type="button"
             className="ag-iconbtn"
             onClick={() => setAnchor((d) => addDays(d, -navStep))}
-            aria-label={view === 'day' ? 'Dia anterior' : 'Semana anterior'}
+            aria-label={view === 'week' ? 'Semana anterior' : 'Dia anterior'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m14.5 6-6 6 6 6" />
@@ -435,7 +436,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
             type="button"
             className="ag-iconbtn"
             onClick={() => setAnchor((d) => addDays(d, navStep))}
-            aria-label={view === 'day' ? 'Próximo dia' : 'Próxima semana'}
+            aria-label={view === 'week' ? 'Próxima semana' : 'Próximo dia'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m9.5 6 6 6-6 6" />
@@ -444,11 +445,11 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         </div>
 
         <div className="ag-topbar__right">
-          {!isMobile && (
-            <div className="ag-segment ag-segment--views" role="radiogroup" aria-label="Visualização">
+          <div className="ag-segment ag-segment--views" role="radiogroup" aria-label="Visualização">
               {[
+                ['list', 'Consultas'],
                 ['day', 'Dia'],
-                ['week', 'Semana'],
+                ...(isMobile ? [] : [['week', 'Semana']]),
               ].map(([value, label]) => (
                 <button
                   key={value}
@@ -462,7 +463,6 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
                 </button>
               ))}
             </div>
-          )}
           <button
             type="button"
             className="ag-btn ag-btn--ghost ag-btn--sm"
@@ -519,6 +519,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         </div>
       )}
 
+      {view !== 'list' && (
       <div className="ag-legend">
         <span className="ag-legend__item">
           <i className="ag-legend__dot ag-legend__dot--confirmed" /> Confirmada
@@ -542,6 +543,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           Mostrar canceladas
         </label>
       </div>
+      )}
 
       {loadError ? (
         <div className="ag-empty">
@@ -550,6 +552,15 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
             Tentar novamente
           </button>
         </div>
+      ) : view === 'list' ? (
+        <ListView
+          dateIso={toIso(anchor)}
+          appointments={appointments}
+          specialtiesById={specialtiesById}
+          onOpen={(appt) => setModal({ type: 'appt-details', appt })}
+          onEdit={(appt) => setModal({ type: 'appt-form', initial: appt, editId: appt.id })}
+          onCancel={(appt) => setApptStatus(appt, 'cancelled')}
+        />
       ) : (
         <TimeGrid
           days={days}
