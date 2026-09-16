@@ -1,9 +1,11 @@
+import io
 import secrets
 import uuid
 from datetime import date as date_type
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from PIL import Image, ImageOps
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -45,13 +47,10 @@ from ..services.slots import has_overlap
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 
-_UPLOAD_EXTENSIONS = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
-}
+_UPLOAD_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 _MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+_MAX_UPLOAD_DIMENSION = 1600
+_WEBP_QUALITY = 82
 
 
 def _appt_snapshot(db: Session, appointment: Appointment) -> dict:
@@ -356,17 +355,40 @@ def delete_post(post_id: int, db: Session = Depends(get_db)):
 
 @router.post("/uploads", response_model=UploadOut, status_code=status.HTTP_201_CREATED)
 async def upload_image(file: UploadFile = File(...)):
-    ext = _UPLOAD_EXTENSIONS.get(file.content_type)
-    if ext is None:
+    if file.content_type not in _UPLOAD_CONTENT_TYPES:
         raise HTTPException(
             status_code=415, detail="Formato de imagem nao suportado"
         )
     contents = await file.read()
     if len(contents) > _MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="Imagem excede o tamanho maximo de 5MB")
+
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}{ext}"
-    (UPLOADS_DIR / filename).write_bytes(contents)
+
+    # Animated GIFs are stored as-is; everything else is downscaled and
+    # re-encoded as WebP so uploads never ship full-resolution originals.
+    if file.content_type == "image/gif":
+        filename = f"{uuid.uuid4().hex}.gif"
+        (UPLOADS_DIR / filename).write_bytes(contents)
+        return UploadOut(url=f"/uploads/{filename}")
+
+    try:
+        image = Image.open(io.BytesIO(contents))
+        image = ImageOps.exif_transpose(image)
+    except Exception as exc:
+        raise HTTPException(status_code=415, detail="Nao foi possivel ler a imagem") from exc
+
+    if image.mode not in ("RGB", "RGBA"):
+        image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+
+    if max(image.size) > _MAX_UPLOAD_DIMENSION:
+        image.thumbnail((_MAX_UPLOAD_DIMENSION, _MAX_UPLOAD_DIMENSION), Image.LANCZOS)
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="WEBP", quality=_WEBP_QUALITY, method=6)
+
+    filename = f"{uuid.uuid4().hex}.webp"
+    (UPLOADS_DIR / filename).write_bytes(buffer.getvalue())
     return UploadOut(url=f"/uploads/{filename}")
 
 

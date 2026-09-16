@@ -11,6 +11,7 @@ if __package__ in (None, ""):
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 from sqlalchemy import inspect, text
 
 from .config import get_settings
@@ -156,6 +157,16 @@ async def lifespan(app: FastAPI):
         task.cancel()
 
 
+class ImmutableStaticFiles(StaticFiles):
+    """Uploaded files get a random UUID name per upload, so a given URL's
+    content never changes — safe to cache for a year without revalidation."""
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 app = FastAPI(title="Mulher Viva API", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
@@ -171,7 +182,7 @@ app.include_router(admin.router)
 app.include_router(google_calendar.router)
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+app.mount("/uploads", ImmutableStaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 
 @app.get("/health")

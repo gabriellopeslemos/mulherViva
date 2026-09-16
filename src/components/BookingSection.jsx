@@ -394,7 +394,7 @@ export default function BookingSection() {
   const selectedDateObj = selectedDate ? parseIso(selectedDate) : null
 
   return (
-    <section className="section bk-section" id="agendamento">
+    <section className="section bk-section" id="agendamento" tabIndex={-1}>
       <div className="container">
         <motion.div
           className="section-header bk-header"
@@ -496,7 +496,7 @@ export default function BookingSection() {
                             </svg>
                           </button>
                         </div>
-                        <div className="bk-calendar__grid" role="grid">
+                        <div className="bk-calendar__grid" role="group" aria-label="Dias do mês">
                           {WEEKDAY_HEAD.map((w, i) => (
                             <span key={`${w}-${i}`} className="bk-calendar__weekday" aria-hidden="true">
                               {w}

@@ -8,4 +8,5 @@ requests
 httpx
 email-validator
 python-multipart
+Pillow
 pytest

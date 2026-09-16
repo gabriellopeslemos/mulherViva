@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import {
   animate,
@@ -10,15 +10,16 @@ import {
   useSpring,
 } from 'framer-motion'
 import FloatingNavbar from './components/FloatingNavbar'
-import AdminHub from './components/AdminHub'
-import AgendaPanel from './components/AgendaPanel'
-import AdminLogin from './components/AdminLogin'
-import BlogPanel from './components/BlogPanel'
 import BookingSection from './components/BookingSection'
-import ManageBooking from './components/ManageBooking'
 import FallbackImage from './components/FallbackImage'
-import BlogPage from './pages/BlogPage'
-import PostPage from './pages/PostPage'
+
+const AdminHub = lazy(() => import('./components/AdminHub'))
+const AgendaPanel = lazy(() => import('./components/AgendaPanel'))
+const AdminLogin = lazy(() => import('./components/AdminLogin'))
+const BlogPanel = lazy(() => import('./components/BlogPanel'))
+const ManageBooking = lazy(() => import('./components/ManageBooking'))
+const BlogPage = lazy(() => import('./pages/BlogPage'))
+const PostPage = lazy(() => import('./pages/PostPage'))
 import { api, clearToken, getToken } from './lib/api'
 import { useAvailableImage } from './lib/useAvailableImage'
 import {
@@ -376,8 +377,8 @@ function Landing() {
   const [years, setYears] = useState(0)
   const [startYearsCount, setStartYearsCount] = useState(false)
   const isAboutInView = useInView(aboutSectionRef, { once: true, amount: 0.3 })
-  const heroImage = useAvailableImage('/images/hero-nobg.png', heroPlaceholder)
-  const aboutImage = useAvailableImage('/images/about.png', aboutPlaceholder)
+  const heroImage = useAvailableImage('/images/hero-nobg.webp', heroPlaceholder)
+  const aboutImage = useAvailableImage('/images/about.webp', aboutPlaceholder)
   const heroTiltX = useMotionValue(0)
   const heroTiltY = useMotionValue(0)
   const { scrollYProgress: pageScrollProgress } = useScroll()
@@ -709,51 +710,53 @@ function Landing() {
       />
       <FloatingNavbar onOpenAgenda={() => setAdminScreen('hub')} />
 
-      {manageToken && (
-        <ManageBooking
-          token={manageToken}
-          onClose={() => {
-            setManageToken(null)
-            window.history.replaceState(null, '', window.location.pathname)
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {manageToken && (
+          <ManageBooking
+            token={manageToken}
+            onClose={() => {
+              setManageToken(null)
+              window.history.replaceState(null, '', window.location.pathname)
+            }}
+          />
+        )}
 
-      {adminScreen && !isAdminAuthed && (
-        <AdminLogin
-          onSuccess={() => setIsAdminAuthed(true)}
-          onClose={() => setAdminScreen(null)}
-        />
-      )}
-      {adminScreen === 'hub' && isAdminAuthed && (
-        <AdminHub
-          onOpenAgenda={() => setAdminScreen('agenda')}
-          onOpenBlog={() => setAdminScreen('blog')}
-          onClose={() => setAdminScreen(null)}
-        />
-      )}
-      {adminScreen === 'agenda' && isAdminAuthed && (
-        <AgendaPanel
-          onClose={() => setAdminScreen('hub')}
-          onAuthExpired={() => {
-            clearToken()
-            setIsAdminAuthed(false)
-          }}
-        />
-      )}
-      {adminScreen === 'blog' && isAdminAuthed && (
-        <BlogPanel
-          onClose={() => setAdminScreen('hub')}
-          onAuthExpired={() => {
-            clearToken()
-            setIsAdminAuthed(false)
-          }}
-          onChanged={() => setBlogTick((t) => t + 1)}
-        />
-      )}
+        {adminScreen && !isAdminAuthed && (
+          <AdminLogin
+            onSuccess={() => setIsAdminAuthed(true)}
+            onClose={() => setAdminScreen(null)}
+          />
+        )}
+        {adminScreen === 'hub' && isAdminAuthed && (
+          <AdminHub
+            onOpenAgenda={() => setAdminScreen('agenda')}
+            onOpenBlog={() => setAdminScreen('blog')}
+            onClose={() => setAdminScreen(null)}
+          />
+        )}
+        {adminScreen === 'agenda' && isAdminAuthed && (
+          <AgendaPanel
+            onClose={() => setAdminScreen('hub')}
+            onAuthExpired={() => {
+              clearToken()
+              setIsAdminAuthed(false)
+            }}
+          />
+        )}
+        {adminScreen === 'blog' && isAdminAuthed && (
+          <BlogPanel
+            onClose={() => setAdminScreen('hub')}
+            onAuthExpired={() => {
+              clearToken()
+              setIsAdminAuthed(false)
+            }}
+            onChanged={() => setBlogTick((t) => t + 1)}
+          />
+        )}
+      </Suspense>
 
       <main>
-        <section className="hero hero-bg" id="inicio">
+        <section className="hero hero-bg" id="inicio" tabIndex={-1}>
           <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
@@ -825,7 +828,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section specialties-section" id="especialidades">
+        <section className="section specialties-section" id="especialidades" tabIndex={-1}>
           <div className="container">
             <div className="section-header section-header--center" data-reveal>
               <h2>Especialidades</h2>
@@ -900,7 +903,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section" id="sobre" ref={aboutSectionRef} style={{ overflow: 'hidden' }}>
+        <section className="section" id="sobre" tabIndex={-1} ref={aboutSectionRef} style={{ overflow: 'hidden' }}>
           <div className="container">
             <div className="about-card" data-reveal>
               <motion.div
@@ -952,7 +955,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section" id="depoimentos">
+        <section className="section" id="depoimentos" tabIndex={-1}>
           <div className="container">
             <div className="section-header" data-reveal>
               <p className="eyebrow">Depoimentos</p>
@@ -980,7 +983,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section section--soft" id="duvidas">
+        <section className="section section--soft" id="duvidas" tabIndex={-1}>
           <div className="container">
             <div className="section-header section-header--center" data-reveal>
               <p className="eyebrow">Dúvidas frequentes</p>
@@ -996,7 +999,7 @@ function Landing() {
 
         <BookingSection />
 
-        <section className="section" id="endereco">
+        <section className="section" id="endereco" tabIndex={-1}>
           <div className="container">
 
             <div className="address-grid address-grid--device">
@@ -1175,12 +1178,14 @@ function Landing() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/blog" element={<BlogPage />} />
-      <Route path="/blog/:id" element={<PostPage />} />
-      <Route path="*" element={<Landing />} />
-    </Routes>
+    <Suspense fallback={null}>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:id" element={<PostPage />} />
+        <Route path="*" element={<Landing />} />
+      </Routes>
+    </Suspense>
   )
 }
 

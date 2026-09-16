@@ -16,7 +16,7 @@ function FloatingNavbar({ onOpenAgenda }) {
     <header className="fixed inset-x-0 top-0 z-50 w-full">
       <nav className="w-full border-b border-[var(--line)] bg-[var(--surface)]/80 shadow-[0_8px_30px_color-mix(in_srgb,var(--accent-strong)_8%,transparent)] backdrop-blur-md">
         <div className="mx-auto flex w-[min(96%,_1180px)] items-center justify-between gap-6 py-3">
-          <a href="/#inicio" className="flex items-center gap-3" aria-label="Voltar ao início">
+          <a href="/#inicio" className="flex items-center gap-3" aria-label="MV, voltar ao início">
             <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] font-serif text-sm font-semibold text-[var(--accent-contrast)]">
               MV
             </span>

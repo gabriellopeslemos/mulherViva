@@ -704,10 +704,25 @@ p {
 .specialties-dots {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
+/* The button owns the 24px hit target; only its ::before dot is styled and
+   scaled, so the active-state scale transform never grows the click box
+   into neighboring targets. */
 .specialties-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.specialties-dot::before {
+  content: '';
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -715,11 +730,11 @@ p {
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.specialties-dot:hover {
+.specialties-dot:hover::before {
   background: color-mix(in srgb, var(--accent-strong) 55%, transparent);
 }
 
-.specialties-dot.is-active {
+.specialties-dot.is-active::before {
   background: var(--accent-strong);
   transform: scale(1.2);
 }
