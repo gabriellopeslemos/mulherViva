@@ -828,7 +828,7 @@ p {
 
   .testimonial-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--palette-1) 10%, transparent);
   }
 }
 
@@ -931,7 +931,7 @@ a.card-link:hover {
   flex-direction: column;
   justify-content: space-between;
   gap: 20px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 8px color-mix(in srgb, var(--palette-1) 7%, transparent);
 }
 
 .testimonial-text {
