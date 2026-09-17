@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "Mulher Viva <no-reply@mulherviva.com.br>"
     public_base_url: str = "http://localhost:5173"
+    # Used to resolve relative /uploads/... image URLs into absolute ones for e-mails.
+    api_base_url: str = "http://localhost:8000"
     clinic_name: str = "Mulher Viva — Dra. Luciana Lopes"
     clinic_address: str = "Centro Médico Lúcio Costa"
 

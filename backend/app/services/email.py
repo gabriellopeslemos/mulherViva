@@ -578,6 +578,127 @@ def booking_reminder_html(
 </html>"""
 
 
+def marketing_blog_post_html(
+    title: str,
+    excerpt: str,
+    post_url: str,
+    image_url: str = "",
+    unsubscribe_note: str = "",
+) -> str:
+    title_esc = html.escape(title)
+    excerpt_esc = html.escape(excerpt)
+    cover = (
+        f"""
+                <tr>
+                  <td style="padding-top: 20px;">
+                    <img src="{html.escape(image_url)}" alt="" width="528" style="width: 100%; max-width: 528px; border-radius: 16px; display: block;" />
+                  </td>
+                </tr>"""
+        if image_url
+        else ""
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title_esc}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #faf5f2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #faf5f2; padding: 32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%;">
+
+          <!-- Cabecalho / marca -->
+          <tr>
+            <td style="padding: 0 8px 24px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="56" height="56" align="center" valign="middle" bgcolor="#9a4067" style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #9a4067, #74284a);">
+                    <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #ffffff;">MV</span>
+                  </td>
+                  <td style="padding-left: 14px;">
+                    <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #74284a;">Mulher Viva</span><br />
+                    <span style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; letter-spacing: 1px; color: #5d4250;">Medicina Integrativa da Saúde Feminina</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card principal -->
+          <tr>
+            <td bgcolor="#fffdfc" style="background-color: #fffdfc; border: 1px solid #e8d4d8; border-radius: 24px; padding: 40px 36px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <span style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #b9854c;">Novidade no blog</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 14px;">
+                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 700; line-height: 1.3; color: #2b1421;">{title_esc}</h1>
+                  </td>
+                </tr>
+                {cover}
+                <tr>
+                  <td style="padding-top: 18px;">
+                    <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 16px; line-height: 1.6; color: #3a2230;">
+                      {excerpt_esc}
+                    </p>
+                  </td>
+                </tr>
+                {_cta_button("Ler publicação completa", post_url)}
+                <tr>
+                  <td style="padding-top: 28px; border-top: 1px solid #e8d4d8;">
+                    <p style="margin: 28px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #74284a;">
+                      Com carinho,<br />Equipe Mulher Viva
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Rodape -->
+          <tr>
+            <td align="center" style="padding: 24px 8px 0;">
+              <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; line-height: 1.6; color: #5d4250;">
+                Mulher Viva &middot; Medicina Integrativa da Saúde Feminina<br />
+                {html.escape(unsubscribe_note) if unsubscribe_note else "Você recebeu este email por já ter contato com nossa clínica."}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_marketing_blog_post(
+    to_email: str,
+    title: str,
+    excerpt: str,
+    post_url: str,
+    image_url: str = "",
+    subject: str | None = None,
+) -> bool:
+    body_html = marketing_blog_post_html(
+        title=title, excerpt=excerpt, post_url=post_url, image_url=image_url
+    )
+    return _send_resend(
+        to_email,
+        subject or title,
+        body_html,
+        log_label="email de marketing (blog)",
+    )
+
+
 def send_booking_reminder(
     to_email: str,
     client_name: str,

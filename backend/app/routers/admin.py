@@ -30,6 +30,8 @@ from ..schemas import (
     AvailabilityRuleIn,
     AvailabilityRuleOut,
     AvailabilityRuleUpdate,
+    BlogMarketingEmailIn,
+    BlogMarketingEmailResult,
     BlogPostIn,
     BlogPostOut,
     BlogPostUpdate,
@@ -41,10 +43,12 @@ from ..schemas import (
     UploadOut,
     WaitlistOut,
 )
+from ..services import email as email_service
 from ..services import google_calendar, notifications, waitlist
 from ..services.instagram import sync_instagram
 from ..services.settings import get_bool_setting, get_int_setting, set_setting
 from ..services.slots import appointment_outside_rule, find_rule_conflicts, has_overlap
+from .public import _excerpt
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 
@@ -468,6 +472,43 @@ def delete_post(post_id: int, db: Session = Depends(get_db)):
     post = _get_or_404(db, BlogPost, post_id, "Post")
     db.delete(post)
     db.commit()
+
+
+@router.get("/blog/recipients", response_model=list[str])
+def suggest_blog_recipients(db: Session = Depends(get_db)):
+    """Distinct client e-mails from past appointments and the waitlist, for prefilling the marketing send form."""
+    appt_emails = db.scalars(select(Appointment.client_email).distinct())
+    waitlist_emails = db.scalars(select(WaitlistEntry.client_email).distinct())
+    emails = {e.strip().lower() for e in [*appt_emails, *waitlist_emails] if e and e.strip()}
+    return sorted(emails)
+
+
+@router.post("/blog/{post_id}/send-email", response_model=BlogMarketingEmailResult)
+def send_blog_marketing_email(
+    post_id: int, body: BlogMarketingEmailIn, db: Session = Depends(get_db)
+):
+    post = _get_or_404(db, BlogPost, post_id, "Post")
+    settings = get_settings()
+    post_url = f"{settings.public_base_url.rstrip('/')}/blog/{post.id}"
+    image_url = post.image_url or ""
+    if image_url.startswith("/"):
+        image_url = f"{settings.api_base_url.rstrip('/')}{image_url}"
+
+    failed: list[str] = []
+    recipients = {str(r).strip().lower() for r in body.recipients if str(r).strip()}
+    for recipient in recipients:
+        ok = email_service.send_marketing_blog_post(
+            to_email=recipient,
+            title=post.title,
+            excerpt=_excerpt(post.body),
+            post_url=post_url,
+            image_url=image_url,
+            subject=body.subject,
+        )
+        if not ok:
+            failed.append(recipient)
+
+    return BlogMarketingEmailResult(sent=len(recipients) - len(failed), failed=failed)
 
 
 # ---- uploads ----
