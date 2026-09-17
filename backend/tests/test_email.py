@@ -5,9 +5,11 @@ import httpx
 import app.services.email as email_service
 from app.services.email import (
     booking_confirmation_html,
+    booking_reminder_html,
     format_date_pt,
     format_time_pt,
     send_booking_confirmation,
+    send_booking_reminder,
 )
 
 
@@ -155,3 +157,93 @@ def test_send_posts_to_resend(monkeypatch):
     assert captured["json"]["to"] == ["paciente@email.com"]
     assert "quinta-feira, 11 de junho de 2026" in captured["json"]["subject"]
     assert "Presencial" in captured["json"]["html"]
+
+
+def test_confirmation_html_includes_optional_links():
+    html_out = booking_confirmation_html(
+        client_name="Maria",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+        manage_link="https://mulherviva.com.br/?manage=tok123",
+        calendar_link="https://calendar.google.com/calendar/render?action=TEMPLATE",
+    )
+    assert "https://mulherviva.com.br/?manage=tok123" in html_out
+    assert "https://calendar.google.com/calendar/render?action=TEMPLATE" in html_out
+
+
+def test_send_confirmation_attaches_ics(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key="re_test"))
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    ok = send_booking_confirmation(
+        to_email="paciente@email.com",
+        client_name="Maria",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(14, 0),
+        end=time(15, 0),
+        modality="online",
+        ics="BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
+    )
+    assert ok is True
+    assert captured["json"]["attachments"][0]["filename"] == "consulta.ics"
+
+
+def test_reminder_html_contains_booking_details():
+    html_out = booking_reminder_html(
+        client_name="Maria Souza",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(14, 0),
+        end=time(15, 0),
+        modality="online",
+        manage_link="https://mulherviva.com.br/?manage=tok123",
+    )
+    assert "Olá, Maria!" in html_out
+    assert "amanhã" in html_out
+    assert "quinta-feira, 11 de junho de 2026" in html_out
+    assert "https://mulherviva.com.br/?manage=tok123" in html_out
+
+
+def test_send_reminder_returns_false_without_api_key(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key=""))
+    ok = send_booking_reminder(
+        to_email="x@y.com",
+        client_name="Maria",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+    )
+    assert ok is False
+
+
+def test_send_reminder_posts_to_resend(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key="re_test"))
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    ok = send_booking_reminder(
+        to_email="paciente@email.com",
+        client_name="Maria",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(14, 0),
+        end=time(15, 0),
+        modality="online",
+    )
+    assert ok is True
+    assert "amanhã" in captured["json"]["subject"]

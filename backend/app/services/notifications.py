@@ -13,6 +13,7 @@ from email.message import EmailMessage
 from urllib.parse import urlencode
 
 from ..config import get_settings
+from . import email as email_service
 
 logger = logging.getLogger(__name__)
 
@@ -182,31 +183,26 @@ def _manage_lines(appt: dict) -> list[str]:
     return ["", f"Para cancelar ou reagendar, acesse: {url}"]
 
 
+def _send_confirmation_via_resend(appt: dict) -> None:
+    email_service.send_booking_confirmation(
+        to_email=appt.get("client_email"),
+        client_name=appt["client_name"],
+        specialty_name=appt["specialty_name"],
+        day=appt["date"],
+        start=appt["start_time"],
+        end=appt["end_time"],
+        modality=appt["type"],
+        manage_link=manage_url(appt.get("token")) or "",
+        calendar_link=google_calendar_link(appt),
+        ics=build_ics(appt),
+    )
+
+
 def notify_booking_confirmed(appt: dict) -> None:
-    settings = get_settings()
-    extra = (
-        ["", f"Endereço: {settings.clinic_address}"]
-        if appt["type"] != "online"
-        else []
-    )
-    body = "\n".join([
-        f"Olá, {appt['client_name']}!",
-        "",
-        "Sua consulta está confirmada. Esperamos por você.",
-        "",
-        *_appt_lines(appt),
-        *extra,
-        *_manage_lines(appt),
-        "",
-        f"Adicionar ao Google Agenda: {google_calendar_link(appt)}",
-        "",
-        "Em anexo, um arquivo para adicionar a consulta ao seu calendário.",
-        "",
-        settings.clinic_name,
-    ])
-    _send_async(
-        appt.get("client_email"), "Sua consulta foi confirmada", body, build_ics(appt)
-    )
+    """Sends the booking-confirmed e-mail via Resend (see app/services/email.py)."""
+    if not appt.get("client_email"):
+        return
+    threading.Thread(target=_send_confirmation_via_resend, args=(appt,), daemon=True).start()
 
 
 def notify_booking_cancelled(appt: dict) -> None:
@@ -234,24 +230,24 @@ def notify_status_change(appt: dict, status: str) -> None:
 
 
 def notify_reminder(appt: dict) -> bool:
-    """Send the 24h reminder synchronously and report whether it was sent.
+    """Send the 24h reminder via Resend synchronously and report whether it was sent.
 
     Unlike the other notifiers, this returns the result so the reminder loop
     only marks an appointment as reminded when the e-mail actually went out
-    (the loop already runs in a worker thread, so blocking on SMTP is fine).
+    (the loop already runs in a worker thread, so blocking here is fine).
     """
-    settings = get_settings()
-    body = "\n".join([
-        f"Olá, {appt['client_name']}!",
-        "",
-        "Este é um lembrete da sua consulta de amanhã:",
-        "",
-        *_appt_lines(appt),
-        *_manage_lines(appt),
-        "",
-        settings.clinic_name,
-    ])
-    return _send(appt.get("client_email"), "Lembrete: sua consulta é amanhã", body)
+    if not appt.get("client_email"):
+        return False
+    return email_service.send_booking_reminder(
+        to_email=appt["client_email"],
+        client_name=appt["client_name"],
+        specialty_name=appt["specialty_name"],
+        day=appt["date"],
+        start=appt["start_time"],
+        end=appt["end_time"],
+        modality=appt["type"],
+        manage_link=manage_url(appt.get("token")) or "",
+    )
 
 
 def notify_waitlist_slot(entry: dict) -> None:

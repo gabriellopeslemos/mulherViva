@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
+    # Confirmation and 24h-reminder e-mails are sent via Resend.
+    resend_api_key: str = ""
     email_from: str = "Mulher Viva <no-reply@mulherviva.com.br>"
     public_base_url: str = "http://localhost:5173"
     clinic_name: str = "Mulher Viva — Dra. Luciana Lopes"
