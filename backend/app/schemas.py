@@ -39,11 +39,17 @@ class SpecialtyUpdate(BaseModel):
 
 # ---- availability ----
 
+LOCATION_RE = "^(online|presencial_bsb|presencial_rj)$"
+
+
 class AvailabilityRuleIn(BaseModel):
     specialty_id: int
     weekday: int = Field(ge=0, le=6)
     start_time: time
     end_time: time
+    location: str = Field(pattern=LOCATION_RE)
+    start_date: date_type | None = None
+    end_date: date_type | None = None
     active: bool = True
 
 
@@ -51,6 +57,9 @@ class AvailabilityRuleUpdate(BaseModel):
     weekday: int | None = Field(default=None, ge=0, le=6)
     start_time: time | None = None
     end_time: time | None = None
+    location: str | None = Field(default=None, pattern=LOCATION_RE)
+    start_date: date_type | None = None
+    end_date: date_type | None = None
     active: bool | None = None
 
 
@@ -62,6 +71,9 @@ class AvailabilityRuleOut(BaseModel):
     weekday: int
     start_time: time
     end_time: time
+    location: str
+    start_date: date_type | None
+    end_date: date_type | None
     active: bool
 
 
@@ -71,6 +83,7 @@ class AvailabilityOverrideIn(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     kind: str = Field(pattern="^(open|block)$")
+    location: str | None = Field(default=None, pattern=LOCATION_RE)
     reason: str | None = Field(default=None, max_length=300)
 
 
@@ -83,6 +96,7 @@ class AvailabilityOverrideOut(BaseModel):
     start_time: time | None
     end_time: time | None
     kind: str
+    location: str | None
     reason: str | None
 
 
@@ -91,6 +105,7 @@ class AvailabilityOverrideOut(BaseModel):
 class SlotOut(BaseModel):
     start: time
     end: time
+    location: str
 
 
 class SlotsDayOut(BaseModel):
@@ -112,7 +127,7 @@ class BookingIn(BaseModel):
     specialty_id: int
     date: date_type
     start: time
-    type: str = Field(pattern="^(online|presencial)$")
+    type: str = Field(pattern=LOCATION_RE)
     client_name: str = Field(min_length=2, max_length=150)
     client_email: str = Field(pattern=EMAIL_RE, max_length=150)
     client_phone: str = Field(min_length=8, max_length=40)
@@ -152,7 +167,7 @@ class AppointmentIn(BaseModel):
     client_contact: str = Field(default="", max_length=150)
     client_email: str | None = Field(default=None, max_length=150)
     client_phone: str | None = Field(default=None, max_length=40)
-    type: str = Field(pattern="^(online|presencial)$")
+    type: str = Field(pattern=LOCATION_RE)
     status: str = Field(default="confirmed", pattern=STATUS_RE)
     notes: str | None = Field(default=None, max_length=1000)
     reason: str | None = Field(default=None, max_length=500)
@@ -169,7 +184,7 @@ class AppointmentUpdate(BaseModel):
     client_contact: str | None = Field(default=None, max_length=150)
     client_email: str | None = Field(default=None, max_length=150)
     client_phone: str | None = Field(default=None, max_length=40)
-    type: str | None = Field(default=None, pattern="^(online|presencial)$")
+    type: str | None = Field(default=None, pattern=LOCATION_RE)
     status: str | None = Field(default=None, pattern=STATUS_RE)
     notes: str | None = Field(default=None, max_length=1000)
     reason: str | None = Field(default=None, max_length=500)

@@ -218,6 +218,8 @@ def create_rule(body: AvailabilityRuleIn, db: Session = Depends(get_db)):
     _get_or_404(db, Specialty, body.specialty_id, "Especialidade")
     if body.end_time <= body.start_time:
         raise HTTPException(status_code=422, detail="Horario final deve ser apos o inicial")
+    if body.start_date and body.end_date and body.end_date < body.start_date:
+        raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
     rule = AvailabilityRule(**body.model_dump())
     db.add(rule)
     db.commit()
@@ -232,6 +234,8 @@ def update_rule(rule_id: int, body: AvailabilityRuleUpdate, db: Session = Depend
         setattr(rule, field, value)
     if rule.end_time <= rule.start_time:
         raise HTTPException(status_code=422, detail="Horario final deve ser apos o inicial")
+    if rule.start_date and rule.end_date and rule.end_date < rule.start_date:
+        raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
     db.commit()
     db.refresh(rule)
     return rule
@@ -278,6 +282,10 @@ def create_override(body: AvailabilityOverrideIn, db: Session = Depends(get_db))
     if body.kind == "open" and body.start_time is None:
         raise HTTPException(
             status_code=422, detail="Abertura extra exige horario de inicio e fim"
+        )
+    if body.kind == "open" and body.location is None:
+        raise HTTPException(
+            status_code=422, detail="Abertura extra exige o local do atendimento"
         )
     override = AvailabilityOverride(**body.model_dump())
     db.add(override)

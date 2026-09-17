@@ -77,6 +77,17 @@ def _pad(t: time, minutes: int, *, earlier: bool) -> time:
     return shifted.time()
 
 
+def _rule_active_on(r: AvailabilityRule, day: date) -> bool:
+    """A rule only produces slots within its vigência (start_date/end_date), if set."""
+    if not r.active:
+        return False
+    if r.start_date is not None and day < r.start_date:
+        return False
+    if r.end_date is not None and day > r.end_date:
+        return False
+    return True
+
+
 def compute_day_slots(
     day: date,
     weekday_rules: list[AvailabilityRule],
@@ -86,17 +97,23 @@ def compute_day_slots(
     now: datetime | None = None,
     min_lead_hours: int = 0,
     buffer_min: int = 0,
-) -> list[Interval]:
+) -> list[tuple[time, time, str]]:
     """Pure interval math for one day. `overrides` and `appointments` must
-    already be filtered to this date (and specialty where applicable)."""
-    windows = [(r.start_time, r.end_time) for r in weekday_rules if r.active]
-    windows += [_override_interval(o) for o in overrides if o.kind == "open"]
-    windows = _merge(windows)
+    already be filtered to this date (and specialty where applicable).
+
+    Windows are grouped by location before merging/chopping: two rules for the
+    same weekday but different locations never collapse into one window, so
+    each resulting slot keeps a single, unambiguous location.
+    """
+    windows_by_location: dict[str, list[Interval]] = {}
+    for r in weekday_rules:
+        if _rule_active_on(r, day):
+            windows_by_location.setdefault(r.location, []).append((r.start_time, r.end_time))
+    for o in overrides:
+        if o.kind == "open":
+            windows_by_location.setdefault(o.location, []).append(_override_interval(o))
 
     blocks = [_override_interval(o) for o in overrides if o.kind == "block"]
-    windows = _subtract(windows, blocks)
-
-    slots = _chop(windows, slot_duration_min)
 
     # Existing appointments make a slot unavailable; an optional buffer extends
     # the busy interval on both sides so consultations aren't back-to-back.
@@ -105,18 +122,29 @@ def compute_day_slots(
         for a in appointments
         if a.status != "cancelled"
     ]
-    slots = [
-        (s, e)
-        for s, e in slots
-        if not any(s < b_end and b_start < e for b_start, b_end in busy)
-    ]
 
+    cutoff_time: time | None = None
     if now is not None:
         cutoff = now + timedelta(hours=min_lead_hours)
         if day < cutoff.date():
             return []
         if day == cutoff.date():
-            slots = [(s, e) for s, e in slots if s >= cutoff.time()]
+            cutoff_time = cutoff.time()
+
+    slots: list[tuple[time, time, str]] = []
+    for location, windows in windows_by_location.items():
+        windows = _subtract(_merge(windows), blocks)
+        location_slots = _chop(windows, slot_duration_min)
+        location_slots = [
+            (s, e)
+            for s, e in location_slots
+            if not any(s < b_end and b_start < e for b_start, b_end in busy)
+        ]
+        if cutoff_time is not None:
+            location_slots = [(s, e) for s, e in location_slots if s >= cutoff_time]
+        slots.extend((s, e, location) for s, e in location_slots)
+
+    slots.sort()
     return slots
 
 
@@ -128,7 +156,7 @@ def get_available_slots(
     buffer_min: int | None = None,
     max_advance_days: int | None = None,
     exclude_appointment_id: int | None = None,
-) -> dict[date, list[Interval]]:
+) -> dict[date, list[tuple[time, time, str]]]:
     settings = get_settings()
     if buffer_min is None:
         buffer_min = get_int_setting(db, "buffer_minutes", settings.buffer_minutes)
@@ -166,7 +194,7 @@ def get_available_slots(
     appointments = list(db.scalars(appt_query))
 
     now = datetime.now()
-    result: dict[date, list[Interval]] = {}
+    result: dict[date, list[tuple[time, time, str]]] = {}
     day = date_from
     while day <= date_to:
         day_rules = [r for r in rules if r.weekday == day.weekday()]

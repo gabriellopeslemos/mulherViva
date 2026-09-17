@@ -84,7 +84,10 @@ def available_slots(
     slots_by_day = get_available_slots(db, specialty, date_from, date_to)
     return SlotsResponse(
         days=[
-            SlotsDayOut(date=day, slots=[SlotOut(start=s, end=e) for s, e in slots])
+            SlotsDayOut(
+                date=day,
+                slots=[SlotOut(start=s, end=e, location=loc) for s, e, loc in slots],
+            )
             for day, slots in slots_by_day.items()
         ]
     )
@@ -114,7 +117,10 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
     day_slots = get_available_slots(db, specialty, body.date, body.date).get(
         body.date, []
     )
-    slot = next(((s, e) for s, e in day_slots if s == body.start), None)
+    slot = next(
+        ((s, e) for s, e, loc in day_slots if s == body.start and loc == body.type),
+        None,
+    )
     if slot is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -238,7 +244,10 @@ def managed_booking_slots(
     )
     return SlotsResponse(
         days=[
-            SlotsDayOut(date=day, slots=[SlotOut(start=s, end=e) for s, e in slots])
+            SlotsDayOut(
+                date=day,
+                slots=[SlotOut(start=s, end=e, location=loc) for s, e, loc in slots],
+            )
             for day, slots in slots_by_day.items()
         ]
     )
@@ -263,7 +272,10 @@ def reschedule_managed_booking(
     day_slots = get_available_slots(
         db, specialty, body.date, body.date, exclude_appointment_id=appointment.id
     ).get(body.date, [])
-    slot = next(((s, e) for s, e in day_slots if s == body.start), None)
+    slot = next(
+        ((s, e) for s, e, loc in day_slots if s == body.start and loc == appointment.type),
+        None,
+    )
     if slot is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Horario indisponivel")
     start, end = slot

@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { fmtDayLabel } from './utils'
 
+const MODALITY_LABELS = {
+  online: 'Online',
+  presencial_bsb: 'Presencial — Brasília',
+  presencial_rj: 'Presencial — Rio de Janeiro',
+}
+
 const STATUS_LABELS = {
   pending: 'Aguardando',
   confirmed: 'Confirmada',
@@ -84,11 +90,7 @@ export default function ListView({
           </div>
           <div className="ag-list__controls">
             <div className="ag-segment" role="radiogroup" aria-label="Modalidade">
-              {[
-                ['all', 'Todas'],
-                ['presencial', 'Presencial'],
-                ['online', 'Online'],
-              ].map(([value, label]) => (
+              {[['all', 'Todas'], ...Object.entries(MODALITY_LABELS)].map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
@@ -149,7 +151,7 @@ export default function ListView({
                       {spec && <small>{spec.name}</small>}
                     </span>
                     <span className={`ag-badge ag-badge--type`}>
-                      {a.type === 'online' ? 'Online' : 'Presencial'}
+                      {MODALITY_LABELS[a.type] || a.type}
                     </span>
                     <span className={`ag-badge ag-badge--${a.status}`}>
                       {STATUS_LABELS[a.status] || a.status}

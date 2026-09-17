@@ -42,6 +42,14 @@ _TABLE_COLUMNS = {
         "status": "VARCHAR(10) NOT NULL DEFAULT 'published'",
         "pinned": "BOOLEAN NOT NULL DEFAULT 0",
     },
+    "availability_rules": {
+        "location": "VARCHAR(20) NOT NULL DEFAULT 'presencial_bsb'",
+        "start_date": "DATE",
+        "end_date": "DATE",
+    },
+    "availability_overrides": {
+        "location": "VARCHAR(20)",
+    },
 }
 
 
@@ -65,6 +73,17 @@ def _ensure_columns() -> None:
                 logger.info(
                     "Added missing %s columns: %s", table, ", ".join(missing)
                 )
+
+
+def _migrate_appointment_locations() -> None:
+    """Backfill the old 2-way 'presencial' appointment type to 'presencial_bsb'.
+
+    Idempotent: after the first run no row matches 'presencial' anymore.
+    """
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE appointments SET type = 'presencial_bsb' WHERE type = 'presencial'")
+        )
 
 
 async def _instagram_sync_loop() -> None:
@@ -140,6 +159,7 @@ async def _reminder_loop() -> None:
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _ensure_columns()
+    _migrate_appointment_locations()
     with SessionLocal() as db:
         seed(db)
     if get_settings().dev_auth_bypass:

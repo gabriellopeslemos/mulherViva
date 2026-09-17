@@ -307,7 +307,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         weekday: row.weekday,
         start_time: minToTime(timeToMin(row.start)),
         end_time: minToTime(timeToMin(row.end)),
-        type: row.type,
+        location: row.location,
         active: true,
       }
       if (row.id > 0) {
@@ -317,7 +317,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           prev.weekday !== payload.weekday ||
           timeToMin(prev.start_time) !== timeToMin(payload.start_time) ||
           timeToMin(prev.end_time) !== timeToMin(payload.end_time) ||
-          prev.type !== payload.type ||
+          prev.location !== payload.location ||
           !prev.active
         if (changed) {
           calls.push(

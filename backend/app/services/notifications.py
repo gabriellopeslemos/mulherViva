@@ -186,7 +186,7 @@ def notify_booking_confirmed(appt: dict) -> None:
     settings = get_settings()
     extra = (
         ["", f"Endereço: {settings.clinic_address}"]
-        if appt["type"] == "presencial"
+        if appt["type"] != "online"
         else []
     )
     body = "\n".join([

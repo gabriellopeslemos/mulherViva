@@ -73,3 +73,17 @@ Two image directories exist on purpose: `public/` (served as-is) and root-level 
 ### Styling
 
 Tailwind is present but unused for color — the real design system is CSS custom properties in `src/index.css`: five `--palette-1..5` values are the only colors meant to be used anywhere, with every other token (`--bg`, `--text`, `--accent`, ...) derived from them via `color-mix()`. Change a `--palette-*` value rather than hardcoding a new color.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in `gabriellopeslemos/mulherViva`, managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/` at the repo root, created lazily). See `docs/agents/domain.md`.

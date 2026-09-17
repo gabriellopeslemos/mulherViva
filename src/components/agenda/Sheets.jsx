@@ -10,6 +10,13 @@ import {
   timeToMin,
 } from './utils'
 
+const MODALITY_LABELS = {
+  online: 'Online',
+  presencial_bsb: 'Presencial — Brasília',
+  presencial_rj: 'Presencial — Rio de Janeiro',
+}
+const MODALITY_OPTIONS = Object.entries(MODALITY_LABELS)
+
 /* ---------- generic shell ---------- */
 
 export function Modal({ title, onClose, children, wide = false }) {
@@ -96,7 +103,7 @@ export function ApptDetails({ appt, specialty, busy, onStatus, onEdit, onDelete,
             {STATUS_LABELS[appt.status]}
           </span>
           <span className="ag-badge ag-badge--type">
-            {appt.type === 'online' ? 'Online' : 'Presencial'}
+            {MODALITY_LABELS[appt.type] || appt.type}
           </span>
         </div>
         <dl className="ag-details__list">
@@ -187,7 +194,7 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
     date: initial.date,
     start: fmtTime(initial.start_time),
     end: fmtTime(initial.end_time),
-    type: initial.type || 'presencial',
+    type: initial.type || 'online',
     status: initial.status || 'confirmed',
     notes: initial.notes || '',
   }))
@@ -316,34 +323,29 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
         {invalidTime && (
           <p className="ag-form__error">O horário final deve ser depois do inicial.</p>
         )}
-        <div className="ag-field-row">
-          <fieldset className="ag-field">
-            <legend>Modalidade</legend>
-            <div className="ag-segment">
-              {[
-                ['presencial', 'Presencial'],
-                ['online', 'Online'],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={form.type === value ? 'is-selected' : ''}
-                  onClick={() => set('type')(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          <label className="ag-field">
-            <span>Situação</span>
-            <select value={form.status} onChange={set('status')}>
-              <option value="confirmed">Confirmada</option>
-              <option value="pending">Aguardando</option>
-              <option value="cancelled">Cancelada</option>
-            </select>
-          </label>
-        </div>
+        <fieldset className="ag-field">
+          <legend>Modalidade</legend>
+          <div className="ag-segment ag-segment--wrap">
+            {MODALITY_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={form.type === value ? 'is-selected' : ''}
+                onClick={() => set('type')(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <label className="ag-field">
+          <span>Situação</span>
+          <select value={form.status} onChange={set('status')}>
+            <option value="confirmed">Confirmada</option>
+            <option value="pending">Aguardando</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+        </label>
         <label className="ag-field">
           <span>
             Observações <em>(opcional)</em>
@@ -440,7 +442,7 @@ export function OverrideForm({ kind, initial, specialties, onSubmit, onClose }) 
     end: fmtMin(Math.min(initial.startMin + 60, 23 * 60 + 59)),
     reason: '',
     specialty_id: '',
-    type: 'presencial',
+    location: 'online',
   }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -459,7 +461,7 @@ export function OverrideForm({ kind, initial, specialties, onSubmit, onClose }) 
         date: form.date,
         start_time: form.allDay ? null : minToTime(timeToMin(form.start)),
         end_time: form.allDay ? null : minToTime(timeToMin(form.end)),
-        type: isBlock ? null : form.type,
+        location: isBlock ? null : form.location,
         reason: isBlock ? form.reason.trim() || null : null,
         specialty_id: form.specialty_id ? Number(form.specialty_id) : null,
       })
@@ -526,16 +528,13 @@ export function OverrideForm({ kind, initial, specialties, onSubmit, onClose }) 
         {!isBlock && (
           <fieldset className="ag-field">
             <legend>Modalidade</legend>
-            <div className="ag-segment">
-              {[
-                ['presencial', 'Presencial'],
-                ['online', 'Online'],
-              ].map(([value, lbl]) => (
+            <div className="ag-segment ag-segment--wrap">
+              {MODALITY_OPTIONS.map(([value, lbl]) => (
                 <button
                   key={value}
                   type="button"
-                  className={form.type === value ? 'is-selected' : ''}
-                  onClick={() => setForm((f) => ({ ...f, type: value }))}
+                  className={form.location === value ? 'is-selected' : ''}
+                  onClick={() => setForm((f) => ({ ...f, location: value }))}
                 >
                   {lbl}
                 </button>
@@ -611,6 +610,12 @@ export function OverrideDetails({ ov, specialty, busy, onDelete, onClose }) {
               : 'Dia inteiro'}
           </dd>
         </div>
+        {!isBlock && ov.location && (
+          <div>
+            <dt>Local</dt>
+            <dd>{MODALITY_LABELS[ov.location] || ov.location}</dd>
+          </div>
+        )}
         {ov.reason && (
           <div>
             <dt>Motivo</dt>
@@ -653,7 +658,7 @@ export function HoursEditor({ rules, specialties, onSave, onClose }) {
         specialty_id: r.specialty_id,
         start: fmtTime(r.start_time),
         end: fmtTime(r.end_time),
-        type: r.type || 'presencial',
+        location: r.location || 'online',
       })),
   )
   const [busy, setBusy] = useState(false)
@@ -682,7 +687,7 @@ export function HoursEditor({ rules, specialties, onSave, onClose }) {
         specialty_id: specialties[0]?.id,
         start,
         end,
-        type: 'presencial',
+        location: 'online',
       },
     ])
   }
@@ -705,10 +710,11 @@ export function HoursEditor({ rules, specialties, onSave, onClose }) {
   return (
     <Modal title="Horários de atendimento" onClose={onClose} wide>
       <p className="ag-form__hint">
-        Defina os horários padrão de cada dia da semana e escolha se cada período
-        é <strong>presencial</strong> ou <strong>online</strong>. As pacientes só
-        conseguem agendar dentro desses períodos (ou em horários extras que você
-        abrir na agenda).
+        Defina os horários padrão de cada dia da semana e escolha o local de
+        cada período (<strong>online</strong>, <strong>Brasília</strong> ou{' '}
+        <strong>Rio de Janeiro</strong>). As pacientes só conseguem agendar
+        dentro desses períodos (ou em horários extras que você abrir na
+        agenda).
       </p>
       <div className="ag-hours">
         {PY_WEEKDAY_LABELS.map((label, weekday) => (
@@ -749,12 +755,15 @@ export function HoursEditor({ rules, specialties, onSave, onClose }) {
                   />
                   <select
                     className="ag-hours__type"
-                    value={row.type}
-                    onChange={(e) => updateRow(row.id, { type: e.target.value })}
-                    aria-label="Modalidade"
+                    value={row.location}
+                    onChange={(e) => updateRow(row.id, { location: e.target.value })}
+                    aria-label="Local"
                   >
-                    <option value="presencial">Presencial</option>
-                    <option value="online">Online</option>
+                    {MODALITY_OPTIONS.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="button"

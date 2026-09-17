@@ -30,6 +30,10 @@ class AvailabilityRule(Base):
     weekday: Mapped[int] = mapped_column(Integer)  # 0=Mon .. 6=Sun
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
+    location: Mapped[str] = mapped_column(String(20), default="presencial_bsb")
+    # vigência: NULL on either side means the rule has no start/end boundary
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     specialty: Mapped[Specialty] = relationship(back_populates="rules")
@@ -46,6 +50,7 @@ class AvailabilityOverride(Base):
     start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     kind: Mapped[str] = mapped_column(String(10))  # 'open' | 'block'
+    location: Mapped[str | None] = mapped_column(String(20), nullable=True)  # only for kind='open'
     reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
 
@@ -62,7 +67,7 @@ class Appointment(Base):
     client_contact: Mapped[str] = mapped_column(String(150))
     client_email: Mapped[str | None] = mapped_column(String(150), nullable=True)
     client_phone: Mapped[str | None] = mapped_column(String(150), nullable=True)
-    type: Mapped[str] = mapped_column(String(15))  # 'online' | 'presencial'
+    type: Mapped[str] = mapped_column(String(15))  # 'online' | 'presencial_bsb' | 'presencial_rj'
     status: Mapped[str] = mapped_column(String(15), default="pending")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
