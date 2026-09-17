@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     api_base_url: str = "http://localhost:8000"
     clinic_name: str = "Mulher Viva — Dra. Luciana Lopes"
     clinic_address: str = "Centro Médico Lúcio Costa"
+    # Who gets notified when a new booking request comes in. Falls back to
+    # ALLOWED_ADMIN_EMAILS when unset.
+    clinic_notification_emails: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -53,6 +56,15 @@ class Settings(BaseSettings):
             for e in self.allowed_admin_emails.split(",")
             if e.strip()
         ]
+
+    @property
+    def clinic_notification_emails_list(self) -> list[str]:
+        emails = [
+            e.strip().lower()
+            for e in self.clinic_notification_emails.split(",")
+            if e.strip()
+        ]
+        return emails or self.allowed_admin_emails_list
 
 
 @lru_cache
