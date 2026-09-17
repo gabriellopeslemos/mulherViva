@@ -222,6 +222,28 @@ def notify_booking_cancelled(appt: dict) -> None:
     _send_async(appt.get("client_email"), "Sua consulta foi cancelada", body)
 
 
+def _send_reschedule_via_resend(appt: dict) -> None:
+    email_service.send_booking_rescheduled(
+        to_email=appt.get("client_email"),
+        client_name=appt["client_name"],
+        specialty_name=appt["specialty_name"],
+        day=appt["date"],
+        start=appt["start_time"],
+        end=appt["end_time"],
+        modality=appt["type"],
+        manage_link=manage_url(appt.get("token")) or "",
+        calendar_link=google_calendar_link(appt),
+        ics=build_ics(appt),
+    )
+
+
+def notify_booking_rescheduled(appt: dict) -> None:
+    """Sends the booking-rescheduled e-mail via Resend (see app/services/email.py)."""
+    if not appt.get("client_email"):
+        return
+    threading.Thread(target=_send_reschedule_via_resend, args=(appt,), daemon=True).start()
+
+
 def notify_status_change(appt: dict, status: str) -> None:
     if status == "confirmed":
         notify_booking_confirmed(appt)

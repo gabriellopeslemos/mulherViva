@@ -176,10 +176,21 @@ export function ConfirmDialog({
   busy = false,
   onConfirm,
   onCancel,
+  notifyCheckbox,
 }) {
   return (
     <Modal title={title} onClose={onCancel}>
       <p className="ag-confirm__msg">{message}</p>
+      {notifyCheckbox && (
+        <label className="ag-legend__toggle ag-confirm__notify">
+          <input
+            type="checkbox"
+            checked={notifyCheckbox.checked}
+            onChange={(e) => notifyCheckbox.onChange(e.target.checked)}
+          />
+          {notifyCheckbox.label}
+        </label>
+      )}
       <div className="ag-modal__actions">
         <button type="button" className="ag-btn ag-btn--ghost" onClick={onCancel}>
           Voltar
@@ -205,7 +216,7 @@ function contactHref(contact) {
   return digits.length >= 8 ? `tel:+55${digits}` : null
 }
 
-export function ApptDetails({ appt, specialty, busy, onStatus, onEdit, onDelete, onClose }) {
+export function ApptDetails({ appt, specialty, busy, onStatus, onCancelAppt, onEdit, onDelete, onClose }) {
   const href = appt.client_contact ? contactHref(appt.client_contact) : null
   return (
     <Modal title="Detalhes da consulta" onClose={onClose}>
@@ -281,7 +292,7 @@ export function ApptDetails({ appt, specialty, busy, onStatus, onEdit, onDelete,
               type="button"
               className="ag-btn ag-btn--ghost"
               disabled={busy}
-              onClick={() => onStatus('cancelled')}
+              onClick={onCancelAppt}
             >
               Marcar como cancelada
             </button>
@@ -298,6 +309,7 @@ export function ApptDetails({ appt, specialty, busy, onStatus, onEdit, onDelete,
 /* ---------- appointment create / edit form ---------- */
 
 export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
+  const isEdit = Boolean(initial.id)
   const [form, setForm] = useState(() => ({
     client_name: initial.client_name || '',
     client_contact: initial.client_contact || '',
@@ -314,6 +326,18 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [conflict, setConflict] = useState(false)
+  const [notifyEmail, setNotifyEmail] = useState(true)
+
+  const scheduleChanged =
+    isEdit &&
+    (form.date !== initial.date ||
+      form.start !== fmtTime(initial.start_time) ||
+      form.end !== fmtTime(initial.end_time))
+  const statusChanged = isEdit && form.status !== initial.status
+  const showNotifyCheckbox =
+    isEdit &&
+    Boolean(form.client_email) &&
+    (scheduleChanged || (statusChanged && form.status === 'cancelled'))
 
   const set = (key) => (e) => {
     const value = e.target ? e.target.value : e
@@ -352,6 +376,7 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
         status: form.status,
         notes: form.notes.trim() || null,
         force,
+        notify_email: showNotifyCheckbox ? notifyEmail : true,
       })
     } catch (err) {
       if (err.status === 409) setConflict(true)
@@ -521,6 +546,19 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
           </span>
           <textarea rows={2} value={form.notes} onChange={set('notes')} />
         </label>
+
+        {showNotifyCheckbox && (
+          <label className="ag-legend__toggle">
+            <input
+              type="checkbox"
+              checked={notifyEmail}
+              onChange={(e) => setNotifyEmail(e.target.checked)}
+            />
+            {form.status === 'cancelled'
+              ? 'Avisar a paciente por e-mail sobre o cancelamento'
+              : 'Avisar a paciente por e-mail sobre a remarcação'}
+          </label>
+        )}
 
         {conflict && (
           <div className="ag-form__conflict" role="alert">

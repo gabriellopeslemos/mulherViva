@@ -1040,6 +1040,10 @@
   color: var(--text-soft);
 }
 
+.ag-confirm__notify {
+  margin-top: 14px;
+}
+
 /* ---------- details ---------- */
 
 .ag-details__top {
