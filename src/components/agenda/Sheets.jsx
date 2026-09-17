@@ -21,9 +21,96 @@ const MODALITY_LABELS = {
 }
 const MODALITY_OPTIONS = Object.entries(MODALITY_LABELS)
 
+const IconEdit = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m6 16 9.5-9.5a2.1 2.1 0 0 1 3 3L9 19l-4 1 1-4z" />
+  </svg>
+)
+
+const IconTrash = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4.5 7h15M9.5 7V4.5h5V7M7 7l1 13h8l1-13M10.5 11v5M13.5 11v5" />
+  </svg>
+)
+
+const IconCalendar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+    <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+  </svg>
+)
+
+const IconClock = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+)
+
+const IconStethoscope = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 4v6a4 4 0 0 0 8 0V4" />
+    <path d="M10 14v1.5a5 5 0 0 0 10 0v-2.3" />
+    <circle cx="20" cy="9.7" r="1.7" />
+    <path d="M6 4H4.5M14 4h1.5" />
+  </svg>
+)
+
+const IconPin = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" />
+    <circle cx="12" cy="9.5" r="2.4" />
+  </svg>
+)
+
+const IconVideo = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="6" width="12" height="12" rx="2.5" />
+    <path d="M15 10.2 20 7.5v9l-5-2.7" />
+  </svg>
+)
+
+const IconCheck = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 13l4 4L19 7" />
+  </svg>
+)
+
+const IconInfinity = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
+  </svg>
+)
+
+const IconUser = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="8" r="3.6" />
+    <path d="M4.8 19.5a7.2 7.2 0 0 1 14.4 0" />
+  </svg>
+)
+
+const MODALITY_CARD_META = {
+  online: { icon: <IconVideo />, label: 'Online', desc: 'Consulta por vídeo' },
+  presencial_bsb: { icon: <IconPin />, label: 'Presencial', desc: 'Brasília' },
+  presencial_rj: { icon: <IconPin />, label: 'Presencial', desc: 'Rio de Janeiro' },
+}
+
+function ToggleField({ icon, label, checked, onChange }) {
+  return (
+    <label className="ag-toggle">
+      <span className="ag-toggle__label">
+        {icon}
+        {label}
+      </span>
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      <span className="ag-toggle__switch" aria-hidden="true" />
+    </label>
+  )
+}
+
 /* ---------- generic shell ---------- */
 
-export function Modal({ title, onClose, children, wide = false }) {
+export function Modal({ title, subtitle, headIcon, summary, onClose, children, wide = false }) {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose()
@@ -32,13 +119,22 @@ export function Modal({ title, onClose, children, wide = false }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const fancy = Boolean(summary)
+  const closeBtn = (
+    <button type="button" className="ag-iconbtn" onClick={onClose} aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </svg>
+    </button>
+  )
+
   return (
     <div
       className="ag-modal__backdrop"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
-        className={`ag-modal${wide ? ' ag-modal--wide' : ''}`}
+        className={`ag-modal${wide ? ' ag-modal--wide' : ''}${fancy ? ' ag-modal--fancy' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -46,14 +142,26 @@ export function Modal({ title, onClose, children, wide = false }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.22, ease: 'easeOut' }}
       >
-        <header className="ag-modal__head">
-          <h3>{title}</h3>
-          <button type="button" className="ag-iconbtn" onClick={onClose} aria-label="Fechar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </header>
+        {fancy ? (
+          <header className="ag-modal__head ag-modal__head--fancy">
+            <div className="ag-modal__head-info">
+              {headIcon && <span className="ag-modal__head-icon">{headIcon}</span>}
+              <div className="ag-modal__head-text">
+                <h3>{title}</h3>
+                {subtitle && <p>{subtitle}</p>}
+              </div>
+            </div>
+            <div className="ag-modal__head-right">
+              {summary}
+              {closeBtn}
+            </div>
+          </header>
+        ) : (
+          <header className="ag-modal__head">
+            <h3>{title}</h3>
+            {closeBtn}
+          </header>
+        )}
         <div className="ag-modal__body">{children}</div>
       </motion.div>
     </div>
@@ -254,92 +362,149 @@ export function ApptForm({ initial, specialties, onSubmit, onClose, title }) {
   }
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal
+      title={title}
+      subtitle="Confira o resumo e ajuste os detalhes."
+      headIcon={<IconUser />}
+      wide
+      summary={
+        <div className="ag-modal__summary">
+          <div className="ag-modal__summary-row">
+            <IconUser />
+            <span>{form.client_name.trim() || 'Nova paciente'}</span>
+          </div>
+          <div className="ag-modal__summary-row">
+            <IconCalendar />
+            <span>
+              {form.date ? fmtDayLabel(form.date) : '—'} · {form.start} – {form.end}
+            </span>
+          </div>
+          <div className="ag-modal__summary-row">
+            <IconPin />
+            <span>{MODALITY_LABELS[form.type] || form.type}</span>
+          </div>
+        </div>
+      }
+      onClose={onClose}
+    >
       <form className="ag-form" onSubmit={submit}>
         <label className="ag-field">
           <span>Nome da paciente</span>
-          <input
-            type="text"
-            value={form.client_name}
-            onChange={set('client_name')}
-            required
-            minLength={2}
-            placeholder="Nome completo"
-          />
-        </label>
-        <label className="ag-field">
-          <span>
-            Telefone <em>(opcional)</em>
+          <span className="ag-input-icon">
+            <IconUser />
+            <input
+              type="text"
+              value={form.client_name}
+              onChange={set('client_name')}
+              required
+              minLength={2}
+              placeholder="Nome completo"
+            />
           </span>
-          <input
-            type="tel"
-            inputMode="tel"
-            value={form.client_contact}
-            onChange={set('client_contact')}
-            placeholder="(00) 00000-0000"
-          />
-        </label>
-        <label className="ag-field">
-          <span>
-            E-mail <em>(opcional)</em>
-          </span>
-          <input
-            type="email"
-            inputMode="email"
-            value={form.client_email}
-            onChange={set('client_email')}
-            placeholder="voce@email.com"
-          />
-        </label>
-        <label className="ag-field">
-          <span>Especialidade</span>
-          <select value={form.specialty_id} onChange={set('specialty_id')}>
-            {specialties.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
         </label>
         <div className="ag-field-row">
           <label className="ag-field">
-            <span>Data</span>
-            <input type="date" value={form.date} onChange={set('date')} required />
-          </label>
-          <label className="ag-field">
-            <span>Início</span>
-            <input type="time" value={form.start} onChange={set('start')} required step={300} />
-          </label>
-          <label className="ag-field">
-            <span>Fim</span>
+            <span>
+              Telefone <em>(opcional)</em>
+            </span>
             <input
-              type="time"
-              value={form.end}
-              onChange={(e) => {
-                setEndTouched(true)
-                set('end')(e)
-              }}
-              required
-              step={300}
+              type="tel"
+              inputMode="tel"
+              value={form.client_contact}
+              onChange={set('client_contact')}
+              placeholder="(00) 00000-0000"
+            />
+          </label>
+          <label className="ag-field">
+            <span>
+              E-mail <em>(opcional)</em>
+            </span>
+            <input
+              type="email"
+              inputMode="email"
+              value={form.client_email}
+              onChange={set('client_email')}
+              placeholder="voce@email.com"
             />
           </label>
         </div>
+        <label className="ag-field">
+          <span>Especialidade</span>
+          <span className="ag-input-icon">
+            <IconStethoscope />
+            <select value={form.specialty_id} onChange={set('specialty_id')}>
+              {specialties.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        </label>
+        <fieldset className="ag-field">
+          <legend>Quando</legend>
+          <div className="ag-field-row">
+            <label className="ag-field">
+              <span>Data</span>
+              <span className="ag-input-icon">
+                <IconCalendar />
+                <input type="date" value={form.date} onChange={set('date')} required />
+              </span>
+            </label>
+            <label className="ag-field">
+              <span>Início</span>
+              <span className="ag-input-icon">
+                <IconClock />
+                <input type="time" value={form.start} onChange={set('start')} required step={300} />
+              </span>
+            </label>
+            <label className="ag-field">
+              <span>Fim</span>
+              <span className="ag-input-icon">
+                <IconClock />
+                <input
+                  type="time"
+                  value={form.end}
+                  onChange={(e) => {
+                    setEndTouched(true)
+                    set('end')(e)
+                  }}
+                  required
+                  step={300}
+                />
+              </span>
+            </label>
+          </div>
+        </fieldset>
         {invalidTime && (
           <p className="ag-form__error">O horário final deve ser depois do inicial.</p>
         )}
         <fieldset className="ag-field">
           <legend>Modalidade</legend>
-          <div className="ag-segment ag-segment--wrap">
-            {MODALITY_OPTIONS.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={form.type === value ? 'is-selected' : ''}
-                onClick={() => set('type')(value)}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="ag-modality-cards">
+            {MODALITY_OPTIONS.map(([value]) => {
+              const meta = MODALITY_CARD_META[value]
+              const selected = form.type === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={`ag-modality-card${selected ? ' is-selected' : ''}`}
+                  onClick={() => set('type')(value)}
+                >
+                  <span className="ag-modality-card__icon">{meta.icon}</span>
+                  <span className="ag-modality-card__text">
+                    <strong>{meta.label}</strong>
+                    <small>{meta.desc}</small>
+                  </span>
+                  {selected && (
+                    <span className="ag-modality-card__check">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </fieldset>
         <label className="ag-field">
@@ -702,7 +867,7 @@ export function ScheduleList({ rules, specialtiesById, onAdd, onEdit, onDelete, 
             const specialty = specialtiesById[r.specialty_id]
             return (
               <li key={r.id}>
-                <button type="button" className="ag-list__row" onClick={() => onEdit(r)}>
+                <div className="ag-list__row ag-list__row--static">
                   <span className="ag-list__time">
                     {PY_WEEKDAY_LABELS[r.weekday].slice(0, 3)}
                     <em>
@@ -718,13 +883,25 @@ export function ScheduleList({ rules, specialtiesById, onAdd, onEdit, onDelete, 
                   <span className={`ag-badge ag-badge--${status}`}>
                     {SCHEDULE_STATUS_LABELS[status]}
                   </span>
-                </button>
+                </div>
                 <div className="ag-list__actions">
-                  <button type="button" onClick={() => onEdit(r)}>
-                    Editar
+                  <button
+                    type="button"
+                    className="ag-iconbtn"
+                    onClick={() => onEdit(r)}
+                    aria-label="Editar programação"
+                    title="Editar programação"
+                  >
+                    <IconEdit />
                   </button>
-                  <button type="button" className="is-danger" onClick={() => onDelete(r)}>
-                    Excluir
+                  <button
+                    type="button"
+                    className="ag-iconbtn ag-iconbtn--danger"
+                    onClick={() => onDelete(r)}
+                    aria-label="Excluir programação"
+                    title="Excluir programação"
+                  >
+                    <IconTrash />
                   </button>
                 </div>
               </li>
@@ -732,11 +909,6 @@ export function ScheduleList({ rules, specialtiesById, onAdd, onEdit, onDelete, 
           })}
         </ul>
       )}
-      <div className="ag-modal__actions">
-        <button type="button" className="ag-btn ag-btn--ghost" onClick={onClose}>
-          Fechar
-        </button>
-      </div>
     </Modal>
   )
 }
@@ -808,98 +980,152 @@ export function ScheduleForm({ initial, specialties, onSubmit, onClose, title })
     }
   }
 
+  const weekdayFull = `${PY_WEEKDAY_LABELS[Number(form.weekday)]}-feira`
+
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal
+      title={title}
+      subtitle="Confira o resumo e ajuste os detalhes."
+      headIcon={<IconCalendar />}
+      wide
+      summary={
+        <div className="ag-modal__summary">
+          <div className="ag-modal__summary-row">
+            <IconCalendar />
+            <span>
+              {weekdayFull} · {form.start} – {form.end}
+            </span>
+          </div>
+          <div className="ag-modal__summary-row">
+            <IconPin />
+            <span>{MODALITY_LABELS[form.location] || form.location}</span>
+          </div>
+        </div>
+      }
+      onClose={onClose}
+    >
       <form className="ag-form" onSubmit={submit}>
-        <label className="ag-field">
-          <span>Especialidade</span>
-          <select value={form.specialty_id} onChange={set('specialty_id')}>
-            {specialties.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="ag-field">
-          <span>Dia da semana</span>
-          <select value={form.weekday} onChange={set('weekday')}>
-            {PY_WEEKDAY_LABELS.map((label, idx) => (
-              <option key={label} value={idx}>
-                {label}-feira
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="ag-field-row">
           <label className="ag-field">
-            <span>Início</span>
-            <input type="time" value={form.start} onChange={set('start')} required step={300} />
+            <span>Especialidade</span>
+            <span className="ag-input-icon">
+              <IconStethoscope />
+              <select value={form.specialty_id} onChange={set('specialty_id')}>
+                {specialties.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </span>
           </label>
           <label className="ag-field">
-            <span>Fim</span>
-            <input type="time" value={form.end} onChange={set('end')} required step={300} />
+            <span>Dia da semana</span>
+            <span className="ag-input-icon">
+              <IconCalendar />
+              <select value={form.weekday} onChange={set('weekday')}>
+                {PY_WEEKDAY_LABELS.map((label, idx) => (
+                  <option key={label} value={idx}>
+                    {label}-feira
+                  </option>
+                ))}
+              </select>
+            </span>
           </label>
         </div>
+        <fieldset className="ag-field">
+          <legend>Horário</legend>
+          <div className="ag-field-row">
+            <label className="ag-field">
+              <span>Início</span>
+              <span className="ag-input-icon">
+                <IconClock />
+                <input type="time" value={form.start} onChange={set('start')} required step={300} />
+              </span>
+            </label>
+            <label className="ag-field">
+              <span>Fim</span>
+              <span className="ag-input-icon">
+                <IconClock />
+                <input type="time" value={form.end} onChange={set('end')} required step={300} />
+              </span>
+            </label>
+          </div>
+        </fieldset>
         {invalidTime && (
           <p className="ag-form__error">O horário final deve ser depois do inicial.</p>
         )}
         <fieldset className="ag-field">
           <legend>Local</legend>
-          <div className="ag-segment ag-segment--wrap">
-            {MODALITY_OPTIONS.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={form.location === value ? 'is-selected' : ''}
-                onClick={() => set('location')(value)}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="ag-modality-cards">
+            {MODALITY_OPTIONS.map(([value]) => {
+              const meta = MODALITY_CARD_META[value]
+              const selected = form.location === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={`ag-modality-card${selected ? ' is-selected' : ''}`}
+                  onClick={() => set('location')(value)}
+                >
+                  <span className="ag-modality-card__icon">{meta.icon}</span>
+                  <span className="ag-modality-card__text">
+                    <strong>{meta.label}</strong>
+                    <small>{meta.desc}</small>
+                  </span>
+                  {selected && (
+                    <span className="ag-modality-card__check">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </fieldset>
         <div className="ag-field-row">
           <label className="ag-field">
             <span>Vigência a partir de</span>
-            <input
-              type="date"
-              value={form.start_date}
-              disabled={form.openStart}
-              onChange={set('start_date')}
-            />
+            <span className="ag-input-icon">
+              <IconCalendar />
+              <input
+                type="date"
+                value={form.start_date}
+                disabled={form.openStart}
+                onChange={set('start_date')}
+              />
+            </span>
           </label>
           <label className="ag-field">
             <span>Até</span>
-            <input
-              type="date"
-              value={form.end_date}
-              disabled={form.openEnded}
-              onChange={set('end_date')}
-            />
+            <span className="ag-input-icon">
+              <IconCalendar />
+              <input
+                type="date"
+                value={form.end_date}
+                disabled={form.openEnded}
+                onChange={set('end_date')}
+              />
+            </span>
           </label>
         </div>
         <div className="ag-field-row">
-          <label className="ag-check">
-            <input
-              type="checkbox"
-              checked={form.openStart}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, openStart: e.target.checked, start_date: '' }))
-              }
-            />
-            <span>Vale desde sempre</span>
-          </label>
-          <label className="ag-check">
-            <input
-              type="checkbox"
-              checked={form.openEnded}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, openEnded: e.target.checked, end_date: '' }))
-              }
-            />
-            <span>Sem data de término</span>
-          </label>
+          <ToggleField
+            icon={<IconInfinity />}
+            label="Vale desde sempre"
+            checked={form.openStart}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, openStart: e.target.checked, start_date: '' }))
+            }
+          />
+          <ToggleField
+            icon={<IconCalendar />}
+            label="Sem data de término"
+            checked={form.openEnded}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, openEnded: e.target.checked, end_date: '' }))
+            }
+          />
         </div>
         {invalidDates && (
           <p className="ag-form__error">A data final deve ser depois da inicial.</p>
@@ -940,7 +1166,14 @@ export function ScheduleForm({ initial, specialties, onSubmit, onClose, title })
             className="ag-btn ag-btn--primary"
             disabled={busy || invalidTime || invalidDates}
           >
-            {busy ? 'Salvando…' : 'Salvar'}
+            {busy ? (
+              'Salvando…'
+            ) : (
+              <>
+                <IconCheck />
+                Salvar
+              </>
+            )}
           </button>
         </div>
       </form>
