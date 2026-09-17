@@ -7,9 +7,10 @@ import {
   ApptDetails,
   ApptForm,
   ConfirmDialog,
-  HoursEditor,
   OverrideDetails,
   OverrideForm,
+  ScheduleForm,
+  ScheduleList,
   SlotActions,
 } from './agenda/Sheets'
 import {
@@ -292,52 +293,42 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
     }
   }
 
-  const saveHours = async (rows) => {
-    const prevById = Object.fromEntries(rules.map((r) => [r.id, r]))
-    const keptIds = new Set(rows.filter((r) => r.id > 0).map((r) => r.id))
-    const calls = []
-    rules.forEach((r) => {
-      if (!keptIds.has(r.id)) {
-        calls.push(api.delete(`/api/admin/availability/rules/${r.id}`, { auth: true }))
-      }
-    })
-    rows.forEach((row) => {
-      const payload = {
-        specialty_id: row.specialty_id,
-        weekday: row.weekday,
-        start_time: minToTime(timeToMin(row.start)),
-        end_time: minToTime(timeToMin(row.end)),
-        location: row.location,
-        active: true,
-      }
-      if (row.id > 0) {
-        const prev = prevById[row.id]
-        const changed =
-          prev.specialty_id !== payload.specialty_id ||
-          prev.weekday !== payload.weekday ||
-          timeToMin(prev.start_time) !== timeToMin(payload.start_time) ||
-          timeToMin(prev.end_time) !== timeToMin(payload.end_time) ||
-          prev.location !== payload.location ||
-          !prev.active
-        if (changed) {
-          calls.push(
-            api.patch(`/api/admin/availability/rules/${row.id}`, payload, { auth: true }),
-          )
-        }
-      } else {
-        calls.push(api.post('/api/admin/availability/rules', payload, { auth: true }))
-      }
-    })
+  const submitSchedule = async (payload, existingId) => {
     try {
-      await Promise.all(calls)
+      if (existingId) {
+        const updated = await api.patch(
+          `/api/admin/availability/rules/${existingId}`,
+          payload,
+          { auth: true },
+        )
+        setRules((list) => list.map((r) => (r.id === existingId ? updated : r)))
+        showToast('Programação atualizada.')
+      } else {
+        const created = await api.post('/api/admin/availability/rules', payload, {
+          auth: true,
+        })
+        setRules((list) => [...list, created])
+        showToast('Programação criada.')
+      }
+      setModal({ type: 'schedules' })
     } catch (err) {
       if (guard(err)) return
       throw err
     }
-    const fresh = await api.get('/api/admin/availability/rules', { auth: true })
-    setRules(fresh)
-    setModal(null)
-    showToast('Horários de atendimento salvos.')
+  }
+
+  const deleteSchedule = async (rule) => {
+    setBusy(true)
+    try {
+      await api.delete(`/api/admin/availability/rules/${rule.id}`, { auth: true })
+      setRules((list) => list.filter((r) => r.id !== rule.id))
+      setModal({ type: 'schedules' })
+      showToast('Programação excluída.')
+    } catch (err) {
+      if (!guard(err)) showToast(err.detail || 'Não foi possível excluir.', 'error')
+    } finally {
+      setBusy(false)
+    }
   }
 
   /* ---------- header labels & navigation ---------- */
@@ -506,14 +497,14 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           <button
             type="button"
             className="ag-btn ag-btn--ghost ag-btn--sm"
-            onClick={() => setModal({ type: 'hours' })}
-            aria-label="Horários de atendimento"
+            onClick={() => setModal({ type: 'schedules' })}
+            aria-label="Programações"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="8.5" />
               <path d="M12 7.5V12l3 2" />
             </svg>
-            <span className="ag-hide-mobile">Horários de atendimento</span>
+            <span className="ag-hide-mobile">Programações</span>
           </button>
           {gcal?.configured && (
             <button
@@ -745,12 +736,36 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         />
       )}
 
-      {modal?.type === 'hours' && (
-        <HoursEditor
+      {modal?.type === 'schedules' && (
+        <ScheduleList
           rules={rules}
-          specialties={specialties}
-          onSave={saveHours}
+          specialtiesById={specialtiesById}
+          onAdd={() => setModal({ type: 'schedule-form' })}
+          onEdit={(rule) => setModal({ type: 'schedule-form', initial: rule, editId: rule.id })}
+          onDelete={(rule) => setModal({ type: 'confirm-delete-schedule', rule })}
           onClose={() => setModal(null)}
+        />
+      )}
+
+      {modal?.type === 'schedule-form' && (
+        <ScheduleForm
+          title={modal.editId ? 'Editar programação' : 'Nova programação'}
+          initial={modal.initial || {}}
+          specialties={specialties}
+          onSubmit={(payload) => submitSchedule(payload, modal.editId)}
+          onClose={() => setModal({ type: 'schedules' })}
+        />
+      )}
+
+      {modal?.type === 'confirm-delete-schedule' && (
+        <ConfirmDialog
+          title="Excluir programação"
+          message="Excluir definitivamente essa programação? Essa ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          danger
+          busy={busy}
+          onConfirm={() => deleteSchedule(modal.rule)}
+          onCancel={() => setModal({ type: 'schedules' })}
         />
       )}
 

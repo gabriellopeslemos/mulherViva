@@ -93,6 +93,11 @@ export function fmtFullDate(iso) {
   return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} de ${MONTHS_LONG[d.getMonth()]}`
 }
 
+export function fmtShortDate(iso) {
+  const d = parseIso(iso)
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`
+}
+
 export const STATUS_LABELS = {
   pending: 'Aguardando',
   confirmed: 'Confirmada',

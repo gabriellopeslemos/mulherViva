@@ -61,6 +61,7 @@ class AvailabilityRuleUpdate(BaseModel):
     start_date: date_type | None = None
     end_date: date_type | None = None
     active: bool | None = None
+    force: bool = False
 
 
 class AvailabilityRuleOut(BaseModel):

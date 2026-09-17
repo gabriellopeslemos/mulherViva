@@ -1010,93 +1010,38 @@
   color: #3f7a50;
 }
 
-/* ---------- work hours editor ---------- */
+/* ---------- schedules (programações) list ---------- */
 
-.ag-hours {
+.ag-schedules__toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 14px;
+  justify-content: flex-start;
+  margin: 12px 0 4px;
 }
 
-.ag-hours__day {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  background: var(--surface);
+.ag-badge--active {
+  background: #e3f2e7;
+  color: #3f7a50;
 }
 
-.ag-hours__dayhead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+.ag-badge--future {
+  background: #e6eefc;
+  color: #2f5ba3;
 }
 
-.ag-hours__dayhead strong {
-  color: var(--text-strong);
-}
-
-.ag-hours__closed {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.ag-hours__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.ag-hours__row select,
-.ag-hours__row input {
-  font: inherit;
-  min-height: 42px;
-  padding: 8px 10px;
-  border: 1.5px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.ag-hours__row select {
-  flex: 1;
-  min-width: 0;
-}
-
-.ag-hours__row select.ag-hours__type {
-  flex: 0 0 7.5rem;
-}
-
-.ag-hours__row.is-invalid input {
-  border-color: #b3382f;
-}
-
-.ag-hours__sep {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.ag-hours__add {
-  background: none;
-  border: 1.5px dashed var(--line);
-  border-radius: 10px;
-  width: 100%;
-  min-height: 40px;
-  font: inherit;
-  font-weight: 600;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all 0.16s ease;
-}
-
-.ag-hours__add:hover {
-  border-color: var(--accent);
+.ag-badge--expired {
   background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.ag-form__orphans {
+  margin: 0 0 10px;
+  padding: 0 0 0 18px;
+  font-size: 0.86rem;
+  color: #7a5817;
+}
+
+.ag-form__orphans li {
+  margin-bottom: 2px;
 }
 
 /* ---------- list view (Consultas) ---------- */

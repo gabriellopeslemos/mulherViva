@@ -3,6 +3,7 @@ import secrets
 import uuid
 from datetime import date as date_type
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from PIL import Image, ImageOps
@@ -43,9 +44,19 @@ from ..schemas import (
 from ..services import google_calendar, notifications, waitlist
 from ..services.instagram import sync_instagram
 from ..services.settings import get_bool_setting, get_int_setting, set_setting
-from ..services.slots import has_overlap
+from ..services.slots import appointment_outside_rule, find_rule_conflicts, has_overlap
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+
+WEEKDAY_LABELS_PT = [
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+    "quinta-feira",
+    "sexta-feira",
+    "sábado",
+    "domingo",
+]
 
 _UPLOAD_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 _MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -78,6 +89,16 @@ def _get_or_404(db: Session, model, obj_id: int, name: str):
     if obj is None:
         raise HTTPException(status_code=404, detail=f"{name} nao encontrado(a)")
     return obj
+
+
+def _rule_conflict_message(db: Session, conflicting: AvailabilityRule) -> str:
+    specialty = db.get(Specialty, conflicting.specialty_id)
+    weekday_label = WEEKDAY_LABELS_PT[conflicting.weekday]
+    return (
+        f"Conflita com a programação de {specialty.name if specialty else 'outra especialidade'} "
+        f"de {weekday_label} {conflicting.start_time.strftime('%H:%M')}"
+        f"–{conflicting.end_time.strftime('%H:%M')}"
+    )
 
 
 # ---- appointments ----
@@ -220,6 +241,17 @@ def create_rule(body: AvailabilityRuleIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=422, detail="Horario final deve ser apos o inicial")
     if body.start_date and body.end_date and body.end_date < body.start_date:
         raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
+    existing = list(
+        db.scalars(select(AvailabilityRule).where(AvailabilityRule.active == True))  # noqa: E712
+    )
+    conflicts = find_rule_conflicts(
+        body.weekday, body.start_time, body.end_time, body.start_date, body.end_date, existing
+    )
+    if conflicts:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_rule_conflict_message(db, conflicts[0]),
+        )
     rule = AvailabilityRule(**body.model_dump())
     db.add(rule)
     db.commit()
@@ -230,12 +262,75 @@ def create_rule(body: AvailabilityRuleIn, db: Session = Depends(get_db)):
 @router.patch("/availability/rules/{rule_id}", response_model=AvailabilityRuleOut)
 def update_rule(rule_id: int, body: AvailabilityRuleUpdate, db: Session = Depends(get_db)):
     rule = _get_or_404(db, AvailabilityRule, rule_id, "Regra")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    old_snapshot = SimpleNamespace(
+        weekday=rule.weekday,
+        start_time=rule.start_time,
+        end_time=rule.end_time,
+        start_date=rule.start_date,
+        end_date=rule.end_date,
+    )
+    for field, value in body.model_dump(exclude_unset=True, exclude={"force"}).items():
         setattr(rule, field, value)
     if rule.end_time <= rule.start_time:
         raise HTTPException(status_code=422, detail="Horario final deve ser apos o inicial")
     if rule.start_date and rule.end_date and rule.end_date < rule.start_date:
         raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
+
+    existing = list(
+        db.scalars(
+            select(AvailabilityRule).where(
+                AvailabilityRule.active == True,  # noqa: E712
+                AvailabilityRule.id != rule.id,
+            )
+        )
+    )
+    conflicts = find_rule_conflicts(
+        rule.weekday, rule.start_time, rule.end_time, rule.start_date, rule.end_date, existing
+    )
+    if conflicts:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_rule_conflict_message(db, conflicts[0]),
+        )
+
+    if not body.force:
+        today = date_type.today()
+        candidates = list(
+            db.scalars(
+                select(Appointment).where(
+                    Appointment.specialty_id == rule.specialty_id,
+                    Appointment.status == "confirmed",
+                    Appointment.date >= today,
+                )
+            )
+        )
+        orphaned = [
+            a
+            for a in candidates
+            if not appointment_outside_rule(a, old_snapshot)
+            and appointment_outside_rule(a, rule)
+        ]
+        if orphaned:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "orphaned_appointments",
+                    "message": (
+                        "Essa mudança deixaria consultas confirmadas fora do novo horário."
+                    ),
+                    "appointments": [
+                        {
+                            "id": a.id,
+                            "date": a.date.isoformat(),
+                            "start_time": a.start_time.strftime("%H:%M"),
+                            "end_time": a.end_time.strftime("%H:%M"),
+                            "client_name": a.client_name,
+                        }
+                        for a in orphaned
+                    ],
+                },
+            )
+
     db.commit()
     db.refresh(rule)
     return rule

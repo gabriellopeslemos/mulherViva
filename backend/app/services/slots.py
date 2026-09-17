@@ -219,6 +219,46 @@ def get_available_slots(
     return result
 
 
+def find_rule_conflicts(
+    weekday: int,
+    start_time: time,
+    end_time: time,
+    start_date: date | None,
+    end_date: date | None,
+    existing_rules: list[AvailabilityRule],
+) -> list[AvailabilityRule]:
+    """Pure overlap check for a candidate programação against clinic-wide active
+    rules: same weekday + overlapping time + overlapping vigência. Specialty and
+    location are not part of the conflict key, since there is a single
+    professional attending one place at a time.
+    """
+    conflicts = []
+    for r in existing_rules:
+        if r.weekday != weekday:
+            continue
+        if start_time >= r.end_time or r.start_time >= end_time:
+            continue
+        if end_date is not None and r.start_date is not None and end_date < r.start_date:
+            continue
+        if r.end_date is not None and start_date is not None and r.end_date < start_date:
+            continue
+        conflicts.append(r)
+    return conflicts
+
+
+def appointment_outside_rule(appt: Appointment, rule: AvailabilityRule) -> bool:
+    """True when `appt` no longer fits `rule`'s weekday/time/vigência window."""
+    if appt.date.weekday() != rule.weekday:
+        return True
+    if rule.start_date is not None and appt.date < rule.start_date:
+        return True
+    if rule.end_date is not None and appt.date > rule.end_date:
+        return True
+    if appt.start_time < rule.start_time or appt.end_time > rule.end_time:
+        return True
+    return False
+
+
 def has_overlap(
     db: Session,
     day: date,

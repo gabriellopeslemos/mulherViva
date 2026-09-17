@@ -15,10 +15,14 @@ export function clearToken() {
 }
 
 export class ApiError extends Error {
-  constructor(status, detail) {
+  constructor(status, detail, payload) {
     super(detail || `Erro ${status}`)
     this.status = status
     this.detail = detail
+    // Raw `detail` from the API response, even when it isn't a plain string
+    // (e.g. a structured conflict payload) — callers that need more than the
+    // display message read this instead of `.detail`.
+    this.payload = payload
   }
 }
 
@@ -39,13 +43,15 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
 
   if (!res.ok) {
     let detail
+    let payload
     try {
       const data = await res.json()
-      detail = typeof data.detail === 'string' ? data.detail : undefined
+      payload = data.detail
+      detail = typeof payload === 'string' ? payload : undefined
     } catch {
       // non-JSON error body
     }
-    throw new ApiError(res.status, detail)
+    throw new ApiError(res.status, detail, payload)
   }
 
   if (res.status === 204) return null

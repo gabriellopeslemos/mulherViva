@@ -3,11 +3,15 @@ import { motion } from 'framer-motion'
 import {
   PY_WEEKDAY_LABELS,
   STATUS_LABELS,
+  fmtDayLabel,
   fmtFullDate,
   fmtMin,
+  fmtShortDate,
   fmtTime,
   minToTime,
+  startOfToday,
   timeToMin,
+  toIso,
 } from './utils'
 
 const MODALITY_LABELS = {
@@ -644,167 +648,302 @@ export function OverrideDetails({ ov, specialty, busy, onDelete, onClose }) {
   )
 }
 
-/* ---------- weekly work hours editor ---------- */
+/* ---------- schedules (programações) list ---------- */
 
-let tempId = -1
+function scheduleStatus(rule, todayIso) {
+  if (rule.start_date && rule.start_date > todayIso) return 'future'
+  if (rule.end_date && rule.end_date < todayIso) return 'expired'
+  return 'active'
+}
 
-export function HoursEditor({ rules, specialties, onSave, onClose }) {
-  const [rows, setRows] = useState(() =>
-    rules
-      .filter((r) => r.active)
-      .map((r) => ({
-        id: r.id,
-        weekday: r.weekday,
-        specialty_id: r.specialty_id,
-        start: fmtTime(r.start_time),
-        end: fmtTime(r.end_time),
-        location: r.location || 'online',
-      })),
+const SCHEDULE_STATUS_LABELS = {
+  active: 'Ativa agora',
+  future: 'Futura',
+  expired: 'Expirada',
+}
+
+function scheduleVigencyLabel(rule) {
+  const from = rule.start_date ? fmtShortDate(rule.start_date) : 'sempre'
+  const to = rule.end_date ? fmtShortDate(rule.end_date) : 'sem data de término'
+  return `${from} – ${to}`
+}
+
+export function ScheduleList({ rules, specialtiesById, onAdd, onEdit, onDelete, onClose }) {
+  const todayIso = toIso(startOfToday())
+  const sorted = useMemo(
+    () =>
+      [...rules].sort(
+        (a, b) =>
+          (a.start_date || '').localeCompare(b.start_date || '') ||
+          a.weekday - b.weekday ||
+          timeToMin(a.start_time) - timeToMin(b.start_time),
+      ),
+    [rules],
   )
+
+  return (
+    <Modal title="Programações" onClose={onClose} wide>
+      <p className="ag-form__hint">
+        Cada programação define especialidade, dia da semana, horário, local e
+        uma faixa de vigência. Cadastre programações futuras com antecedência
+        sem afetar a que está ativa hoje.
+      </p>
+      <div className="ag-schedules__toolbar">
+        <button type="button" className="ag-btn ag-btn--primary ag-btn--sm" onClick={onAdd}>
+          + Nova programação
+        </button>
+      </div>
+      {sorted.length === 0 ? (
+        <p className="ag-list__empty">Nenhuma programação cadastrada.</p>
+      ) : (
+        <ul className="ag-list__rows">
+          {sorted.map((r) => {
+            const status = scheduleStatus(r, todayIso)
+            const specialty = specialtiesById[r.specialty_id]
+            return (
+              <li key={r.id}>
+                <button type="button" className="ag-list__row" onClick={() => onEdit(r)}>
+                  <span className="ag-list__time">
+                    {PY_WEEKDAY_LABELS[r.weekday].slice(0, 3)}
+                    <em>
+                      {fmtTime(r.start_time)}–{fmtTime(r.end_time)}
+                    </em>
+                  </span>
+                  <span className="ag-list__patient">
+                    <strong>{specialty ? specialty.name : '—'}</strong>
+                    <small>
+                      {MODALITY_LABELS[r.location] || r.location} · {scheduleVigencyLabel(r)}
+                    </small>
+                  </span>
+                  <span className={`ag-badge ag-badge--${status}`}>
+                    {SCHEDULE_STATUS_LABELS[status]}
+                  </span>
+                </button>
+                <div className="ag-list__actions">
+                  <button type="button" onClick={() => onEdit(r)}>
+                    Editar
+                  </button>
+                  <button type="button" className="is-danger" onClick={() => onDelete(r)}>
+                    Excluir
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <div className="ag-modal__actions">
+        <button type="button" className="ag-btn ag-btn--ghost" onClick={onClose}>
+          Fechar
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+/* ---------- schedule (programação) create/edit form ---------- */
+
+export function ScheduleForm({ initial, specialties, onSubmit, onClose, title }) {
+  const [form, setForm] = useState(() => ({
+    specialty_id: initial.specialty_id || specialties[0]?.id || '',
+    weekday: initial.weekday ?? 0,
+    start: initial.start_time ? fmtTime(initial.start_time) : '08:00',
+    end: initial.end_time ? fmtTime(initial.end_time) : '12:00',
+    location: initial.location || 'presencial_bsb',
+    // Editing a rule with a null start_date means "valid since always" — keep
+    // that accurately reflected instead of silently defaulting to today (which
+    // would narrow the vigência on save). New schedules default to today.
+    openStart: initial.id ? !initial.start_date : false,
+    start_date: initial.start_date || (initial.id ? '' : toIso(startOfToday())),
+    openEnded: !initial.end_date,
+    end_date: initial.end_date || '',
+  }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [orphanWarning, setOrphanWarning] = useState(null)
 
-  const byDay = useMemo(() => {
-    const map = Array.from({ length: 7 }, () => [])
-    rows.forEach((row) => map[row.weekday].push(row))
-    map.forEach((list) => list.sort((a, b) => timeToMin(a.start) - timeToMin(b.start)))
-    return map
-  }, [rows])
-
-  const updateRow = (id, patch) => {
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-  }
-
-  const addRow = (weekday) => {
-    const last = byDay[weekday][byDay[weekday].length - 1]
-    const start = last ? fmtMin(Math.min(timeToMin(last.end) + 60, 22 * 60)) : '08:00'
-    const end = fmtMin(Math.min(timeToMin(start) + 240, 23 * 60))
-    setRows((rs) => [
-      ...rs,
-      {
-        id: tempId--,
-        weekday,
-        specialty_id: specialties[0]?.id,
-        start,
-        end,
-        location: 'online',
-      },
-    ])
-  }
-
-  const removeRow = (id) => setRows((rs) => rs.filter((r) => r.id !== id))
-
-  const hasInvalid = rows.some((r) => timeToMin(r.end) <= timeToMin(r.start))
-
-  const save = async () => {
-    setBusy(true)
+  const set = (key) => (e) => {
+    const value = e?.target ? e.target.value : e
+    setForm((f) => ({ ...f, [key]: value }))
+    setOrphanWarning(null)
     setError(null)
+  }
+
+  const invalidTime =
+    form.start && form.end && timeToMin(form.end) <= timeToMin(form.start)
+  const invalidDates =
+    !form.openStart &&
+    !form.openEnded &&
+    form.start_date &&
+    form.end_date &&
+    form.end_date < form.start_date
+
+  const submit = async (e, force = false) => {
+    e?.preventDefault()
+    if (invalidTime || invalidDates) return
+    setBusy(true)
+    if (!force) setError(null)
     try {
-      await onSave(rows)
+      await onSubmit({
+        specialty_id: Number(form.specialty_id),
+        weekday: Number(form.weekday),
+        start_time: minToTime(timeToMin(form.start)),
+        end_time: minToTime(timeToMin(form.end)),
+        location: form.location,
+        start_date: form.openStart ? null : form.start_date || null,
+        end_date: form.openEnded ? null : form.end_date || null,
+        active: true,
+        force,
+      })
+      setOrphanWarning(null)
     } catch (err) {
-      setError(err.detail || 'Não foi possível salvar os horários. Tente novamente.')
+      if (err.status === 409 && err.payload && typeof err.payload === 'object') {
+        setOrphanWarning(err.payload)
+      } else {
+        setOrphanWarning(null)
+        setError(err.detail || 'Não foi possível salvar. Tente novamente.')
+      }
+    } finally {
       setBusy(false)
     }
   }
 
   return (
-    <Modal title="Horários de atendimento" onClose={onClose} wide>
-      <p className="ag-form__hint">
-        Defina os horários padrão de cada dia da semana e escolha o local de
-        cada período (<strong>online</strong>, <strong>Brasília</strong> ou{' '}
-        <strong>Rio de Janeiro</strong>). As pacientes só conseguem agendar
-        dentro desses períodos (ou em horários extras que você abrir na
-        agenda).
-      </p>
-      <div className="ag-hours">
-        {PY_WEEKDAY_LABELS.map((label, weekday) => (
-          <div key={label} className="ag-hours__day">
-            <div className="ag-hours__dayhead">
-              <strong>{label}</strong>
-              {byDay[weekday].length === 0 && <span className="ag-hours__closed">Fechado</span>}
-            </div>
-            {byDay[weekday].map((row) => {
-              const invalid = timeToMin(row.end) <= timeToMin(row.start)
-              return (
-                <div key={row.id} className={`ag-hours__row${invalid ? ' is-invalid' : ''}`}>
-                  <select
-                    value={row.specialty_id}
-                    onChange={(e) => updateRow(row.id, { specialty_id: Number(e.target.value) })}
-                    aria-label="Especialidade"
-                  >
-                    {specialties.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="time"
-                    value={row.start}
-                    step={300}
-                    onChange={(e) => updateRow(row.id, { start: e.target.value })}
-                    aria-label="Início"
-                  />
-                  <span className="ag-hours__sep">às</span>
-                  <input
-                    type="time"
-                    value={row.end}
-                    step={300}
-                    onChange={(e) => updateRow(row.id, { end: e.target.value })}
-                    aria-label="Fim"
-                  />
-                  <select
-                    className="ag-hours__type"
-                    value={row.location}
-                    onChange={(e) => updateRow(row.id, { location: e.target.value })}
-                    aria-label="Local"
-                  >
-                    {MODALITY_OPTIONS.map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="ag-iconbtn ag-iconbtn--danger"
-                    onClick={() => removeRow(row.id)}
-                    aria-label={`Remover horário de ${label}`}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                      <path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13M10 11v6M14 11v6" />
-                    </svg>
-                  </button>
-                </div>
-              )
-            })}
-            <button type="button" className="ag-hours__add" onClick={() => addRow(weekday)}>
-              + Adicionar horário
+    <Modal title={title} onClose={onClose}>
+      <form className="ag-form" onSubmit={submit}>
+        <label className="ag-field">
+          <span>Especialidade</span>
+          <select value={form.specialty_id} onChange={set('specialty_id')}>
+            {specialties.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="ag-field">
+          <span>Dia da semana</span>
+          <select value={form.weekday} onChange={set('weekday')}>
+            {PY_WEEKDAY_LABELS.map((label, idx) => (
+              <option key={label} value={idx}>
+                {label}-feira
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="ag-field-row">
+          <label className="ag-field">
+            <span>Início</span>
+            <input type="time" value={form.start} onChange={set('start')} required step={300} />
+          </label>
+          <label className="ag-field">
+            <span>Fim</span>
+            <input type="time" value={form.end} onChange={set('end')} required step={300} />
+          </label>
+        </div>
+        {invalidTime && (
+          <p className="ag-form__error">O horário final deve ser depois do inicial.</p>
+        )}
+        <fieldset className="ag-field">
+          <legend>Local</legend>
+          <div className="ag-segment ag-segment--wrap">
+            {MODALITY_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={form.location === value ? 'is-selected' : ''}
+                onClick={() => set('location')(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <div className="ag-field-row">
+          <label className="ag-field">
+            <span>Vigência a partir de</span>
+            <input
+              type="date"
+              value={form.start_date}
+              disabled={form.openStart}
+              onChange={set('start_date')}
+            />
+          </label>
+          <label className="ag-field">
+            <span>Até</span>
+            <input
+              type="date"
+              value={form.end_date}
+              disabled={form.openEnded}
+              onChange={set('end_date')}
+            />
+          </label>
+        </div>
+        <div className="ag-field-row">
+          <label className="ag-check">
+            <input
+              type="checkbox"
+              checked={form.openStart}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, openStart: e.target.checked, start_date: '' }))
+              }
+            />
+            <span>Vale desde sempre</span>
+          </label>
+          <label className="ag-check">
+            <input
+              type="checkbox"
+              checked={form.openEnded}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, openEnded: e.target.checked, end_date: '' }))
+              }
+            />
+            <span>Sem data de término</span>
+          </label>
+        </div>
+        {invalidDates && (
+          <p className="ag-form__error">A data final deve ser depois da inicial.</p>
+        )}
+
+        {orphanWarning && (
+          <div className="ag-form__conflict" role="alert">
+            <p>{orphanWarning.message}</p>
+            <ul className="ag-form__orphans">
+              {orphanWarning.appointments.map((a) => (
+                <li key={a.id}>
+                  {fmtDayLabel(a.date)} · {a.start_time} · {a.client_name}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="ag-btn ag-btn--danger"
+              disabled={busy}
+              onClick={(e) => submit(e, true)}
+            >
+              Salvar mesmo assim
             </button>
           </div>
-        ))}
-      </div>
-      {hasInvalid && (
-        <p className="ag-form__error">Há horários com fim antes do início — corrija para salvar.</p>
-      )}
-      {error && (
-        <p className="ag-form__error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="ag-modal__actions">
-        <button type="button" className="ag-btn ag-btn--ghost" onClick={onClose}>
-          Cancelar
-        </button>
-        <button
-          type="button"
-          className="ag-btn ag-btn--primary"
-          disabled={busy || hasInvalid}
-          onClick={save}
-        >
-          {busy ? 'Salvando…' : 'Salvar horários'}
-        </button>
-      </div>
+        )}
+        {error && (
+          <p className="ag-form__error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="ag-modal__actions">
+          <button type="button" className="ag-btn ag-btn--ghost" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="ag-btn ag-btn--primary"
+            disabled={busy || invalidTime || invalidDates}
+          >
+            {busy ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
+      </form>
     </Modal>
   )
 }
