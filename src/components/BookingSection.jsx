@@ -58,14 +58,21 @@ function bestColumns(n) {
   return 3
 }
 
-const MODALITY_LABELS = { presencial: 'Presencial', online: 'Online' }
+const MODALITY_LABELS = {
+  online: 'Online',
+  presencial_bsb: 'Presencial — Brasília',
+  presencial_rj: 'Presencial — Rio de Janeiro',
+}
+
+const HOUSE_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5" />
+  </svg>
+)
 
 const MODALITY_ICONS = {
-  presencial: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5" />
-    </svg>
-  ),
+  presencial_bsb: HOUSE_ICON,
+  presencial_rj: HOUSE_ICON,
   online: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="5" width="18" height="12" rx="1.5" />
@@ -222,7 +229,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
   const loadingMonth = specialties.length > 0 && monthMaps.length < specialties.length
 
   // Predicate honouring the active modality filter (no filter ⇒ everything).
-  const matchesFilter = (slot) => !modalityFilter || slot.type === modalityFilter
+  const matchesFilter = (slot) => !modalityFilter || slot.location === modalityFilter
 
   // Filter-independent: are there ANY slots this month? Gates the filter chips.
   const monthHasAnySlots = monthMaps.some((m) =>
@@ -383,7 +390,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
       const slots =
         monthCache[`${id}:${monthPartOf(selectedDate)}`]?.[selectedDate] || []
       const stillValid = slots.some(
-        (s) => s.start === selectedSlot.start && s.type === selectedSlot.type,
+        (s) => s.start === selectedSlot.start && s.location === selectedSlot.location,
       )
       if (!stillValid) setSelectedSlot(null)
     }
@@ -418,9 +425,9 @@ export default function BookingSection({ presetSpecialty } = {}) {
         specialty_id: specialtyId,
         date: selectedDate,
         start: selectedSlot.start,
-        type: selectedSlot.type,
+        type: selectedSlot.location,
         client_name: form.name.trim(),
-        client_contact: form.phone.trim(),
+        client_phone: form.phone.trim(),
         client_email: form.email.trim(),
         notes: form.notes.trim() || null,
       })
@@ -512,7 +519,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
               </div>
               <div>
                 <dt>Modalidade</dt>
-                <dd>{confirmation.type === 'online' ? 'Online' : 'Presencial'}</dd>
+                <dd>{MODALITY_LABELS[confirmation.type] || confirmation.type}</dd>
               </div>
             </dl>
             <button className="bk-btn bk-btn--ghost" type="button" onClick={reset}>
@@ -614,22 +621,17 @@ export default function BookingSection({ presetSpecialty } = {}) {
                             role="group"
                             aria-label="Ir para o próximo horário disponível por modalidade"
                           >
-                            <button
-                              type="button"
-                              className={`bk-filterbtn${modalityFilter === 'presencial' ? ' is-active' : ''}`}
-                              onClick={() => toggleFilter('presencial')}
-                              aria-pressed={modalityFilter === 'presencial'}
-                            >
-                              Presencial
-                            </button>
-                            <button
-                              type="button"
-                              className={`bk-filterbtn${modalityFilter === 'online' ? ' is-active' : ''}`}
-                              onClick={() => toggleFilter('online')}
-                              aria-pressed={modalityFilter === 'online'}
-                            >
-                              Online
-                            </button>
+                            {Object.keys(MODALITY_LABELS).map((loc) => (
+                              <button
+                                key={loc}
+                                type="button"
+                                className={`bk-filterbtn${modalityFilter === loc ? ' is-active' : ''}`}
+                                onClick={() => toggleFilter(loc)}
+                                aria-pressed={modalityFilter === loc}
+                              >
+                                {MODALITY_LABELS[loc]}
+                              </button>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -695,18 +697,18 @@ export default function BookingSection({ presetSpecialty } = {}) {
                                     {group.slots.map((slot) => {
                                       const isSel =
                                         selectedSlot?.start === slot.start &&
-                                        selectedSlot?.type === slot.type
+                                        selectedSlot?.location === slot.location
                                       return (
                                         <button
-                                          key={`${slot.start}-${slot.type}`}
+                                          key={`${slot.start}-${slot.location}`}
                                           type="button"
                                           className={`bk-slot${isSel ? ' is-selected' : ''}`}
                                           onClick={() => pickSlot(slot)}
                                         >
                                           <span className="bk-slot__time">{fmtTime(slot.start)}</span>
-                                          <span className={`bk-slot__mode bk-slot__mode--${slot.type}`}>
-                                            {MODALITY_ICONS[slot.type]}
-                                            {MODALITY_LABELS[slot.type]}
+                                          <span className={`bk-slot__mode bk-slot__mode--${slot.location}`}>
+                                            {MODALITY_ICONS[slot.location]}
+                                            {MODALITY_LABELS[slot.location]}
                                           </span>
                                         </button>
                                       )
@@ -791,10 +793,10 @@ export default function BookingSection({ presetSpecialty } = {}) {
                       {selectedSlot && (
                         <div className="bk-field bk-field--full">
                           <span>Modalidade</span>
-                          <p className={`bk-modality-note bk-modality-note--${selectedSlot.type}`}>
-                            {MODALITY_ICONS[selectedSlot.type]}
+                          <p className={`bk-modality-note bk-modality-note--${selectedSlot.location}`}>
+                            {MODALITY_ICONS[selectedSlot.location]}
                             Este horário é{' '}
-                            <strong>{MODALITY_LABELS[selectedSlot.type].toLowerCase()}</strong>.
+                            <strong>{MODALITY_LABELS[selectedSlot.location].toLowerCase()}</strong>.
                           </p>
                         </div>
                       )}
@@ -855,7 +857,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                 <li className={selectedSlot ? 'is-filled' : ''}>
                   <span className="bk-summary__label">Modalidade</span>
                   <span className="bk-summary__value">
-                    {selectedSlot ? MODALITY_LABELS[selectedSlot.type] : '—'}
+                    {selectedSlot ? MODALITY_LABELS[selectedSlot.location] : '—'}
                   </span>
                 </li>
               </ul>

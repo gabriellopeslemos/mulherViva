@@ -190,6 +190,16 @@
   color: var(--accent-contrast);
 }
 
+/* Lets a segment wrap onto multiple lines when it holds more options than
+   fit on one row (e.g. a 3-way location choice) instead of overflowing. */
+.ag-segment--wrap {
+  flex-wrap: wrap;
+}
+
+.ag-segment--wrap button {
+  flex: 1 1 auto;
+}
+
 /* ---------- mobile day strip ---------- */
 
 .ag-daystrip {

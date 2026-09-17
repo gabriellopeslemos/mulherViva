@@ -34,7 +34,12 @@ MONTHS_PT = [
     "dezembro",
 ]
 
-MODALITY_LABELS = {"online": "Online", "presencial": "Presencial"}
+MODALITY_LABELS = {
+    "online": "Online",
+    "presencial": "Presencial",
+    "presencial_bsb": "Presencial — Brasília",
+    "presencial_rj": "Presencial — Rio de Janeiro",
+}
 
 
 def format_date_pt(d: date) -> str:
@@ -74,7 +79,7 @@ def booking_confirmation_html(
     time_str = f"{format_time_pt(start)} &ndash; {format_time_pt(end)}"
 
     address_extra = ""
-    if modality == "presencial" and clinic_address.strip():
+    if modality != "online" and clinic_address.strip():
         address_extra = (
             '<br /><span style="font-family: \'Segoe UI\', Tahoma, sans-serif; '
             'font-size: 13px; color: #5d4250;">'

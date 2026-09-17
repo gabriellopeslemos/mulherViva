@@ -152,7 +152,7 @@ def revoke_connection(db: Session) -> None:
 def _event_body(appt: Appointment, specialty_name: str) -> dict:
     settings = get_settings()
     prefix = _STATUS_PREFIX.get(appt.status, "")
-    location = settings.clinic_address if appt.type == "presencial" else "Online"
+    location = "Online" if appt.type == "online" else settings.clinic_address
     description_lines = [f"Contato: {appt.client_contact}"]
     if appt.reason:
         description_lines.append(f"Motivo: {appt.reason}")
