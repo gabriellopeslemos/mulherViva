@@ -169,7 +169,8 @@ def update_appointment(
 ):
     appointment = _get_or_404(db, Appointment, appointment_id, "Consulta")
     previous_status = appointment.status
-    data = body.model_dump(exclude_unset=True, exclude={"force"})
+    previous_schedule = (appointment.date, appointment.start_time, appointment.end_time)
+    data = body.model_dump(exclude_unset=True, exclude={"force", "notify_email"})
     if "specialty_id" in data:
         _get_or_404(db, Specialty, data["specialty_id"], "Especialidade")
     for field, value in data.items():
@@ -196,14 +197,29 @@ def update_appointment(
     db.commit()
     db.refresh(appointment)
     google_calendar.schedule_sync(appointment.id)
+    status_changed = appointment.status != previous_status
+    schedule_changed = (
+        appointment.date,
+        appointment.start_time,
+        appointment.end_time,
+    ) != previous_schedule
     if (
-        appointment.client_email
-        and appointment.status != previous_status
+        body.notify_email
+        and appointment.client_email
+        and status_changed
         and appointment.status in ("confirmed", "cancelled")
     ):
         notifications.notify_status_change(
             _appt_snapshot(db, appointment), appointment.status
         )
+    elif (
+        body.notify_email
+        and appointment.client_email
+        and schedule_changed
+        and not status_changed
+        and appointment.status not in ("cancelled",)
+    ):
+        notifications.notify_booking_rescheduled(_appt_snapshot(db, appointment))
     if appointment.status == "cancelled" and previous_status != "cancelled":
         waitlist.notify_next(db, appointment.specialty_id, appointment.date)
     return appointment

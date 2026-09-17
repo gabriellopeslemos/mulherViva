@@ -191,6 +191,7 @@ class AppointmentUpdate(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
     is_first_visit: bool | None = None
     force: bool = False
+    notify_email: bool = True
 
 
 # ---- patient self-service (manage by token) ----

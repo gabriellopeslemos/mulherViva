@@ -211,6 +211,174 @@ def booking_confirmation_html(
 </html>"""
 
 
+def booking_rescheduled_html(
+    client_name: str,
+    specialty_name: str,
+    day: date,
+    start: time,
+    end: time,
+    modality: str,
+    clinic_address: str = "",
+    manage_link: str = "",
+    calendar_link: str = "",
+) -> str:
+    first_name = html.escape(client_name.strip().split()[0] if client_name.strip() else "")
+    specialty_esc = html.escape(specialty_name)
+    modality_label = MODALITY_LABELS.get(modality, html.escape(modality))
+    date_str = format_date_pt(day)
+    time_str = f"{format_time_pt(start)} &ndash; {format_time_pt(end)}"
+
+    address_extra = ""
+    if modality != "online" and clinic_address.strip():
+        address_extra = (
+            '<br /><span style="font-family: \'Segoe UI\', Tahoma, sans-serif; '
+            'font-size: 13px; color: #5d4250;">'
+            f"{html.escape(clinic_address.strip())}</span>"
+        )
+
+    details = (
+        _detail_row("Data", date_str)
+        + _detail_row("Horário", time_str)
+        + _detail_row("Especialidade", specialty_esc)
+        + _detail_row("Modalidade", modality_label, address_extra, last=True)
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulta remarcada</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #faf5f2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #faf5f2; padding: 32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%;">
+
+          <!-- Cabecalho / marca -->
+          <tr>
+            <td style="padding: 0 8px 24px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="56" height="56" align="center" valign="middle" bgcolor="#9a4067" style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #9a4067, #74284a);">
+                    <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #ffffff;">MV</span>
+                  </td>
+                  <td style="padding-left: 14px;">
+                    <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #74284a;">Mulher Viva</span><br />
+                    <span style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; letter-spacing: 1px; color: #5d4250;">Medicina Integrativa da Saúde Feminina</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card principal -->
+          <tr>
+            <td bgcolor="#fffdfc" style="background-color: #fffdfc; border: 1px solid #e8d4d8; border-radius: 24px; padding: 40px 36px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <span style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #b9854c;">Consulta remarcada</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 14px;">
+                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 700; line-height: 1.25; color: #2b1421;">Olá, {first_name}!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 12px;">
+                    <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 16px; line-height: 1.6; color: #3a2230;">
+                      Sua consulta foi <strong style="color: #9a4067;">remarcada</strong>. Confira o novo horário:
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Card de detalhes -->
+                <tr>
+                  <td style="padding-top: 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7ebf0" style="background-color: #f7ebf0; border-radius: 16px;">
+                      <tr>
+                        <td style="padding: 20px 24px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            {details}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding-top: 24px;">
+                    <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; line-height: 1.6; color: #5d4250;">
+                      Se o novo horário não funcionar para você, é só responder este
+                      e-mail ou falar conosco para reagendar.
+                    </p>
+                  </td>
+                </tr>
+                {_cta_button("Adicionar ao Google Agenda", calendar_link) if calendar_link else ""}
+                {_cta_button("Gerenciar minha consulta", manage_link) if manage_link else ""}
+                <tr>
+                  <td style="padding-top: 28px; border-top: 1px solid #e8d4d8;">
+                    <p style="margin: 28px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #74284a;">
+                      Com carinho,<br />Equipe Mulher Viva
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Rodape -->
+          <tr>
+            <td align="center" style="padding: 24px 8px 0;">
+              <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; line-height: 1.6; color: #5d4250;">
+                Mulher Viva &middot; Medicina Integrativa da Saúde Feminina<br />
+                Você recebeu este email porque agendou uma consulta em nosso site.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_booking_rescheduled(
+    to_email: str,
+    client_name: str,
+    specialty_name: str,
+    day: date,
+    start: time,
+    end: time,
+    modality: str,
+    manage_link: str = "",
+    calendar_link: str = "",
+    ics: str | None = None,
+) -> bool:
+    settings = get_settings()
+    subject = f"Consulta remarcada — {format_date_pt(day)} às {format_time_pt(start)}"
+    body_html = booking_rescheduled_html(
+        client_name=client_name,
+        specialty_name=specialty_name,
+        day=day,
+        start=start,
+        end=end,
+        modality=modality,
+        clinic_address=settings.clinic_address,
+        manage_link=manage_link,
+        calendar_link=calendar_link,
+    )
+    return _send_resend(
+        to_email, subject, body_html, ics=ics, log_label="email de remarcacao"
+    )
+
+
 def _send_resend(
     to_email: str,
     subject: str,

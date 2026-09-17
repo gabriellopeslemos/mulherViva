@@ -52,6 +52,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
   const [showCancelled, setShowCancelled] = useState(false)
   const [modal, setModal] = useState(null)
   const [conflictMove, setConflictMove] = useState(null)
+  const [notifyOnCancel, setNotifyOnCancel] = useState(true)
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState(null)
   const [loadError, setLoadError] = useState(null)
@@ -181,6 +182,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         start_time: minToTime(newStartMin),
         end_time: minToTime(newStartMin + dur),
         force,
+        notify_email: false,
       }
       const prev = appointments
       setAppointments((list) =>
@@ -207,12 +209,12 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
     [appointments, guard, showToast],
   )
 
-  const setApptStatus = async (appt, status) => {
+  const setApptStatus = async (appt, status, notifyEmail = true) => {
     setBusy(true)
     try {
       const updated = await api.patch(
         `/api/admin/appointments/${appt.id}`,
-        { status },
+        { status, notify_email: notifyEmail },
         { auth: true },
       )
       setAppointments((list) => list.map((a) => (a.id === appt.id ? updated : a)))
@@ -252,7 +254,8 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
         setAppointments((list) => list.map((a) => (a.id === existingId ? updated : a)))
         showToast('Consulta atualizada.')
       } else {
-        const created = await api.post('/api/admin/appointments', payload, { auth: true })
+        const { notify_email: _notifyEmail, ...createPayload } = payload
+        const created = await api.post('/api/admin/appointments', createPayload, { auth: true })
         if (days.includes(created.date)) setAppointments((list) => [...list, created])
         showToast('Consulta criada.')
       }
@@ -598,7 +601,10 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           specialtiesById={specialtiesById}
           onOpen={(appt) => setModal({ type: 'appt-details', appt })}
           onEdit={(appt) => setModal({ type: 'appt-form', initial: appt, editId: appt.id })}
-          onCancel={(appt) => setApptStatus(appt, 'cancelled')}
+          onCancel={(appt) => {
+            setNotifyOnCancel(true)
+            setModal({ type: 'confirm-cancel', appt })
+          }}
         />
       ) : view === 'month' ? (
         <MonthGrid
@@ -646,6 +652,10 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           specialty={specialtiesById[modal.appt.specialty_id]}
           busy={busy}
           onStatus={(status) => setApptStatus(modal.appt, status)}
+          onCancelAppt={() => {
+            setNotifyOnCancel(true)
+            setModal({ type: 'confirm-cancel', appt: modal.appt })
+          }}
           onEdit={() =>
             setModal({ type: 'appt-form', initial: modal.appt, editId: modal.appt.id })
           }
@@ -721,6 +731,27 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           busy={busy}
           onConfirm={() => deleteAppt(modal.appt)}
           onCancel={() => setModal({ type: 'appt-details', appt: modal.appt })}
+        />
+      )}
+
+      {modal?.type === 'confirm-cancel' && (
+        <ConfirmDialog
+          title="Cancelar consulta"
+          message={`Marcar a consulta de ${modal.appt.client_name} em ${fmtDayLabel(modal.appt.date)} como cancelada?`}
+          confirmLabel="Marcar como cancelada"
+          danger
+          busy={busy}
+          onConfirm={() => setApptStatus(modal.appt, 'cancelled', notifyOnCancel)}
+          onCancel={() => setModal({ type: 'appt-details', appt: modal.appt })}
+          notifyCheckbox={
+            modal.appt.client_email
+              ? {
+                  checked: notifyOnCancel,
+                  onChange: setNotifyOnCancel,
+                  label: 'Avisar a paciente por e-mail',
+                }
+              : null
+          }
         />
       )}
 
