@@ -244,6 +244,35 @@ def notify_booking_rescheduled(appt: dict) -> None:
     threading.Thread(target=_send_reschedule_via_resend, args=(appt,), daemon=True).start()
 
 
+def _send_internal_new_booking(appt: dict) -> None:
+    settings = get_settings()
+    recipients = settings.clinic_notification_emails_list
+    if not recipients:
+        return
+    base = settings.public_base_url.rstrip("/")
+    for to_email in recipients:
+        email_service.send_internal_new_booking(
+            to_email=to_email,
+            client_name=appt["client_name"],
+            client_email=appt.get("client_email") or "",
+            client_phone=appt.get("client_phone") or "",
+            specialty_name=appt["specialty_name"],
+            day=appt["date"],
+            start=appt["start_time"],
+            end=appt["end_time"],
+            modality=appt["type"],
+            is_first_visit=appt.get("is_first_visit", False),
+            reason=appt.get("reason") or "",
+            notes=appt.get("notes") or "",
+            admin_link=base,
+        )
+
+
+def notify_internal_new_booking(appt: dict) -> None:
+    """Alerts the clinic staff (CLINIC_NOTIFICATION_EMAILS) of a new booking request."""
+    threading.Thread(target=_send_internal_new_booking, args=(appt,), daemon=True).start()
+
+
 def notify_status_change(appt: dict, status: str) -> None:
     if status == "confirmed":
         notify_booking_confirmed(appt)

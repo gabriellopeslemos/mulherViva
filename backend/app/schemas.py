@@ -1,7 +1,7 @@
 from datetime import date as date_type, datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # ---- auth ----
@@ -310,6 +310,16 @@ class BlogPostOut(BaseModel):
 class BlogListResponse(BaseModel):
     total: int
     items: list[BlogPostListItem]
+
+
+class BlogMarketingEmailIn(BaseModel):
+    recipients: list[EmailStr] = Field(min_length=1, max_length=500)
+    subject: str | None = Field(default=None, max_length=200)
+
+
+class BlogMarketingEmailResult(BaseModel):
+    sent: int
+    failed: list[str]
 
 
 class UploadOut(BaseModel):

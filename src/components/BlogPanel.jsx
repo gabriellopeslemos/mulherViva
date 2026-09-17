@@ -24,6 +24,13 @@ const IconTrash = () => (
   </svg>
 )
 
+const IconMail = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+    <path d="m4.5 7 7.5 6 7.5-6" />
+  </svg>
+)
+
 const STATUS_LABELS = {
   draft: 'Rascunho',
   published: 'Publicado',
@@ -328,6 +335,121 @@ function PostForm({ initial, onSubmit, onClose }) {
   )
 }
 
+function parseRecipients(text) {
+  return [...new Set(
+    text
+      .split(/[,;\n]/)
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  )]
+}
+
+function SendEmailModal({ post, onSend, onClose }) {
+  const [recipientsText, setRecipientsText] = useState('')
+  const [subject, setSubject] = useState(post.title)
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
+  const [result, setResult] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get('/api/admin/blog/recipients', { auth: true })
+      .then((emails) => {
+        if (!cancelled) setRecipientsText(emails.join('\n'))
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingSuggestions(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const recipients = parseRecipients(recipientsText)
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError(null)
+    setSending(true)
+    try {
+      const res = await onSend({ recipients, subject: subject.trim() || undefined })
+      setResult(res)
+    } catch (err) {
+      setError(err.detail || 'Não foi possível enviar o e-mail.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <Modal title="Enviar por e-mail" subtitle={post.title} onClose={onClose} wide>
+      {result ? (
+        <div className="ag-form">
+          <p>
+            E-mail enviado para <strong>{result.sent}</strong> destinatário(s).
+          </p>
+          {result.failed.length > 0 && (
+            <p className="ag-form__error">
+              Falha ao enviar para: {result.failed.join(', ')}
+            </p>
+          )}
+          <div className="ag-modal__actions">
+            <button type="button" className="ag-btn ag-btn--primary" onClick={onClose}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form className="ag-form" onSubmit={submit}>
+          <label className="ag-field">
+            <span>Assunto</span>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              maxLength={200}
+              placeholder={post.title}
+            />
+          </label>
+          <label className="ag-field">
+            <span>
+              Destinatários <em>(um por linha, ou separados por vírgula)</em>
+            </span>
+            <textarea
+              value={recipientsText}
+              onChange={(e) => setRecipientsText(e.target.value)}
+              rows={8}
+              required
+              placeholder={
+                loadingSuggestions
+                  ? 'Carregando sugestões de pacientes…'
+                  : 'nome@exemplo.com'
+              }
+            />
+            <small>{recipients.length} destinatário(s)</small>
+          </label>
+          {error && <p className="ag-form__error">{error}</p>}
+          <div className="ag-modal__actions">
+            <button type="button" className="ag-btn ag-btn--ghost" onClick={onClose}>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="ag-btn ag-btn--primary"
+              disabled={sending || recipients.length === 0}
+            >
+              {sending ? 'Enviando…' : `Enviar para ${recipients.length}`}
+            </button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  )
+}
+
 export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
   const [posts, setPosts] = useState(null)
   const [modal, setModal] = useState(null)
@@ -425,6 +547,15 @@ export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
       onChanged?.()
     } catch (err) {
       if (!guard(err)) showToast(err.detail || 'Não foi possível atualizar.', 'error')
+    }
+  }
+
+  const sendMarketingEmail = async (post, payload) => {
+    try {
+      return await api.post(`/api/admin/blog/${post.id}/send-email`, payload, { auth: true })
+    } catch (err) {
+      if (guard(err)) return { sent: 0, failed: [] }
+      throw err
     }
   }
 
@@ -535,6 +666,17 @@ export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
                   >
                     <IconPin />
                   </button>
+                  {post.status === 'published' && (
+                    <button
+                      type="button"
+                      className="ag-iconbtn"
+                      onClick={() => setModal({ type: 'send-email', post })}
+                      aria-label="Enviar por e-mail"
+                      title="Enviar por e-mail"
+                    >
+                      <IconMail />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="ag-iconbtn"
@@ -564,6 +706,14 @@ export default function BlogPanel({ onClose, onAuthExpired, onChanged }) {
         <PostForm
           initial={modal.post}
           onSubmit={(payload) => submitPost(payload, modal.post?.id)}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {modal?.type === 'send-email' && (
+        <SendEmailModal
+          post={modal.post}
+          onSend={(payload) => sendMarketingEmail(modal.post, payload)}
           onClose={() => setModal(null)}
         />
       )}

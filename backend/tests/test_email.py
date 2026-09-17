@@ -8,8 +8,12 @@ from app.services.email import (
     booking_reminder_html,
     format_date_pt,
     format_time_pt,
+    internal_new_booking_html,
+    marketing_blog_post_html,
     send_booking_confirmation,
     send_booking_reminder,
+    send_internal_new_booking,
+    send_marketing_blog_post,
 )
 
 
@@ -247,3 +251,179 @@ def test_send_reminder_posts_to_resend(monkeypatch):
     )
     assert ok is True
     assert "amanhã" in captured["json"]["subject"]
+
+
+def test_marketing_html_contains_post_details():
+    html_out = marketing_blog_post_html(
+        title="Menopausa: mitos e verdades",
+        excerpt="Descubra o que é fato e o que é mito.",
+        post_url="https://mulherviva.com.br/blog/12",
+        image_url="https://mulherviva.com.br/uploads/cover.webp",
+    )
+    assert "Menopausa: mitos e verdades" in html_out
+    assert "Descubra o que é fato e o que é mito." in html_out
+    assert "https://mulherviva.com.br/blog/12" in html_out
+    assert "https://mulherviva.com.br/uploads/cover.webp" in html_out
+
+
+def test_marketing_html_omits_image_when_absent():
+    html_out = marketing_blog_post_html(
+        title="Título",
+        excerpt="Resumo",
+        post_url="https://mulherviva.com.br/blog/12",
+    )
+    assert "<img" not in html_out
+
+
+def test_marketing_html_escapes_user_input():
+    html_out = marketing_blog_post_html(
+        title="<script>alert(1)</script>",
+        excerpt="Resumo",
+        post_url="https://mulherviva.com.br/blog/12",
+    )
+    assert "<script>" not in html_out
+    assert "&lt;script&gt;" in html_out
+
+
+def test_send_marketing_blog_post_returns_false_without_api_key(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key=""))
+    ok = send_marketing_blog_post(
+        to_email="x@y.com",
+        title="Título",
+        excerpt="Resumo",
+        post_url="https://mulherviva.com.br/blog/12",
+    )
+    assert ok is False
+
+
+def test_send_marketing_blog_post_posts_to_resend(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key="re_test"))
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    ok = send_marketing_blog_post(
+        to_email="paciente@email.com",
+        title="Menopausa: mitos e verdades",
+        excerpt="Resumo do post.",
+        post_url="https://mulherviva.com.br/blog/12",
+        subject="Novo post no blog!",
+    )
+    assert ok is True
+    assert captured["json"]["to"] == ["paciente@email.com"]
+    assert captured["json"]["subject"] == "Novo post no blog!"
+    assert "Menopausa: mitos e verdades" in captured["json"]["html"]
+
+
+def test_send_marketing_blog_post_defaults_subject_to_title(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key="re_test"))
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    send_marketing_blog_post(
+        to_email="paciente@email.com",
+        title="Menopausa: mitos e verdades",
+        excerpt="Resumo do post.",
+        post_url="https://mulherviva.com.br/blog/12",
+    )
+    assert captured["json"]["subject"] == "Menopausa: mitos e verdades"
+
+
+def test_internal_booking_html_contains_details():
+    html_out = internal_new_booking_html(
+        client_name="Maria Souza",
+        client_email="maria@email.com",
+        client_phone="(11) 99999-0000",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(14, 0),
+        end=time(15, 0),
+        modality="online",
+    )
+    assert "Maria Souza" in html_out
+    assert "maria@email.com" in html_out
+    assert "(11) 99999-0000" in html_out
+    assert "Ginecologia" in html_out
+    assert "quinta-feira, 11 de junho de 2026" in html_out
+    assert "Novo agendamento" in html_out
+
+
+def test_internal_booking_html_flags_first_visit():
+    html_out = internal_new_booking_html(
+        client_name="Maria",
+        client_email="maria@email.com",
+        client_phone="",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+        is_first_visit=True,
+    )
+    assert "Primeira consulta" in html_out
+
+
+def test_internal_booking_html_includes_reason_and_notes():
+    html_out = internal_new_booking_html(
+        client_name="Maria",
+        client_email="maria@email.com",
+        client_phone="",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+        reason="Dor pélvica recorrente",
+        notes="Prefere atendimento pela manhã",
+    )
+    assert "Dor pélvica recorrente" in html_out
+    assert "Prefere atendimento pela manhã" in html_out
+
+
+def test_send_internal_new_booking_returns_false_without_api_key(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key=""))
+    ok = send_internal_new_booking(
+        to_email="equipe@mulherviva.com.br",
+        client_name="Maria",
+        client_email="maria@email.com",
+        client_phone="",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+    )
+    assert ok is False
+
+
+def test_send_internal_new_booking_posts_to_resend(monkeypatch):
+    monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key="re_test"))
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    ok = send_internal_new_booking(
+        to_email="equipe@mulherviva.com.br",
+        client_name="Maria Souza",
+        client_email="maria@email.com",
+        client_phone="(11) 99999-0000",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(14, 0),
+        end=time(15, 0),
+        modality="presencial",
+    )
+    assert ok is True
+    assert captured["json"]["to"] == ["equipe@mulherviva.com.br"]
+    assert "Maria Souza" in captured["json"]["subject"]
+    assert "Ginecologia" in captured["json"]["html"]

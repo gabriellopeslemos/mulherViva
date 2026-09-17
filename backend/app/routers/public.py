@@ -38,12 +38,16 @@ def _appt_snapshot(appointment: Appointment, specialty_name: str) -> dict:
     return {
         "client_name": appointment.client_name,
         "client_email": appointment.client_email,
+        "client_phone": appointment.client_phone,
         "date": appointment.date,
         "start_time": appointment.start_time,
         "end_time": appointment.end_time,
         "type": appointment.type,
         "specialty_name": specialty_name,
         "token": appointment.token,
+        "is_first_visit": appointment.is_first_visit,
+        "reason": appointment.reason,
+        "notes": appointment.notes,
     }
 
 
@@ -161,6 +165,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
         notifications.notify_booking_confirmed(snapshot)
     else:
         notifications.notify_booking_received(snapshot)
+    notifications.notify_internal_new_booking(snapshot)
 
     return appointment
 
