@@ -156,6 +156,14 @@ export default function BookingSection({ presetSpecialty } = {}) {
   // calendar and slot list to one kind of consultation.
   const [modalityFilter, setModalityFilter] = useState(null)
 
+  // "Join the waitlist" mini-form, shown as an opt-in below the calendar.
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
+  const [waitlistSpecialtyId, setWaitlistSpecialtyId] = useState(null)
+  const [waitlistForm, setWaitlistForm] = useState({ name: '', email: '', phone: '' })
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false)
+  const [waitlistError, setWaitlistError] = useState(null)
+  const [waitlistDone, setWaitlistDone] = useState(false)
+
   // The section sits far below the fold, but the fetches it kicks off were
   // firing at mount time regardless — showing up as an early, slow leg of the
   // page's critical request chain. Deferring them until the section is about
@@ -443,6 +451,35 @@ export default function BookingSection({ presetSpecialty } = {}) {
       }
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const openWaitlist = () => {
+    setWaitlistOpen(true)
+    setWaitlistDone(false)
+    setWaitlistError(null)
+    setWaitlistSpecialtyId(specialtyId || dateSpecialties[0]?.id || specialties[0]?.id || null)
+  }
+
+  const handleWaitlistSubmit = async (event) => {
+    event.preventDefault()
+    setWaitlistError(null)
+    setWaitlistSubmitting(true)
+    try {
+      await api.post('/api/waitlist', {
+        specialty_id: waitlistSpecialtyId,
+        client_name: waitlistForm.name.trim(),
+        client_email: waitlistForm.email.trim(),
+        client_phone: waitlistForm.phone.trim() || null,
+        preferred_date: selectedDate || null,
+      })
+      setWaitlistDone(true)
+    } catch (err) {
+      setWaitlistError(
+        err.detail || 'Não foi possível entrar na lista de espera. Tente novamente.',
+      )
+    } finally {
+      setWaitlistSubmitting(false)
     }
   }
 
@@ -736,6 +773,122 @@ export default function BookingSection({ presetSpecialty } = {}) {
                             </button>
                           )}
                         </>
+                      )}
+                    </div>
+
+                    <div className="bk-waitlist">
+                      {!waitlistOpen ? (
+                        <button
+                          type="button"
+                          className="bk-waitlist__toggle"
+                          onClick={openWaitlist}
+                        >
+                          Não achou o horário que queria? Entre na lista de espera
+                          para ser avisado quando novos horários aparecerem.
+                        </button>
+                      ) : waitlistDone ? (
+                        <p className="bk-waitlist__done">
+                          <CheckIcon /> Pronto! Avisaremos{' '}
+                          <strong>{waitlistForm.email}</strong> assim que um
+                          horário abrir.
+                        </p>
+                      ) : (
+                        <form className="bk-waitlist__form" onSubmit={handleWaitlistSubmit}>
+                          <h4 className="bk-waitlist__title">Entrar na lista de espera</h4>
+                          <div className="bk-form__grid">
+                            <label className="bk-field bk-field--full" htmlFor="wl-specialty">
+                              <span>Especialidade</span>
+                              <select
+                                id="wl-specialty"
+                                value={waitlistSpecialtyId || ''}
+                                onChange={(e) =>
+                                  setWaitlistSpecialtyId(Number(e.target.value))
+                                }
+                                required
+                              >
+                                <option value="" disabled>
+                                  Selecione…
+                                </option>
+                                {specialties.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="bk-field bk-field--full" htmlFor="wl-name">
+                              <span>Nome completo</span>
+                              <input
+                                id="wl-name"
+                                type="text"
+                                autoComplete="name"
+                                value={waitlistForm.name}
+                                onChange={(e) =>
+                                  setWaitlistForm((f) => ({ ...f, name: e.target.value }))
+                                }
+                                required
+                                minLength={2}
+                              />
+                            </label>
+                            <label className="bk-field" htmlFor="wl-email">
+                              <span>E-mail</span>
+                              <input
+                                id="wl-email"
+                                type="email"
+                                autoComplete="email"
+                                value={waitlistForm.email}
+                                onChange={(e) =>
+                                  setWaitlistForm((f) => ({ ...f, email: e.target.value }))
+                                }
+                                required
+                              />
+                            </label>
+                            <label className="bk-field" htmlFor="wl-phone">
+                              <span>
+                                Telefone <em>(opcional)</em>
+                              </span>
+                              <input
+                                id="wl-phone"
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                value={waitlistForm.phone}
+                                onChange={(e) =>
+                                  setWaitlistForm((f) => ({ ...f, phone: e.target.value }))
+                                }
+                              />
+                            </label>
+                          </div>
+                          {selectedDate && (
+                            <p className="bk-hint bk-waitlist__hint">
+                              Vamos priorizar horários em{' '}
+                              {WEEKDAYS_LONG[selectedDateObj.getDay()]},{' '}
+                              {selectedDateObj.getDate()} de{' '}
+                              {MONTHS_LONG[selectedDateObj.getMonth()]}.
+                            </p>
+                          )}
+                          {waitlistError && (
+                            <p className="bk-error" role="alert">
+                              {waitlistError}
+                            </p>
+                          )}
+                          <div className="bk-waitlist__actions">
+                            <button
+                              type="button"
+                              className="bk-btn bk-btn--ghost"
+                              onClick={() => setWaitlistOpen(false)}
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="submit"
+                              className="bk-btn bk-btn--primary"
+                              disabled={waitlistSubmitting || !waitlistSpecialtyId}
+                            >
+                              {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
+                            </button>
+                          </div>
+                        </form>
                       )}
                     </div>
                   </motion.div>
