@@ -62,7 +62,7 @@ const IconGraduation = () => (
 )
 
 const aboutTags = [
-  'Medicina integrativa',
+  'Medicina humanizada',
   'Obstetrícia humanizada',
   'Ortomolecular',
 ]
@@ -70,7 +70,7 @@ const aboutTags = [
 const specialties = [
   {
     title: 'Ginecologia',
-    text: 'Ginecologia natural, integrativa e preventiva, baseada no olhar integral da mulher. A história, os sinais, os sintomas, o exame físico e, quando necessário, exames complementares são cuidadosamente avaliados.',
+    text: 'Ginecologia natural e preventiva, baseada no olhar integral da mulher. A história, os sinais, os sintomas, o exame físico e, quando necessário, exames complementares são cuidadosamente avaliados.',
     image: '/images/exam.jpg',
     placeholder: gynPlaceholder,
     imageAlt: 'Médica realizando atendimento ginecológico acolhedor',
@@ -141,7 +141,7 @@ const testimonialsRowTwo = [
   },
   {
     name: 'Beatriz A.',
-    role: 'Paciente · Medicina integrativa',
+    role: 'Paciente',
     text: 'Cuidado individualizado de verdade, sem pressa e com muita clareza nas explicações.',
     tone: 'color-mix(in srgb, var(--palette-2) 40%, white)',
     image: '/images/mulherRandom.jpg',
@@ -184,7 +184,7 @@ const ribbonItems = [
   'Ginecologia natural',
   'Obstetrícia humanizada',
   'Ortomolecular',
-  'Medicina integrativa',
+  'Medicina humanizada',
   'Escuta profunda',
   'Cuidado sem pressa',
 ]
@@ -350,6 +350,7 @@ function Landing() {
     new URLSearchParams(window.location.search).get('manage'),
   )
   const [isAdminAuthed, setIsAdminAuthed] = useState(() => Boolean(getToken()))
+  const [presetSpecialty, setPresetSpecialty] = useState(null)
   const [blogPosts, setBlogPosts] = useState(fallbackBlogPosts)
   const [blogTick, setBlogTick] = useState(0)
   // Same reasoning as the booking section: this preview sits far below the
@@ -788,10 +789,10 @@ function Landing() {
             <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
               <p className="eyebrow">Ginecologia · Obstetrícia · Ortomolecular</p>
               <h1>
-                Um novo olhar para a saúde feminina — <em>mais humano, mais completo</em>.
+                Um novo olhar para a saúde feminina: <em>mais humano, mais completo</em>.
               </h1>
               <p className="lead">
-                Medicina integrativa para mulheres que buscam um cuidado
+                Medicina para mulheres que buscam um cuidado
                 profundo, personalizado e consciente, em todas as fases da vida.
               </p>
               <div className="hero-actions">
@@ -879,7 +880,11 @@ function Landing() {
                     <div className="specialty-card__content">
                       <h3>{item.title}</h3>
                       <p>{item.text}</p>
-                      <a className="card-link" href="#agendamento">
+                      <a
+                        className="card-link"
+                        href="#agendamento"
+                        onClick={() => setPresetSpecialty(item.title)}
+                      >
                         Agendar Consulta &rarr;
                       </a>
                     </div>
@@ -1023,7 +1028,7 @@ function Landing() {
           </div>
         </section>
 
-        <BookingSection />
+        <BookingSection presetSpecialty={presetSpecialty} />
 
         <section className="section" id="endereco" tabIndex={-1}>
           <div className="container">
@@ -1167,7 +1172,7 @@ function Landing() {
                 <span className="footer-logo" aria-hidden="true">MV</span>
                 <div>
                   <strong>Mulher Viva</strong>
-                  <span>Medicina Integrativa da Saúde Feminina</span>
+                  <span>Medicina da Saúde Feminina</span>
                 </div>
               </div>
               <div className="footer-col">

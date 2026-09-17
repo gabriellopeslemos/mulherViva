@@ -128,7 +128,7 @@ function CalendarGlyph() {
   )
 }
 
-export default function BookingSection() {
+export default function BookingSection({ presetSpecialty } = {}) {
   const reducedMotion = useReducedMotion()
   const [specialties, setSpecialties] = useState([])
   const [unavailable, setUnavailable] = useState(false)
@@ -271,13 +271,47 @@ export default function BookingSection() {
   const canPrevMonth = cursor > minMonth
   const canNextMonth = cursor < maxMonth
 
+  // A specialty card's "Agendar Consulta" link sets this to its title; once
+  // specialties load we resolve it to a real specialty id (names differ
+  // slightly, e.g. card "Ginecologia" vs. seeded "Ginecologia Integrativa",
+  // so match by substring).
+  const presetSpecialtyId = useMemo(() => {
+    if (!presetSpecialty) return null
+    const needle = presetSpecialty.toLowerCase()
+    return specialties.find((s) => s.name.toLowerCase().includes(needle))?.id ?? null
+  }, [presetSpecialty, specialties])
+
+  // Tracks which preset we're currently honouring so a repeat click on the
+  // same card doesn't re-run the search, while a click on a *different* card
+  // overrides whatever was already selected.
+  const pendingPresetRef = useRef(null)
+  useEffect(() => {
+    if (presetSpecialty && pendingPresetRef.current !== presetSpecialty) {
+      pendingPresetRef.current = presetSpecialty
+      setSelectedDate(null)
+      setSpecialtyId(null)
+      setSelectedSlot(null)
+      setStep(1)
+      setCursor(new Date(today.getFullYear(), today.getMonth(), 1))
+    }
+  }, [presetSpecialty, today])
+
   // Land the patient on a ready-to-confirm booking: pre-select the next open
   // date and its first time slot once the agenda finishes loading. Runs once
   // (or rolls forward a month when the current one has nothing open).
+  // When a preset specialty is pending, only that specialty is searched.
   const autoPickedRef = useRef(false)
   useEffect(() => {
-    if (autoPickedRef.current || selectedDate || loadingMonth) return
+    if (selectedDate || loadingMonth) return
     if (specialties.length === 0) return
+    // With no preset, only run once. With a preset, `targetSpecialties`
+    // below falls back to searching all specialties if it doesn't match one
+    // (e.g. still loading), so this only needs to gate the no-preset case.
+    if (!presetSpecialty && autoPickedRef.current) return
+
+    const targetSpecialties = presetSpecialtyId
+      ? specialties.filter((s) => s.id === presetSpecialtyId)
+      : specialties
 
     const part = `${cursor.getFullYear()}-${cursor.getMonth()}`
     const slotsOf = (id, iso) =>
@@ -290,7 +324,7 @@ export default function BookingSection() {
         (day) =>
           day.getMonth() === cursor.getMonth() &&
           day >= today &&
-          specialties.some((s) => hasSlots(s.id, toIso(day))),
+          targetSpecialties.some((s) => hasSlots(s.id, toIso(day))),
       )
       .map((day) => toIso(day))[0]
 
@@ -298,7 +332,7 @@ export default function BookingSection() {
     // data; the ref guard keeps it from cascading.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (firstIso) {
-      const spec = specialties.find((s) => hasSlots(s.id, firstIso))
+      const spec = targetSpecialties.find((s) => hasSlots(s.id, firstIso))
       autoPickedRef.current = true
       setSelectedDate(firstIso)
       setSpecialtyId(spec.id)
@@ -306,10 +340,12 @@ export default function BookingSection() {
       setStep(2)
     } else if (canNextMonth) {
       setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
+    } else {
+      autoPickedRef.current = true
     }
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMonth, monthCache, specialties, cursor, today, selectedDate, canNextMonth, modalityFilter])
+  }, [loadingMonth, monthCache, specialties, cursor, today, selectedDate, canNextMonth, modalityFilter, presetSpecialty, presetSpecialtyId])
 
   // The modality chips filter the calendar. Toggling re-runs the auto-pick so
   // the soonest matching date and time are surfaced for the chosen modality.
