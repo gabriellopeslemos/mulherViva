@@ -564,7 +564,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
             </button>
           </motion.div>
         ) : (
-          <div className="bk-shell">
+          <div className={`bk-shell${step === 3 ? '' : ' bk-shell--solo'}`}>
             <div className="bk-card bk-main">
               <AnimatePresence mode="wait" initial={false}>
                 {step <= 2 && (
@@ -901,6 +901,16 @@ export default function BookingSection({ presetSpecialty } = {}) {
                     onSubmit={handleSubmit}
                     {...motionProps}
                   >
+                    <button
+                      type="button"
+                      className="bk-back"
+                      onClick={() => setStep(2)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="m14.5 6-6 6 6 6" />
+                      </svg>
+                      Voltar e editar data e horário
+                    </button>
                     <h3 className="bk-step__title">Quase lá! Seus dados</h3>
                     <div className="bk-form__grid">
                       <label className="bk-field bk-field--full" htmlFor="bk-name">
@@ -943,16 +953,6 @@ export default function BookingSection({ presetSpecialty } = {}) {
                           required
                         />
                       </label>
-                      {selectedSlot && (
-                        <div className="bk-field bk-field--full">
-                          <span>Modalidade</span>
-                          <p className={`bk-modality-note bk-modality-note--${selectedSlot.location}`}>
-                            {MODALITY_ICONS[selectedSlot.location]}
-                            Este horário é{' '}
-                            <strong>{MODALITY_LABELS[selectedSlot.location].toLowerCase()}</strong>.
-                          </p>
-                        </div>
-                      )}
                       <label className="bk-field bk-field--full" htmlFor="bk-notes">
                         <span>
                           Mensagem <em>(opcional)</em>
@@ -984,6 +984,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
               )}
             </div>
 
+            {step === 3 && (
             <aside className="bk-card bk-summary" aria-label="Resumo da consulta">
               <h4>Resumo da consulta</h4>
               <ul>
@@ -1019,6 +1020,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                 com todos os detalhes.
               </p>
             </aside>
+            )}
           </div>
         )}
       </div>

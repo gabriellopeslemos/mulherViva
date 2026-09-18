@@ -965,11 +965,42 @@ a.card-link:hover {
   color: var(--text-soft);
 }
 
+.faq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.faq-intro {
+  position: sticky;
+  top: 120px;
+  text-align: left;
+  margin: 0;
+}
+
+.faq-note {
+  margin-top: 18px;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--accent-strong);
+}
+
+@media (max-width: 860px) {
+  .faq-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .faq-intro {
+    position: static;
+  }
+}
+
 .faq-list {
   display: grid;
   gap: 14px;
   max-width: 780px;
-  margin: 0 auto;
 }
 
 .faq-item {
@@ -984,6 +1015,18 @@ a.card-link:hover {
 .faq-item:has(.faq-question[aria-expanded='true']) {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   box-shadow: var(--shadow-lg);
+}
+
+.faq-question[aria-expanded='true'] {
+  background: var(--accent-strong);
+  color: var(--surface);
+  padding: 14px 22px;
+  font-size: 15px;
+}
+
+.faq-question[aria-expanded='true'] .faq-icon {
+  border-color: color-mix(in srgb, var(--surface) 40%, transparent);
+  color: var(--surface);
 }
 
 .faq-item__heading {
@@ -1007,7 +1050,7 @@ a.card-link:hover {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .faq-question:hover {
+  .faq-question[aria-expanded='false']:hover {
     color: var(--accent-strong);
   }
 }
@@ -1052,7 +1095,7 @@ a.card-link:hover {
 
 .faq-answer p {
   margin: 0;
-  padding: 0 22px 20px;
+  padding: 18px 22px 20px;
   color: var(--text-soft);
   line-height: 1.7;
 }

@@ -1016,15 +1016,19 @@ function Landing() {
 
         <section className="section section--soft" id="duvidas" tabIndex={-1}>
           <div className="container">
-            <div className="section-header section-header--center" data-reveal>
-              <p className="eyebrow">Dúvidas frequentes</p>
-              <h2>Perguntas que ouvimos com carinho.</h2>
-              <p>
-                Reunimos aqui as dúvidas mais comuns antes de uma primeira
-                consulta — se algo ainda não estiver claro, é só chamar.
-              </p>
+            <div className="faq-grid">
+              <div className="section-header faq-intro" data-reveal>
+                <p className="eyebrow">Dúvidas frequentes</p>
+                <h2>Perguntas que ajudam você a se sentir mais segura.</h2>
+                <p>
+                  Separamos aqui as dúvidas mais comuns sobre a consulta, o
+                  atendimento e o cuidado com a sua saúde. Se quiser saber algo
+                  mais, estou por aqui.
+                </p>
+                <p className="faq-note" aria-hidden="true">Sua saúde é prioridade ♡</p>
+              </div>
+              <FaqAccordion />
             </div>
-            <FaqAccordion />
           </div>
         </section>
 

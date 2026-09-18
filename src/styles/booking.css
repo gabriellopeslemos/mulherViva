@@ -26,6 +26,35 @@
   align-items: start;
 }
 
+/* Antes da etapa de dados, o resumo não existe — a agenda ocupa tudo. */
+.bk-shell--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bk-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.bk-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.bk-back:hover {
+  color: var(--text-strong);
+}
+
 .bk-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -566,30 +595,6 @@
 .bk-slot.is-selected .bk-slot__mode {
   color: var(--accent-contrast);
   opacity: 0.85;
-}
-
-.bk-modality-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
-  font-size: 0.92rem;
-  color: var(--text-soft);
-}
-
-.bk-modality-note svg {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  color: var(--accent);
-}
-
-.bk-modality-note strong {
-  color: var(--text-strong);
 }
 
 /* ---- form ---- */
