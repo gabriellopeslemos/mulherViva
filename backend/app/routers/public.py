@@ -17,6 +17,8 @@ from ..schemas import (
     BlogPostOut,
     BookingIn,
     ManageAppointmentOut,
+    RecoverBookingIn,
+    RecoverBookingOut,
     RescheduleIn,
     SlotOut,
     SlotsDayOut,
@@ -32,6 +34,26 @@ from ..services.slots import get_available_slots, has_overlap
 router = APIRouter(prefix="/api", tags=["public"])
 
 MAX_PENDING_PER_CONTACT_PER_DAY = 3
+
+# "Quero reagendar": how many link re-sends one e-mail address may trigger per
+# hour. In-process only (resets on restart), which is enough to stop a form
+# being used to flood someone's inbox.
+MAX_RECOVER_PER_EMAIL_PER_HOUR = 3
+_recover_attempts: dict[str, list[datetime]] = {}
+RECOVER_MESSAGE = (
+    "Se houver uma consulta futura com esse e-mail, enviamos o link para "
+    "reagendar ou cancelar. Confira também a caixa de spam."
+)
+
+
+def _recover_rate_limited(email: str, now: datetime) -> bool:
+    cutoff = now - timedelta(hours=1)
+    attempts = [t for t in _recover_attempts.get(email, []) if t > cutoff]
+    limited = len(attempts) >= MAX_RECOVER_PER_EMAIL_PER_HOUR
+    if not limited:
+        attempts.append(now)
+    _recover_attempts[email] = attempts
+    return limited
 
 
 def _appt_snapshot(appointment: Appointment, specialty_name: str) -> dict:
@@ -312,6 +334,43 @@ def reschedule_managed_booking(
         can_modify=_can_modify(appointment, window),
         cancellation_window_hours=window,
     )
+
+
+@router.post("/bookings/recover", response_model=RecoverBookingOut)
+def recover_booking_links(body: RecoverBookingIn, db: Session = Depends(get_db)):
+    """Re-sends the manage link(s) for every upcoming appointment of an e-mail.
+
+    Always answers the same message, whether or not the e-mail is known, so the
+    form can't be used to check who is a patient.
+    """
+    email = body.email.strip().lower()
+    if _recover_rate_limited(email, datetime.now()):
+        return RecoverBookingOut(message=RECOVER_MESSAGE)
+
+    today = datetime.now().date()
+    appointments = db.scalars(
+        select(Appointment)
+        .where(
+            func.lower(Appointment.client_email) == email,
+            Appointment.date >= today,
+            Appointment.status.in_(("pending", "confirmed")),
+            Appointment.token.is_not(None),
+        )
+        .order_by(Appointment.date, Appointment.start_time)
+    ).all()
+
+    if appointments:
+        snapshots = []
+        for appointment in appointments:
+            specialty = db.get(Specialty, appointment.specialty_id)
+            snapshots.append(
+                _appt_snapshot(appointment, specialty.name if specialty else "")
+            )
+        notifications.notify_booking_links(
+            appointments[0].client_email, appointments[0].client_name, snapshots
+        )
+
+    return RecoverBookingOut(message=RECOVER_MESSAGE)
 
 
 @router.post("/waitlist", response_model=WaitlistOut, status_code=status.HTTP_201_CREATED)

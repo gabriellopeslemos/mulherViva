@@ -858,6 +858,149 @@ def send_internal_new_booking(
     )
 
 
+def booking_links_html(client_name: str, appointments: list[dict]) -> str:
+    """E-mail listing every upcoming appointment with its manage link.
+
+    Sent when the patient asks for their manage link(s) again from the site.
+    Each item in ``appointments`` is a dict with ``specialty_name``, ``date``,
+    ``start_time``, ``end_time``, ``type`` and ``manage_link``.
+    """
+    first_name = html.escape(client_name.strip().split()[0] if client_name.strip() else "")
+
+    items = ""
+    for appt in appointments:
+        modality_label = MODALITY_LABELS.get(appt["type"], html.escape(appt["type"]))
+        time_str = f"{format_time_pt(appt['start_time'])} &ndash; {format_time_pt(appt['end_time'])}"
+        items += f"""
+                <tr>
+                  <td style="padding-top: 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7ebf0" style="background-color: #f7ebf0; border-radius: 16px;">
+                      <tr>
+                        <td style="padding: 20px 24px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            {_detail_row("Data", format_date_pt(appt["date"]))}
+                            {_detail_row("Horário", time_str)}
+                            {_detail_row("Especialidade", html.escape(appt["specialty_name"]))}
+                            {_detail_row("Modalidade", modality_label, last=True)}
+                          </table>
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 16px;">
+                            <tr>
+                              <td bgcolor="#9a4067" style="background-color: #9a4067; border-radius: 12px;">
+                                <a href="{html.escape(appt["manage_link"])}" style="display: inline-block; padding: 12px 22px; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none;">Reagendar ou cancelar</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>"""
+
+    plural = len(appointments) > 1
+    intro = (
+        "Aqui estão os links pessoais das suas próximas consultas. Por eles você pode reagendar ou cancelar sem precisar ligar."
+        if plural
+        else "Aqui está o link pessoal da sua próxima consulta. Por ele você pode reagendar ou cancelar sem precisar ligar."
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seu link de gerenciamento</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #faf5f2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #faf5f2; padding: 32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%;">
+
+          <!-- Cabecalho / marca -->
+          <tr>
+            <td style="padding: 0 0 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="56" height="56" align="center" valign="middle" bgcolor="#9a4067" style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #9a4067, #74284a);">
+                    <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #ffffff;">MV</span>
+                  </td>
+                  <td style="padding-left: 14px;">
+                    <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #74284a;">Mulher Viva</span><br />
+                    <span style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; letter-spacing: 1px; color: #5d4250;">Medicina Integrativa da Saúde Feminina</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card principal -->
+          <tr>
+            <td bgcolor="#fffdfc" style="background-color: #fffdfc; border: 1px solid #e8d4d8; border-radius: 24px; padding: 40px 36px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <span style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #b9854c;">{"Suas consultas" if plural else "Sua consulta"}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 14px;">
+                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 700; line-height: 1.25; color: #2b1421;">Olá, {first_name}!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 12px;">
+                    <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 16px; line-height: 1.6; color: #3a2230;">
+                      {intro}
+                    </p>
+                  </td>
+                </tr>
+                {items}
+                <tr>
+                  <td style="padding-top: 28px;">
+                    <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; line-height: 1.6; color: #5d4250;">
+                      Se você não pediu este e-mail, pode ignorá-lo. Os links são pessoais: não os compartilhe.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 28px; border-top: 1px solid #e8d4d8;">
+                    <p style="margin: 28px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #74284a;">
+                      Com carinho,<br />Equipe Mulher Viva
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Rodape -->
+          <tr>
+            <td align="center" style="padding: 24px 8px 0;">
+              <p style="margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 12px; line-height: 1.6; color: #5d4250;">
+                Mulher Viva &middot; Medicina Integrativa da Saúde Feminina<br />
+                Você recebeu este email porque pediu seu link de gerenciamento em nosso site.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_booking_links(to_email: str, client_name: str, appointments: list[dict]) -> bool:
+    subject = (
+        "Seus links para reagendar ou cancelar"
+        if len(appointments) > 1
+        else "Seu link para reagendar ou cancelar"
+    )
+    body_html = booking_links_html(client_name=client_name, appointments=appointments)
+    return _send_resend(to_email, subject, body_html, log_label="email de links de gerenciamento")
+
+
 def send_booking_reminder(
     to_email: str,
     client_name: str,

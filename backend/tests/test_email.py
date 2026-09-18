@@ -427,3 +427,81 @@ def test_send_internal_new_booking_posts_to_resend(monkeypatch):
     assert captured["json"]["to"] == ["equipe@mulherviva.com.br"]
     assert "Maria Souza" in captured["json"]["subject"]
     assert "Ginecologia" in captured["json"]["html"]
+
+
+def test_booking_links_html_lists_every_appointment():
+    from app.services.email import booking_links_html
+
+    html_out = booking_links_html(
+        client_name="Maria Souza",
+        appointments=[
+            {
+                "specialty_name": "Ginecologia",
+                "date": date(2026, 6, 11),
+                "start_time": time(9, 0),
+                "end_time": time(10, 0),
+                "type": "online",
+                "manage_link": "https://site/?manage=tok1",
+            },
+            {
+                "specialty_name": "Obstetrícia",
+                "date": date(2026, 6, 18),
+                "start_time": time(14, 30),
+                "end_time": time(15, 30),
+                "type": "presencial_bsb",
+                "manage_link": "https://site/?manage=tok2",
+            },
+        ],
+    )
+    assert "Olá, Maria!" in html_out
+    assert "quinta-feira, 11 de junho de 2026" in html_out
+    assert "quinta-feira, 18 de junho de 2026" in html_out
+    assert "https://site/?manage=tok1" in html_out
+    assert "https://site/?manage=tok2" in html_out
+    assert html_out.count("Reagendar ou cancelar") == 2
+    assert "Suas consultas" in html_out
+
+
+def test_booking_links_html_escapes_untrusted_fields():
+    from app.services.email import booking_links_html
+
+    html_out = booking_links_html(
+        client_name="<b>Eva</b>",
+        appointments=[
+            {
+                "specialty_name": "<script>x</script>",
+                "date": date(2026, 6, 11),
+                "start_time": time(9, 0),
+                "end_time": time(10, 0),
+                "type": "online",
+                "manage_link": "https://site/?manage=tok\"><img>",
+            }
+        ],
+    )
+    assert "<script>" not in html_out
+    assert "&lt;script&gt;" in html_out
+    assert 'tok&quot;&gt;' in html_out
+    assert "Sua consulta" in html_out
+
+
+def test_send_booking_links_without_api_key_returns_false(monkeypatch):
+    monkeypatch.setattr(
+        email_service, "get_settings", lambda: type("S", (), {"resend_api_key": ""})()
+    )
+    assert (
+        email_service.send_booking_links(
+            "a@b.com",
+            "Ana",
+            [
+                {
+                    "specialty_name": "G",
+                    "date": date(2026, 6, 11),
+                    "start_time": time(9, 0),
+                    "end_time": time(10, 0),
+                    "type": "online",
+                    "manage_link": "https://x",
+                }
+            ],
+        )
+        is False
+    )
