@@ -5,14 +5,36 @@ import '../styles/booking.css'
 
 const WEEKDAY_HEAD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const MONTHS_LONG = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
 ]
 const WEEKDAYS_LONG = [
-  'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira',
-  'quinta-feira', 'sexta-feira', 'sábado',
+  'domingo',
+  'segunda-feira',
+  'terça-feira',
+  'quarta-feira',
+  'quinta-feira',
+  'sexta-feira',
+  'sábado',
 ]
 const MAX_MONTHS_AHEAD = 2
+
+const STEPS = [
+  { id: 1, label: 'Data e horário' },
+  { id: 2, label: 'Dados pessoais' },
+  { id: 3, label: 'Motivo da consulta' },
+  { id: 4, label: 'Confirmação' },
+]
 
 function toIso(date) {
   const y = date.getFullYear()
@@ -35,9 +57,28 @@ function fmtTime(t) {
   return t.slice(0, 5)
 }
 
+function fmtLongDate(iso) {
+  const d = parseIso(iso)
+  const text = `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} de ${MONTHS_LONG[d.getMonth()]}`
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+function fmtShortDate(iso) {
+  const d = parseIso(iso)
+  return `${d.getDate()} de ${MONTHS_LONG[d.getMonth()]}`
+}
+
 function startOfToday() {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
+// "Hoje", "Amanhã" or the weekday name, for the "next free slot" shortcut.
+function relativeDayLabel(iso, today) {
+  const diff = Math.round((parseIso(iso) - today) / 86_400_000)
+  if (diff === 0) return 'Hoje'
+  if (diff === 1) return 'Amanhã'
+  return WEEKDAYS_LONG[parseIso(iso).getDay()]
 }
 
 function periodOf(start) {
@@ -49,57 +90,62 @@ function periodOf(start) {
 
 const PERIOD_ORDER = ['Manhã', 'Tarde', 'Noite']
 
-// Pick a column count that splits `n` slots into evenly-filled rows: 4→2 (2×2),
-// 6→3 (2×3), 8→2 (4×2), 9→3 (3×3). Prefer 3, then 2, falling back for primes.
-function bestColumns(n) {
-  if (n <= 3) return n
-  if (n % 3 === 0) return 3
-  if (n % 2 === 0) return 2
-  return 3
-}
-
-const MODALITY_LABELS = {
-  online: 'Online',
-  presencial_bsb: 'Presencial — Brasília',
-  presencial_rj: 'Presencial — Rio de Janeiro',
-}
-
 const HOUSE_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5" />
   </svg>
 )
 
-const MODALITY_ICONS = {
-  presencial_bsb: HOUSE_ICON,
-  presencial_rj: HOUSE_ICON,
-  online: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="12" rx="1.5" />
-      <path d="M8 21h8M12 17v4" />
-    </svg>
-  ),
-}
+const VIDEO_ICON = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="6" width="13" height="12" rx="2" />
+    <path d="m16 10 5-3v10l-5-3" />
+  </svg>
+)
 
-const PERIOD_ICONS = {
-  Manhã: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-      <path d="M12 3v2M4.2 6.2l1.4 1.4M3 13h2M19 13h2M18.4 6.2 17 7.6M6 17a6 6 0 0 1 12 0" />
-      <path d="M3 21h18" />
-    </svg>
-  ),
-  Tarde: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4.5" />
-      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19" />
-    </svg>
-  ),
-  Noite: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
-    </svg>
-  ),
-}
+// Order here is the order of the segmented control.
+const MODALITIES = [
+  {
+    id: 'online',
+    label: 'Online',
+    title: 'Telemedicina (Online)',
+    description: 'Atendimento humanizado por vídeo',
+    icon: VIDEO_ICON,
+  },
+  {
+    id: 'presencial_rj',
+    label: 'Rio de Janeiro',
+    title: 'Presencial — Rio de Janeiro',
+    description: 'Atendimento no consultório',
+    icon: HOUSE_ICON,
+  },
+  {
+    id: 'presencial_bsb',
+    label: 'Brasília',
+    title: 'Presencial — Brasília',
+    description: 'Atendimento no consultório',
+    icon: HOUSE_ICON,
+  },
+]
+
+const MODALITY_BY_ID = Object.fromEntries(MODALITIES.map((m) => [m.id, m]))
+const MODALITY_LABELS = Object.fromEntries(MODALITIES.map((m) => [m.id, m.title]))
 
 function buildMonthMatrix(cursor) {
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
@@ -120,15 +166,71 @@ function buildMonthMatrix(cursor) {
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M4.5 12.5 10 18 19.5 7" />
+    </svg>
+  )
+}
+
+function ArrowIcon({ dir = 'right' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {dir === 'right' ? <path d="M5 12h14M13 6l6 6-6 6" /> : <path d="M19 12H5M11 6l-6 6 6 6" />}
+    </svg>
+  )
+}
+
+function ChevronIcon({ dir }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {dir === 'left' ? <path d="m14.5 6-6 6 6 6" /> : <path d="m9.5 6 6 6-6 6" />}
+    </svg>
+  )
+}
+
+function BoltIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
     </svg>
   )
 }
 
 function CalendarGlyph() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
       <path d="M3.5 9.5h17M8 3v4M16 3v4" />
     </svg>
@@ -148,18 +250,27 @@ export default function BookingSection({ presetSpecialty } = {}) {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' })
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    notes: '',
+  })
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(null)
   const [error, setError] = useState(null)
-  // Optional multi-select modality filter (subset of MODALITY_LABELS keys)
-  // that narrows the calendar and slot list. Empty array ⇒ no filter.
-  const [modalityFilters, setModalityFilters] = useState([])
+  // Single-select modality (online / presencial RJ / presencial BSB). The
+  // calendar and the slot list only show slots of the chosen modality.
+  const [modality, setModality] = useState(MODALITIES[0].id)
 
   // "Join the waitlist" mini-form, shown as an opt-in below the calendar.
   const [waitlistOpen, setWaitlistOpen] = useState(false)
   const [waitlistSpecialtyId, setWaitlistSpecialtyId] = useState(null)
-  const [waitlistForm, setWaitlistForm] = useState({ name: '', email: '', phone: '' })
+  const [waitlistForm, setWaitlistForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  })
   const [waitlistSubmitting, setWaitlistSubmitting] = useState(false)
   const [waitlistError, setWaitlistError] = useState(null)
   const [waitlistDone, setWaitlistDone] = useState(false)
@@ -228,28 +339,23 @@ export default function BookingSection({ presetSpecialty } = {}) {
   }, [specialties, monthPart, cursor, monthCache])
 
   const monthMaps = useMemo(
-    () =>
-      specialties
-        .map((s) => monthCache[`${s.id}:${monthPart}`])
-        .filter(Boolean),
+    () => specialties.map((s) => monthCache[`${s.id}:${monthPart}`]).filter(Boolean),
     [specialties, monthCache, monthPart],
   )
   const loadingMonth = specialties.length > 0 && monthMaps.length < specialties.length
 
-  // Predicate honouring the active modality filters (none selected ⇒ everything).
-  const matchesFilter = (slot) =>
-    modalityFilters.length === 0 || modalityFilters.includes(slot.location)
+  const matchesFilter = (slot) => slot.location === modality
 
-  // Filter-independent: are there ANY slots this month? Gates the filter chips.
-  const monthHasAnySlots = monthMaps.some((m) =>
-    Object.values(m).some((s) => s.length > 0),
-  )
-  const monthHasSlots = monthMaps.some((m) =>
-    Object.values(m).some((s) => s.some(matchesFilter)),
-  )
+  const monthHasSlots = monthMaps.some((m) => Object.values(m).some((s) => s.some(matchesFilter)))
 
-  const dayHasAvailability = (iso) =>
-    monthMaps.some((m) => (m[iso]?.some(matchesFilter) ?? false))
+  const dayHasAvailability = (iso) => monthMaps.some((m) => m[iso]?.some(matchesFilter) ?? false)
+
+  const today = startOfToday()
+  const todayIso = toIso(today)
+  const minMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const maxMonth = new Date(today.getFullYear(), today.getMonth() + MAX_MONTHS_AHEAD, 1)
+  const canPrevMonth = cursor > minMonth
+  const canNextMonth = cursor < maxMonth
 
   // Specialties that actually have an open slot on the picked date.
   const dateSpecialties = useMemo(() => {
@@ -259,7 +365,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
       (s) => monthCache[`${s.id}:${part}`]?.[selectedDate]?.some(matchesFilter) ?? false,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [specialties, monthCache, selectedDate, modalityFilters])
+  }, [specialties, monthCache, selectedDate, modality])
 
   // Times are the same for every specialty, so we can show them right away —
   // using the chosen specialty, or the first available one as a stand-in.
@@ -270,7 +376,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
     const key = `${slotSpecialtyId}:${monthPartOf(selectedDate)}`
     return (monthCache[key]?.[selectedDate] || []).filter(matchesFilter)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthCache, selectedDate, slotSpecialtyId, modalityFilters])
+  }, [monthCache, selectedDate, slotSpecialtyId, modality])
 
   const slotGroups = useMemo(() => {
     const groups = { Manhã: [], Tarde: [], Noite: [] }
@@ -281,11 +387,18 @@ export default function BookingSection({ presetSpecialty } = {}) {
     }))
   }, [daySlots])
 
-  const today = startOfToday()
-  const minMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-  const maxMonth = new Date(today.getFullYear(), today.getMonth() + MAX_MONTHS_AHEAD, 1)
-  const canPrevMonth = cursor > minMonth
-  const canNextMonth = cursor < maxMonth
+  // Specialties that offer exactly the chosen slot (same start + modality).
+  // Slot grids differ per specialty duration, so this can be narrower than
+  // `dateSpecialties`.
+  const slotSpecialties = useMemo(() => {
+    if (!selectedDate || !selectedSlot) return []
+    const part = monthPartOf(selectedDate)
+    return specialties.filter((s) =>
+      (monthCache[`${s.id}:${part}`]?.[selectedDate] || []).some(
+        (x) => x.start === selectedSlot.start && x.location === selectedSlot.location,
+      ),
+    )
+  }, [specialties, monthCache, selectedDate, selectedSlot])
 
   // A specialty card's "Agendar Consulta" link sets this to its title; once
   // specialties load we resolve it to a real specialty id (names differ
@@ -296,6 +409,33 @@ export default function BookingSection({ presetSpecialty } = {}) {
     const needle = presetSpecialty.toLowerCase()
     return specialties.find((s) => s.name.toLowerCase().includes(needle))?.id ?? null
   }, [presetSpecialty, specialties])
+
+  // Earliest open slot for the chosen modality across every month loaded so
+  // far, optionally restricted to a set of specialties. Drives both the
+  // "Próximo horário livre" shortcut and the initial auto-selection.
+  const findNextFree = (targetSpecialties) => {
+    let best = null
+    targetSpecialties.forEach((s) => {
+      Object.entries(monthCache).forEach(([key, map]) => {
+        if (!key.startsWith(`${s.id}:`)) return
+        Object.entries(map).forEach(([iso, slots]) => {
+          if (iso < todayIso) return
+          slots.filter(matchesFilter).forEach((slot) => {
+            if (!best || iso < best.iso || (iso === best.iso && slot.start < best.slot.start)) {
+              best = { iso, slot, specialtyId: s.id }
+            }
+          })
+        })
+      })
+    })
+    return best
+  }
+
+  const nextFree = useMemo(
+    () => findNextFree(specialties),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [monthCache, specialties, modality, todayIso],
+  )
 
   // Tracks which preset we're currently honouring so a repeat click on the
   // same card doesn't re-run the search, while a click on a *different* card
@@ -320,40 +460,23 @@ export default function BookingSection({ presetSpecialty } = {}) {
   useEffect(() => {
     if (selectedDate || loadingMonth) return
     if (specialties.length === 0) return
-    // With no preset, only run once. With a preset, `targetSpecialties`
-    // below falls back to searching all specialties if it doesn't match one
-    // (e.g. still loading), so this only needs to gate the no-preset case.
     if (!presetSpecialty && autoPickedRef.current) return
 
     const targetSpecialties = presetSpecialtyId
       ? specialties.filter((s) => s.id === presetSpecialtyId)
       : specialties
-
-    const part = `${cursor.getFullYear()}-${cursor.getMonth()}`
-    const slotsOf = (id, iso) =>
-      (monthCache[`${id}:${part}`]?.[iso] || []).filter(matchesFilter)
-    const hasSlots = (id, iso) => slotsOf(id, iso).length > 0
-
-    const firstIso = buildMonthMatrix(cursor)
-      .flat()
-      .filter(
-        (day) =>
-          day.getMonth() === cursor.getMonth() &&
-          day >= today &&
-          targetSpecialties.some((s) => hasSlots(s.id, toIso(day))),
-      )
-      .map((day) => toIso(day))[0]
+    const found = findNextFree(targetSpecialties)
 
     // Intentional one-shot sync of selection from asynchronously-loaded agenda
     // data; the ref guard keeps it from cascading.
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (firstIso) {
-      const spec = targetSpecialties.find((s) => hasSlots(s.id, firstIso))
+    if (found) {
       autoPickedRef.current = true
-      setSelectedDate(firstIso)
-      setSpecialtyId(spec.id)
-      setSelectedSlot(slotsOf(spec.id, firstIso)[0])
-      setStep(2)
+      const d = parseIso(found.iso)
+      setCursor(new Date(d.getFullYear(), d.getMonth(), 1))
+      setSelectedDate(found.iso)
+      setSpecialtyId(found.specialtyId)
+      setSelectedSlot(found.slot)
     } else if (canNextMonth) {
       setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
     } else {
@@ -361,20 +484,28 @@ export default function BookingSection({ presetSpecialty } = {}) {
     }
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMonth, monthCache, specialties, cursor, today, selectedDate, canNextMonth, modalityFilters, presetSpecialty, presetSpecialtyId])
+  }, [
+    loadingMonth,
+    monthCache,
+    specialties,
+    cursor,
+    selectedDate,
+    canNextMonth,
+    modality,
+    presetSpecialty,
+    presetSpecialtyId,
+  ])
 
-  // The modality chips filter the calendar. Toggling re-runs the auto-pick so
-  // the soonest matching date and time are surfaced for the chosen modality.
-  const toggleFilter = (type) => {
+  // Switching modality re-runs the auto-pick so the soonest matching date and
+  // time are surfaced right away.
+  const changeModality = (id) => {
+    if (id === modality) return
     setError(null)
-    setModalityFilters((cur) =>
-      cur.includes(type) ? cur.filter((t) => t !== type) : [...cur, type],
-    )
+    setModality(id)
     autoPickedRef.current = false
     setSelectedDate(null)
     setSpecialtyId(null)
     setSelectedSlot(null)
-    setStep(1)
     setCursor(() => new Date(today.getFullYear(), today.getMonth(), 1))
   }
 
@@ -383,28 +514,13 @@ export default function BookingSection({ presetSpecialty } = {}) {
     // patient re-picks one among those available on that date.
     const keptSpecialty =
       specialtyId &&
-      (monthCache[`${specialtyId}:${monthPartOf(iso)}`]?.[iso]?.length ?? 0) > 0
+      (monthCache[`${specialtyId}:${monthPartOf(iso)}`]?.[iso]?.some(matchesFilter) ?? false)
         ? specialtyId
         : null
     setSelectedDate(iso)
     setSpecialtyId(keptSpecialty)
     setSelectedSlot(null)
     setError(null)
-    setStep(2)
-  }
-
-  const pickSpecialty = (id) => {
-    setSpecialtyId(id)
-    setError(null)
-    // Drop the chosen time only if it no longer exists for this specialty.
-    if (selectedSlot) {
-      const slots =
-        monthCache[`${id}:${monthPartOf(selectedDate)}`]?.[selectedDate] || []
-      const stillValid = slots.some(
-        (s) => s.start === selectedSlot.start && s.location === selectedSlot.location,
-      )
-      if (!stillValid) setSelectedSlot(null)
-    }
   }
 
   const pickSlot = (slot) => {
@@ -412,8 +528,35 @@ export default function BookingSection({ presetSpecialty } = {}) {
     setError(null)
   }
 
-  const goToForm = () => {
-    if (specialtyId && selectedSlot) setStep(3)
+  const pickNextFree = () => {
+    if (!nextFree) return
+    const d = parseIso(nextFree.iso)
+    setCursor(new Date(d.getFullYear(), d.getMonth(), 1))
+    setSelectedDate(nextFree.iso)
+    setSelectedSlot(nextFree.slot)
+    setSpecialtyId((cur) =>
+      cur &&
+      monthCache[`${cur}:${monthPartOf(nextFree.iso)}`]?.[nextFree.iso]?.some(
+        (x) => x.start === nextFree.slot.start && x.location === nextFree.slot.location,
+      )
+        ? cur
+        : nextFree.specialtyId,
+    )
+    setError(null)
+  }
+
+  const goToStep = (target) => {
+    setError(null)
+    if (target === 3) {
+      // Entering "Motivo da consulta": make sure the specialty on record can
+      // actually be booked in the chosen slot, and pre-select when obvious.
+      const valid = slotSpecialties.some((s) => s.id === specialtyId)
+      if (!valid) {
+        const preset = slotSpecialties.find((s) => s.id === presetSpecialtyId)
+        setSpecialtyId(preset?.id ?? (slotSpecialties.length === 1 ? slotSpecialties[0].id : null))
+      }
+    }
+    setStep(target)
   }
 
   const reset = () => {
@@ -424,11 +567,11 @@ export default function BookingSection({ presetSpecialty } = {}) {
     setForm({ name: '', phone: '', email: '', notes: '' })
     setMonthCache({})
     setError(null)
+    autoPickedRef.current = false
     setStep(1)
   }
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const handleSubmit = async () => {
     setError(null)
     setSubmitting(true)
     try {
@@ -447,7 +590,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
       if (err.status === 409) {
         setMonthCache({})
         setSelectedSlot(null)
-        setStep(2)
+        setStep(1)
         setError('Esse horário acabou de ser reservado. Escolha outro, por favor.')
       } else {
         setError(err.detail || 'Não foi possível concluir o agendamento. Tente novamente.')
@@ -478,9 +621,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
       })
       setWaitlistDone(true)
     } catch (err) {
-      setWaitlistError(
-        err.detail || 'Não foi possível entrar na lista de espera. Tente novamente.',
-      )
+      setWaitlistError(err.detail || 'Não foi possível entrar na lista de espera. Tente novamente.')
     } finally {
       setWaitlistSubmitting(false)
     }
@@ -501,7 +642,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
         transition: { duration: 0.26, ease: 'easeOut' },
       }
 
-  const selectedDateObj = selectedDate ? parseIso(selectedDate) : null
+  const activeModality = MODALITY_BY_ID[modality]
 
   return (
     <section className="section bk-section" id="agendamento" tabIndex={-1} ref={sectionRef}>
@@ -516,8 +657,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
           <p className="eyebrow">Agendamento online</p>
           <h2>Sua consulta, no seu tempo.</h2>
           <p>
-            Escolha o dia, a especialidade e o horário em poucos toques. A
-            confirmação chega na hora, no seu e-mail.
+            Escolha o dia, a especialidade e o horário em poucos toques. A confirmação chega na
+            hora, no seu e-mail.
           </p>
         </motion.div>
 
@@ -535,8 +676,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
             <h3>Consulta confirmada!</h3>
             <p className="bk-success__lead">
               Tudo certo! Enviamos um e-mail de confirmação para{' '}
-              <strong>{confirmation.client_email}</strong> com os detalhes da
-              sua consulta.
+              <strong>{confirmation.client_email}</strong> com os detalhes da sua consulta.
             </p>
             <dl className="bk-success__details">
               <div>
@@ -545,11 +685,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
               </div>
               <div>
                 <dt>Data</dt>
-                <dd>
-                  {WEEKDAYS_LONG[parseIso(confirmation.date).getDay()]},{' '}
-                  {parseIso(confirmation.date).getDate()} de{' '}
-                  {MONTHS_LONG[parseIso(confirmation.date).getMonth()]}
-                </dd>
+                <dd>{fmtLongDate(confirmation.date)}</dd>
               </div>
               <div>
                 <dt>Horário</dt>
@@ -567,459 +703,617 @@ export default function BookingSection({ presetSpecialty } = {}) {
             </button>
           </motion.div>
         ) : (
-          <div className={`bk-shell${step === 3 ? '' : ' bk-shell--solo'}`}>
-            <div className="bk-card bk-main">
-              <AnimatePresence mode="wait" initial={false}>
-                {step <= 2 && (
-                  <motion.div key="schedule" className="bk-step bk-schedule" {...motionProps}>
-                    <div className="bk-schedule__head">
-                      <h3 className="bk-step__title">Escolha o melhor dia</h3>
-                      {monthHasAnySlots && (
-                        <div
-                          className="bk-filter"
-                          role="group"
-                          aria-label="Filtrar horários por modalidade"
-                        >
-                          {Object.keys(MODALITY_LABELS).map((loc) => (
-                            <button
-                              key={loc}
-                              type="button"
-                              className={`bk-filterbtn${modalityFilters.includes(loc) ? ' is-active' : ''}`}
-                              onClick={() => toggleFilter(loc)}
-                              aria-pressed={modalityFilters.includes(loc)}
-                            >
-                              {MODALITY_ICONS[loc]}
-                              {MODALITY_LABELS[loc]}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="bk-schedule__cal">
-                      <div className="bk-calendar" aria-busy={loadingMonth}>
-                        <div className="bk-calendar__nav">
-                          <button
-                            type="button"
-                            className="bk-iconbtn"
-                            onClick={() =>
-                              setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))
-                            }
-                            disabled={!canPrevMonth}
-                            aria-label="Mês anterior"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="m14.5 6-6 6 6 6" />
-                            </svg>
-                          </button>
-                          <strong>
-                            {MONTHS_LONG[cursor.getMonth()]} {cursor.getFullYear()}
-                          </strong>
-                          <button
-                            type="button"
-                            className="bk-iconbtn"
-                            onClick={() =>
-                              setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
-                            }
-                            disabled={!canNextMonth}
-                            aria-label="Próximo mês"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="m9.5 6 6 6-6 6" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="bk-calendar__grid" role="group" aria-label="Dias do mês">
-                          {WEEKDAY_HEAD.map((w, i) => (
-                            <span key={`${w}-${i}`} className="bk-calendar__weekday" aria-hidden="true">
-                              {w}
-                            </span>
-                          ))}
-                          {buildMonthMatrix(cursor)
-                            .flat()
-                            .map((day) => {
-                              const iso = toIso(day)
-                              const inMonth = day.getMonth() === cursor.getMonth()
-                              const enabled = inMonth && dayHasAvailability(iso)
-                              const isToday = iso === toIso(today)
-                              return (
-                                <button
-                                  key={iso}
-                                  type="button"
-                                  className={[
-                                    'bk-calendar__day',
-                                    inMonth ? '' : 'is-outside',
-                                    enabled ? 'is-available' : '',
-                                    selectedDate === iso ? 'is-selected' : '',
-                                    isToday ? 'is-today' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                  disabled={!enabled}
-                                  onClick={() => pickDate(iso)}
-                                  aria-label={`${day.getDate()} de ${MONTHS_LONG[day.getMonth()]}${enabled ? ', com horários disponíveis' : ', indisponível'}`}
-                                >
-                                  <span>{day.getDate()}</span>
-                                  {enabled && <i className="bk-calendar__dot" aria-hidden="true" />}
-                                </button>
-                              )
-                            })}
-                        </div>
-                        {loadingMonth && !error && <p className="bk-hint">Carregando agenda…</p>}
-                        {!loadingMonth && !monthHasSlots && (
-                          <p className="bk-hint">
-                            Sem horários neste mês. Tente o próximo ou fale conosco
-                            pelo formulário de contato.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bk-schedule__side">
-                      {!selectedDateObj ? (
-                        <div className="bk-side-empty">
-                          <CalendarGlyph />
-                          <p>
-                            Selecione uma data no calendário para ver os
-                            horários disponíveis.
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="bk-side-date">
-                            {WEEKDAYS_LONG[selectedDateObj.getDay()]},{' '}
-                            {selectedDateObj.getDate()} de{' '}
-                            {MONTHS_LONG[selectedDateObj.getMonth()]}
-                          </p>
-
-                          {dateSpecialties.length === 0 ? (
-                            <p className="bk-hint">
-                              Nenhum horário disponível nesta data. Escolha outro dia.
-                            </p>
-                          ) : (
-                            <div className="bk-side-block">
-                              <span className="bk-side-block__label">Horário</span>
-                              {slotGroups.map((group) => (
-                                <div key={group.label} className="bk-slot-group">
-                                  <span className="bk-slot-group__label">
-                                    {PERIOD_ICONS[group.label]}
-                                    {group.label}
-                                  </span>
-                                  <div
-                                    className="bk-slots"
-                                    style={{
-                                      gridTemplateColumns: `repeat(${bestColumns(group.slots.length)}, minmax(0, 1fr))`,
-                                    }}
-                                  >
-                                    {group.slots.map((slot) => {
-                                      const isSel =
-                                        selectedSlot?.start === slot.start &&
-                                        selectedSlot?.location === slot.location
-                                      return (
-                                        <button
-                                          key={`${slot.start}-${slot.location}`}
-                                          type="button"
-                                          className={`bk-slot${isSel ? ' is-selected' : ''}`}
-                                          onClick={() => pickSlot(slot)}
-                                        >
-                                          <span className="bk-slot__time">{fmtTime(slot.start)}</span>
-                                          <span className={`bk-slot__mode bk-slot__mode--${slot.location}`}>
-                                            {MODALITY_ICONS[slot.location]}
-                                            {MODALITY_LABELS[slot.location]}
-                                          </span>
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              ))}
-                              {slotGroups.length === 0 && (
-                                <p className="bk-hint">
-                                  Os horários deste dia acabaram de ser preenchidos.
-                                  Escolha outra data.
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {dateSpecialties.length > 0 && (
-                            <div className="bk-side-block">
-                              <span className="bk-side-block__label">Especialidade</span>
-                              <div className="bk-chips" role="list">
-                                {dateSpecialties.map((s) => (
-                                  <button
-                                    key={s.id}
-                                    type="button"
-                                    role="listitem"
-                                    className={`bk-chip${specialtyId === s.id ? ' is-selected' : ''}`}
-                                    onClick={() => pickSpecialty(s.id)}
-                                  >
-                                    {s.name}
-                                    <em>{s.slot_duration_min} min</em>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {dateSpecialties.length > 0 && (
-                            <button
-                              type="button"
-                              className="bk-btn bk-btn--primary bk-schedule__next"
-                              onClick={goToForm}
-                              disabled={!specialtyId || !selectedSlot}
-                            >
-                              Continuar
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <div className="bk-waitlist">
-                      {!waitlistOpen ? (
-                        <button
-                          type="button"
-                          className="bk-waitlist__toggle"
-                          onClick={openWaitlist}
-                        >
-                          Não achou o horário que queria? Entre na lista de espera
-                          para ser avisado quando novos horários aparecerem.
-                        </button>
-                      ) : waitlistDone ? (
-                        <p className="bk-waitlist__done">
-                          <CheckIcon /> Pronto! Avisaremos{' '}
-                          <strong>{waitlistForm.email}</strong> assim que um
-                          horário abrir.
-                        </p>
-                      ) : (
-                        <form className="bk-waitlist__form" onSubmit={handleWaitlistSubmit}>
-                          <h4 className="bk-waitlist__title">Entrar na lista de espera</h4>
-                          <div className="bk-form__grid">
-                            <label className="bk-field bk-field--full" htmlFor="wl-specialty">
-                              <span>Especialidade</span>
-                              <select
-                                id="wl-specialty"
-                                value={waitlistSpecialtyId || ''}
-                                onChange={(e) =>
-                                  setWaitlistSpecialtyId(Number(e.target.value))
-                                }
-                                required
-                              >
-                                <option value="" disabled>
-                                  Selecione…
-                                </option>
-                                {specialties.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    {s.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="bk-field bk-field--full" htmlFor="wl-name">
-                              <span>Nome completo</span>
-                              <input
-                                id="wl-name"
-                                type="text"
-                                autoComplete="name"
-                                value={waitlistForm.name}
-                                onChange={(e) =>
-                                  setWaitlistForm((f) => ({ ...f, name: e.target.value }))
-                                }
-                                required
-                                minLength={2}
-                              />
-                            </label>
-                            <label className="bk-field" htmlFor="wl-email">
-                              <span>E-mail</span>
-                              <input
-                                id="wl-email"
-                                type="email"
-                                autoComplete="email"
-                                value={waitlistForm.email}
-                                onChange={(e) =>
-                                  setWaitlistForm((f) => ({ ...f, email: e.target.value }))
-                                }
-                                required
-                              />
-                            </label>
-                            <label className="bk-field" htmlFor="wl-phone">
-                              <span>
-                                Telefone <em>(opcional)</em>
-                              </span>
-                              <input
-                                id="wl-phone"
-                                type="tel"
-                                inputMode="tel"
-                                autoComplete="tel"
-                                value={waitlistForm.phone}
-                                onChange={(e) =>
-                                  setWaitlistForm((f) => ({ ...f, phone: e.target.value }))
-                                }
-                              />
-                            </label>
-                          </div>
-                          {selectedDate && (
-                            <p className="bk-hint bk-waitlist__hint">
-                              Vamos priorizar horários em{' '}
-                              {WEEKDAYS_LONG[selectedDateObj.getDay()]},{' '}
-                              {selectedDateObj.getDate()} de{' '}
-                              {MONTHS_LONG[selectedDateObj.getMonth()]}.
-                            </p>
-                          )}
-                          {waitlistError && (
-                            <p className="bk-error" role="alert">
-                              {waitlistError}
-                            </p>
-                          )}
-                          <div className="bk-waitlist__actions">
-                            <button
-                              type="button"
-                              className="bk-btn bk-btn--ghost"
-                              onClick={() => setWaitlistOpen(false)}
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="submit"
-                              className="bk-btn bk-btn--primary"
-                              disabled={waitlistSubmitting || !waitlistSpecialtyId}
-                            >
-                              {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
-                            </button>
-                          </div>
-                        </form>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-
-                {step === 3 && (
-                  <motion.form
-                    key="step3"
-                    className="bk-step bk-form"
-                    onSubmit={handleSubmit}
-                    {...motionProps}
+          <div className="bk-card bk-main">
+            <ol className="bk-stepper" aria-label="Etapas do agendamento">
+              {STEPS.map((s) => {
+                const state = s.id === step ? 'current' : s.id < step ? 'done' : 'upcoming'
+                const clickable = state === 'done' && !submitting
+                return (
+                  <li
+                    key={s.id}
+                    className={`bk-stepper__item is-${state}`}
+                    aria-current={state === 'current' ? 'step' : undefined}
                   >
                     <button
                       type="button"
-                      className="bk-back"
-                      onClick={() => setStep(2)}
+                      className="bk-stepper__btn"
+                      onClick={() => clickable && goToStep(s.id)}
+                      disabled={!clickable}
+                      aria-label={`Etapa ${s.id}: ${s.label}`}
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="m14.5 6-6 6 6 6" />
-                      </svg>
-                      Voltar e editar data e horário
+                      <span className="bk-stepper__num" aria-hidden="true">
+                        {state === 'done' ? <CheckIcon /> : s.id}
+                      </span>
+                      <span className="bk-stepper__label">{s.label}</span>
                     </button>
-                    <h3 className="bk-step__title">Quase lá! Seus dados</h3>
-                    <div className="bk-form__grid">
-                      <label className="bk-field bk-field--full" htmlFor="bk-name">
-                        <span>Nome completo</span>
-                        <input
-                          id="bk-name"
-                          type="text"
-                          autoComplete="name"
-                          placeholder="Como devemos te chamar?"
-                          value={form.name}
-                          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                          required
-                          minLength={2}
-                        />
-                      </label>
-                      <label className="bk-field" htmlFor="bk-phone">
-                        <span>Telefone / WhatsApp</span>
-                        <input
-                          id="bk-phone"
-                          type="tel"
-                          inputMode="tel"
-                          autoComplete="tel"
-                          placeholder="(00) 00000-0000"
-                          value={form.phone}
-                          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                          required
-                          minLength={8}
-                        />
-                      </label>
-                      <label className="bk-field" htmlFor="bk-email">
-                        <span>E-mail</span>
-                        <input
-                          id="bk-email"
-                          type="email"
-                          inputMode="email"
-                          autoComplete="email"
-                          placeholder="voce@email.com"
-                          value={form.email}
-                          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                          required
-                        />
-                      </label>
-                      <label className="bk-field bk-field--full" htmlFor="bk-notes">
-                        <span>
-                          Mensagem <em>(opcional)</em>
-                        </span>
-                        <textarea
-                          id="bk-notes"
-                          rows={3}
-                          placeholder="Conte um pouco sobre o que você precisa"
-                          value={form.notes}
-                          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                        />
-                      </label>
-                    </div>
-                    <button className="bk-btn bk-btn--primary bk-form__submit" type="submit" disabled={submitting}>
-                      {submitting ? 'Enviando…' : 'Confirmar agendamento'}
-                    </button>
-                    <p className="bk-form__note">
-                      Sem pagamento agora. Sua consulta é confirmada na hora e
-                      você recebe os detalhes por e-mail.
+                  </li>
+                )
+              })}
+            </ol>
+            <p className="bk-stepper__caption" aria-hidden="true">
+              Etapa {step} de {STEPS.length} · <strong>{STEPS[step - 1].label}</strong>
+            </p>
+
+            <AnimatePresence mode="wait" initial={false}>
+              {step === 1 && (
+                <motion.div key="step1" className="bk-step bk-schedule" {...motionProps}>
+                  {/* ---- column 1: intro + modality ---- */}
+                  <div className="bk-schedule__intro">
+                    <h3 className="bk-schedule__title">Quando você gostaria de ser atendida?</h3>
+                    <p className="bk-schedule__lead">
+                      Escolha a modalidade, data e o horário que melhor se encaixam na sua rotina.
                     </p>
-                  </motion.form>
-                )}
-              </AnimatePresence>
 
-              {error && (
-                <p className="bk-error" role="alert">
-                  {error}
-                </p>
+                    <span className="bk-label" id="bk-modality-label">
+                      Selecione o local / formato
+                    </span>
+                    <div
+                      className="bk-segment"
+                      role="radiogroup"
+                      aria-labelledby="bk-modality-label"
+                    >
+                      {MODALITIES.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={modality === m.id}
+                          className={`bk-segment__btn${modality === m.id ? ' is-active' : ''}`}
+                          onClick={() => changeModality(m.id)}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="bk-info">
+                      <span className="bk-info__icon">{activeModality.icon}</span>
+                      <div>
+                        <strong>{activeModality.title}</strong>
+                        <span>{activeModality.description}</span>
+                      </div>
+                    </div>
+
+                    <div className="bk-nextfree" aria-live="polite">
+                      <span className="bk-nextfree__icon">
+                        <BoltIcon />
+                      </span>
+                      <div>
+                        <span className="bk-nextfree__label">Próximo horário livre:</span>
+                        {nextFree ? (
+                          <button
+                            type="button"
+                            className="bk-nextfree__link"
+                            onClick={pickNextFree}
+                          >
+                            {relativeDayLabel(nextFree.iso, today)}, {fmtShortDate(nextFree.iso)} às{' '}
+                            {fmtTime(nextFree.slot.start)}
+                          </button>
+                        ) : (
+                          <span className="bk-nextfree__empty">
+                            {loadingMonth ? 'Buscando…' : 'Nenhum nas próximas semanas'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ---- column 2: calendar ---- */}
+                  <div className="bk-panel bk-calendar" aria-busy={loadingMonth}>
+                    <div className="bk-calendar__nav">
+                      <button
+                        type="button"
+                        className="bk-iconbtn"
+                        onClick={() =>
+                          setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))
+                        }
+                        disabled={!canPrevMonth}
+                        aria-label="Mês anterior"
+                      >
+                        <ChevronIcon dir="left" />
+                      </button>
+                      <strong aria-live="polite">
+                        {MONTHS_LONG[cursor.getMonth()]} {cursor.getFullYear()}
+                      </strong>
+                      <button
+                        type="button"
+                        className="bk-iconbtn"
+                        onClick={() =>
+                          setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
+                        }
+                        disabled={!canNextMonth}
+                        aria-label="Próximo mês"
+                      >
+                        <ChevronIcon dir="right" />
+                      </button>
+                    </div>
+                    <div className="bk-calendar__grid" role="group" aria-label="Dias do mês">
+                      {WEEKDAY_HEAD.map((w, i) => (
+                        <span key={`${w}-${i}`} className="bk-calendar__weekday" aria-hidden="true">
+                          {w}
+                        </span>
+                      ))}
+                      {buildMonthMatrix(cursor)
+                        .flat()
+                        .map((day) => {
+                          const iso = toIso(day)
+                          const inMonth = day.getMonth() === cursor.getMonth()
+                          const enabled = inMonth && dayHasAvailability(iso)
+                          const isToday = iso === todayIso
+                          return (
+                            <button
+                              key={iso}
+                              type="button"
+                              className={[
+                                'bk-calendar__day',
+                                inMonth ? '' : 'is-outside',
+                                enabled ? 'is-available' : '',
+                                selectedDate === iso ? 'is-selected' : '',
+                                isToday ? 'is-today' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              disabled={!enabled}
+                              onClick={() => pickDate(iso)}
+                              aria-pressed={selectedDate === iso}
+                              aria-label={`${day.getDate()} de ${MONTHS_LONG[day.getMonth()]}${enabled ? ', com horários disponíveis' : ', indisponível'}`}
+                            >
+                              <span>{day.getDate()}</span>
+                            </button>
+                          )
+                        })}
+                    </div>
+                    <div className="bk-calendar__foot">
+                      {loadingMonth && !error ? (
+                        <p className="bk-calendar__hint">Carregando agenda…</p>
+                      ) : !monthHasSlots ? (
+                        <p className="bk-calendar__hint">
+                          Sem horários neste mês para esta modalidade.
+                        </p>
+                      ) : (
+                        <ul className="bk-legend" aria-hidden="true">
+                          <li className="bk-legend__available">Disponível</li>
+                          <li className="bk-legend__selected">Selecionado</li>
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ---- column 3: time slots ---- */}
+                  <div className="bk-times-wrap">
+                    <div className="bk-panel bk-times">
+                      {!selectedDate ? (
+                        <div className="bk-times__empty">
+                          <CalendarGlyph />
+                          <p>Selecione uma data no calendário para ver os horários disponíveis.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className="bk-times__title">
+                            Horários do dia <strong>{fmtShortDate(selectedDate)}</strong>
+                          </h4>
+
+                          {slotGroups.length === 0 ? (
+                            <p className="bk-times__hint">
+                              Os horários deste dia acabaram de ser preenchidos. Escolha outra data.
+                            </p>
+                          ) : (
+                            <div
+                              className={`bk-slotlist${daySlots.length > 5 ? ' is-scrollable' : ''}`}
+                              role="radiogroup"
+                              aria-label="Horários disponíveis"
+                            >
+                              {slotGroups.map((group) => (
+                                <div key={group.label} className="bk-slotlist__group">
+                                  {slotGroups.length > 1 && (
+                                    <span className="bk-slotlist__label">{group.label}</span>
+                                  )}
+                                  {group.slots.map((slot) => {
+                                    const isSel =
+                                      selectedSlot?.start === slot.start &&
+                                      selectedSlot?.location === slot.location
+                                    return (
+                                      <button
+                                        key={`${slot.start}-${slot.location}`}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={isSel}
+                                        className={`bk-slot${isSel ? ' is-selected' : ''}`}
+                                        onClick={() => pickSlot(slot)}
+                                      >
+                                        <span className="bk-slot__time">{fmtTime(slot.start)}</span>
+                                        {isSel && (
+                                          <span className="bk-slot__check">
+                                            <CheckIcon />
+                                          </span>
+                                        )}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            className="bk-btn bk-btn--primary bk-times__next"
+                            onClick={() => goToStep(2)}
+                            disabled={!selectedSlot}
+                          >
+                            Próximo passo
+                            <ArrowIcon />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ---- waitlist opt-in (spans all columns) ---- */}
+                  <div className="bk-waitlist">
+                    {!waitlistOpen ? (
+                      <button type="button" className="bk-waitlist__toggle" onClick={openWaitlist}>
+                        Não achou o horário que queria? Entre na lista de espera para ser avisada
+                        quando novos horários aparecerem.
+                      </button>
+                    ) : waitlistDone ? (
+                      <p className="bk-waitlist__done">
+                        <CheckIcon /> Pronto! Avisaremos <strong>{waitlistForm.email}</strong> assim
+                        que um horário abrir.
+                      </p>
+                    ) : (
+                      <form className="bk-waitlist__form" onSubmit={handleWaitlistSubmit}>
+                        <h4 className="bk-waitlist__title">Entrar na lista de espera</h4>
+                        <div className="bk-form__grid">
+                          <label className="bk-field bk-field--full" htmlFor="wl-specialty">
+                            <span>Especialidade</span>
+                            <select
+                              id="wl-specialty"
+                              value={waitlistSpecialtyId || ''}
+                              onChange={(e) => setWaitlistSpecialtyId(Number(e.target.value))}
+                              required
+                            >
+                              <option value="" disabled>
+                                Selecione…
+                              </option>
+                              {specialties.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="bk-field bk-field--full" htmlFor="wl-name">
+                            <span>Nome completo</span>
+                            <input
+                              id="wl-name"
+                              type="text"
+                              autoComplete="name"
+                              value={waitlistForm.name}
+                              onChange={(e) =>
+                                setWaitlistForm((f) => ({
+                                  ...f,
+                                  name: e.target.value,
+                                }))
+                              }
+                              required
+                              minLength={2}
+                            />
+                          </label>
+                          <label className="bk-field" htmlFor="wl-email">
+                            <span>E-mail</span>
+                            <input
+                              id="wl-email"
+                              type="email"
+                              autoComplete="email"
+                              value={waitlistForm.email}
+                              onChange={(e) =>
+                                setWaitlistForm((f) => ({
+                                  ...f,
+                                  email: e.target.value,
+                                }))
+                              }
+                              required
+                            />
+                          </label>
+                          <label className="bk-field" htmlFor="wl-phone">
+                            <span>
+                              Telefone <em>(opcional)</em>
+                            </span>
+                            <input
+                              id="wl-phone"
+                              type="tel"
+                              inputMode="tel"
+                              autoComplete="tel"
+                              value={waitlistForm.phone}
+                              onChange={(e) =>
+                                setWaitlistForm((f) => ({
+                                  ...f,
+                                  phone: e.target.value,
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                        {selectedDate && (
+                          <p className="bk-hint bk-waitlist__hint">
+                            Vamos priorizar horários em {fmtLongDate(selectedDate)}.
+                          </p>
+                        )}
+                        {waitlistError && (
+                          <p className="bk-error" role="alert">
+                            {waitlistError}
+                          </p>
+                        )}
+                        <div className="bk-waitlist__actions">
+                          <button
+                            type="button"
+                            className="bk-btn bk-btn--ghost"
+                            onClick={() => setWaitlistOpen(false)}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            className="bk-btn bk-btn--primary"
+                            disabled={waitlistSubmitting || !waitlistSpecialtyId}
+                          >
+                            {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
 
-            {step === 3 && (
-            <aside className="bk-card bk-summary" aria-label="Resumo da consulta">
-              <h4>Resumo da consulta</h4>
-              <ul>
-                <li className={selectedDateObj ? 'is-filled' : ''}>
-                  <span className="bk-summary__label">Data</span>
-                  <span className="bk-summary__value">
-                    {selectedDateObj
-                      ? `${WEEKDAYS_LONG[selectedDateObj.getDay()]}, ${selectedDateObj.getDate()} de ${MONTHS_LONG[selectedDateObj.getMonth()]}`
-                      : '—'}
-                  </span>
-                </li>
-                <li className={specialty ? 'is-filled' : ''}>
-                  <span className="bk-summary__label">Especialidade</span>
-                  <span className="bk-summary__value">{specialty?.name || '—'}</span>
-                </li>
-                <li className={selectedSlot ? 'is-filled' : ''}>
-                  <span className="bk-summary__label">Horário</span>
-                  <span className="bk-summary__value">
-                    {selectedSlot
-                      ? `${fmtTime(selectedSlot.start)} – ${fmtTime(selectedSlot.end)}`
-                      : '—'}
-                  </span>
-                </li>
-                <li className={selectedSlot ? 'is-filled' : ''}>
-                  <span className="bk-summary__label">Modalidade</span>
-                  <span className="bk-summary__value">
-                    {selectedSlot ? MODALITY_LABELS[selectedSlot.location] : '—'}
-                  </span>
-                </li>
-              </ul>
-              <p className="bk-summary__note">
-                Ao enviar, sua consulta fica confirmada e você recebe um e-mail
-                com todos os detalhes.
+              {step === 2 && (
+                <motion.form
+                  key="step2"
+                  className="bk-step bk-form"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    goToStep(3)
+                  }}
+                  {...motionProps}
+                >
+                  <div className="bk-form__head">
+                    <h3 className="bk-step__title">Quase lá! Seus dados</h3>
+                    <p className="bk-step__lead">
+                      Usamos esses dados apenas para confirmar e lembrar você da consulta.
+                    </p>
+                  </div>
+                  <div className="bk-form__grid">
+                    <label className="bk-field bk-field--full" htmlFor="bk-name">
+                      <span>Nome completo</span>
+                      <input
+                        id="bk-name"
+                        type="text"
+                        autoComplete="name"
+                        placeholder="Como devemos te chamar?"
+                        value={form.name}
+                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        required
+                        minLength={2}
+                        autoFocus
+                      />
+                    </label>
+                    <label className="bk-field" htmlFor="bk-phone">
+                      <span>Telefone / WhatsApp</span>
+                      <input
+                        id="bk-phone"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="(00) 00000-0000"
+                        value={form.phone}
+                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                        required
+                        minLength={8}
+                      />
+                    </label>
+                    <label className="bk-field" htmlFor="bk-email">
+                      <span>E-mail</span>
+                      <input
+                        id="bk-email"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        placeholder="voce@email.com"
+                        value={form.email}
+                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                        required
+                      />
+                    </label>
+                  </div>
+                  <div className="bk-form__actions">
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--ghost"
+                      onClick={() => goToStep(1)}
+                    >
+                      <ArrowIcon dir="left" />
+                      Voltar
+                    </button>
+                    <button className="bk-btn bk-btn--primary" type="submit">
+                      Próximo passo
+                      <ArrowIcon />
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+
+              {step === 3 && (
+                <motion.form
+                  key="step3"
+                  className="bk-step bk-form"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (specialtyId) goToStep(4)
+                  }}
+                  {...motionProps}
+                >
+                  <div className="bk-form__head">
+                    <h3 className="bk-step__title">Motivo da consulta</h3>
+                    <p className="bk-step__lead">
+                      Escolha a especialidade e, se quiser, conte um pouco sobre o que você precisa.
+                    </p>
+                  </div>
+
+                  <fieldset className="bk-field bk-field--full">
+                    <legend>Especialidade</legend>
+                    {slotSpecialties.length === 0 ? (
+                      <p className="bk-hint">
+                        Nenhuma especialidade atende nesse horário. Volte e escolha outro.
+                      </p>
+                    ) : (
+                      <div className="bk-chips" role="radiogroup" aria-label="Especialidade">
+                        {slotSpecialties.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={specialtyId === s.id}
+                            className={`bk-chip${specialtyId === s.id ? ' is-selected' : ''}`}
+                            onClick={() => setSpecialtyId(s.id)}
+                          >
+                            <span>{s.name}</span>
+                            <em>{s.slot_duration_min} min</em>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </fieldset>
+
+                  <div className="bk-form__grid">
+                    <label className="bk-field bk-field--full" htmlFor="bk-notes">
+                      <span>
+                        Mensagem <em>(opcional)</em>
+                      </span>
+                      <textarea
+                        id="bk-notes"
+                        rows={4}
+                        placeholder="Conte um pouco sobre o que você precisa"
+                        value={form.notes}
+                        onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="bk-form__actions">
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--ghost"
+                      onClick={() => goToStep(2)}
+                    >
+                      <ArrowIcon dir="left" />
+                      Voltar
+                    </button>
+                    <button
+                      className="bk-btn bk-btn--primary"
+                      type="submit"
+                      disabled={!specialtyId}
+                    >
+                      Revisar agendamento
+                      <ArrowIcon />
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+
+              {step === 4 && (
+                <motion.div key="step4" className="bk-step bk-form bk-review" {...motionProps}>
+                  <div className="bk-form__head">
+                    <h3 className="bk-step__title">Confira os dados da consulta</h3>
+                    <p className="bk-step__lead">
+                      Está tudo certo? Ao confirmar, sua consulta é agendada na hora.
+                    </p>
+                  </div>
+
+                  <dl className="bk-review__list">
+                    <div>
+                      <dt>Data e horário</dt>
+                      <dd>
+                        {selectedDate && fmtLongDate(selectedDate)}
+                        {selectedSlot &&
+                          `, ${fmtTime(selectedSlot.start)} – ${fmtTime(selectedSlot.end)}`}
+                      </dd>
+                      <button type="button" className="bk-review__edit" onClick={() => goToStep(1)}>
+                        Editar
+                      </button>
+                    </div>
+                    <div>
+                      <dt>Modalidade</dt>
+                      <dd>{selectedSlot && MODALITY_LABELS[selectedSlot.location]}</dd>
+                      <button type="button" className="bk-review__edit" onClick={() => goToStep(1)}>
+                        Editar
+                      </button>
+                    </div>
+                    <div>
+                      <dt>Especialidade</dt>
+                      <dd>{specialty?.name}</dd>
+                      <button type="button" className="bk-review__edit" onClick={() => goToStep(3)}>
+                        Editar
+                      </button>
+                    </div>
+                    <div>
+                      <dt>Seus dados</dt>
+                      <dd>
+                        {form.name}
+                        <small>
+                          {form.email} · {form.phone}
+                        </small>
+                      </dd>
+                      <button type="button" className="bk-review__edit" onClick={() => goToStep(2)}>
+                        Editar
+                      </button>
+                    </div>
+                    {form.notes.trim() && (
+                      <div>
+                        <dt>Mensagem</dt>
+                        <dd className="bk-review__notes">{form.notes.trim()}</dd>
+                        <button
+                          type="button"
+                          className="bk-review__edit"
+                          onClick={() => goToStep(3)}
+                        >
+                          Editar
+                        </button>
+                      </div>
+                    )}
+                  </dl>
+
+                  <div className="bk-form__actions">
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--ghost"
+                      onClick={() => goToStep(3)}
+                      disabled={submitting}
+                    >
+                      <ArrowIcon dir="left" />
+                      Voltar
+                    </button>
+                    <button
+                      className="bk-btn bk-btn--primary"
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Confirmando…' : 'Confirmar agendamento'}
+                    </button>
+                  </div>
+                  <p className="bk-form__note">
+                    Sem pagamento agora. Você recebe os detalhes e o link para gerenciar a consulta
+                    por e-mail.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {error && (
+              <p className="bk-error" role="alert">
+                {error}
               </p>
-            </aside>
             )}
           </div>
         )}
