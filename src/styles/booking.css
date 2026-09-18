@@ -105,47 +105,44 @@
 /* ---- modality filter (next presencial / online) ---- */
 
 /* Quick "jump to next available slot" control, sitting under the calendar. */
-.bk-jump {
-  margin-top: 22px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-  max-width: 400px;
-  margin-inline: auto;
-}
-
-.bk-jump__label {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
-
+/* Multi-select modality filter, rendered as one contained pill group so the
+   options read as a single control instead of loose buttons. */
 .bk-filter {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
 }
 
 .bk-filterbtn {
-  flex: 1 1 auto;
-  min-height: 40px;
-  padding: 9px 18px;
-  border: 1.5px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 15px;
+  border: 0;
   border-radius: 999px;
-  background: var(--surface);
+  background: transparent;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--text-soft);
   cursor: pointer;
-  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.bk-filterbtn svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  opacity: 0.8;
 }
 
 .bk-filterbtn:hover {
-  border-color: var(--accent);
+  background: var(--surface);
   color: var(--accent);
 }
 
@@ -156,8 +153,11 @@
    size and lets the background paint edge-to-edge in a single pass. */
 .bk-filterbtn.is-active {
   background: var(--accent);
-  border-color: transparent;
   color: var(--accent-contrast);
+}
+
+.bk-filterbtn.is-active svg {
+  opacity: 1;
 }
 
 /* ---- schedule layout (calendar + side panel) ---- */
@@ -175,6 +175,24 @@
   .bk-schedule {
     grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
   }
+}
+
+/* Header row spanning both columns: step title on the left, the modality
+   segmented control on the right — the filter is a decision the patient takes
+   BEFORE scanning the calendar, so it lives above it, not below. */
+.bk-schedule__head {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bk-schedule__head .bk-step__title {
+  margin: 0;
 }
 
 .bk-schedule__cal {

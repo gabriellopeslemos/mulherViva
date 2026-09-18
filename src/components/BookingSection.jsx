@@ -152,9 +152,9 @@ export default function BookingSection({ presetSpecialty } = {}) {
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(null)
   const [error, setError] = useState(null)
-  // Optional modality filter ('presencial' | 'online' | null) that narrows the
-  // calendar and slot list to one kind of consultation.
-  const [modalityFilter, setModalityFilter] = useState(null)
+  // Optional multi-select modality filter (subset of MODALITY_LABELS keys)
+  // that narrows the calendar and slot list. Empty array ⇒ no filter.
+  const [modalityFilters, setModalityFilters] = useState([])
 
   // "Join the waitlist" mini-form, shown as an opt-in below the calendar.
   const [waitlistOpen, setWaitlistOpen] = useState(false)
@@ -236,8 +236,9 @@ export default function BookingSection({ presetSpecialty } = {}) {
   )
   const loadingMonth = specialties.length > 0 && monthMaps.length < specialties.length
 
-  // Predicate honouring the active modality filter (no filter ⇒ everything).
-  const matchesFilter = (slot) => !modalityFilter || slot.location === modalityFilter
+  // Predicate honouring the active modality filters (none selected ⇒ everything).
+  const matchesFilter = (slot) =>
+    modalityFilters.length === 0 || modalityFilters.includes(slot.location)
 
   // Filter-independent: are there ANY slots this month? Gates the filter chips.
   const monthHasAnySlots = monthMaps.some((m) =>
@@ -258,7 +259,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
       (s) => monthCache[`${s.id}:${part}`]?.[selectedDate]?.some(matchesFilter) ?? false,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [specialties, monthCache, selectedDate, modalityFilter])
+  }, [specialties, monthCache, selectedDate, modalityFilters])
 
   // Times are the same for every specialty, so we can show them right away —
   // using the chosen specialty, or the first available one as a stand-in.
@@ -269,7 +270,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
     const key = `${slotSpecialtyId}:${monthPartOf(selectedDate)}`
     return (monthCache[key]?.[selectedDate] || []).filter(matchesFilter)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthCache, selectedDate, slotSpecialtyId, modalityFilter])
+  }, [monthCache, selectedDate, slotSpecialtyId, modalityFilters])
 
   const slotGroups = useMemo(() => {
     const groups = { Manhã: [], Tarde: [], Noite: [] }
@@ -360,13 +361,15 @@ export default function BookingSection({ presetSpecialty } = {}) {
     }
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingMonth, monthCache, specialties, cursor, today, selectedDate, canNextMonth, modalityFilter, presetSpecialty, presetSpecialtyId])
+  }, [loadingMonth, monthCache, specialties, cursor, today, selectedDate, canNextMonth, modalityFilters, presetSpecialty, presetSpecialtyId])
 
   // The modality chips filter the calendar. Toggling re-runs the auto-pick so
   // the soonest matching date and time are surfaced for the chosen modality.
   const toggleFilter = (type) => {
     setError(null)
-    setModalityFilter((cur) => (cur === type ? null : type))
+    setModalityFilters((cur) =>
+      cur.includes(type) ? cur.filter((t) => t !== type) : [...cur, type],
+    )
     autoPickedRef.current = false
     setSelectedDate(null)
     setSpecialtyId(null)
@@ -569,8 +572,31 @@ export default function BookingSection({ presetSpecialty } = {}) {
               <AnimatePresence mode="wait" initial={false}>
                 {step <= 2 && (
                   <motion.div key="schedule" className="bk-step bk-schedule" {...motionProps}>
-                    <div className="bk-schedule__cal">
+                    <div className="bk-schedule__head">
                       <h3 className="bk-step__title">Escolha o melhor dia</h3>
+                      {monthHasAnySlots && (
+                        <div
+                          className="bk-filter"
+                          role="group"
+                          aria-label="Filtrar horários por modalidade"
+                        >
+                          {Object.keys(MODALITY_LABELS).map((loc) => (
+                            <button
+                              key={loc}
+                              type="button"
+                              className={`bk-filterbtn${modalityFilters.includes(loc) ? ' is-active' : ''}`}
+                              onClick={() => toggleFilter(loc)}
+                              aria-pressed={modalityFilters.includes(loc)}
+                            >
+                              {MODALITY_ICONS[loc]}
+                              {MODALITY_LABELS[loc]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bk-schedule__cal">
                       <div className="bk-calendar" aria-busy={loadingMonth}>
                         <div className="bk-calendar__nav">
                           <button
@@ -647,31 +673,6 @@ export default function BookingSection({ presetSpecialty } = {}) {
                           </p>
                         )}
                       </div>
-
-                      {monthHasAnySlots && (
-                        <div className="bk-jump">
-                          <span className="bk-jump__label">
-                            Ir para o próximo horário disponível:
-                          </span>
-                          <div
-                            className="bk-filter"
-                            role="group"
-                            aria-label="Ir para o próximo horário disponível por modalidade"
-                          >
-                            {Object.keys(MODALITY_LABELS).map((loc) => (
-                              <button
-                                key={loc}
-                                type="button"
-                                className={`bk-filterbtn${modalityFilter === loc ? ' is-active' : ''}`}
-                                onClick={() => toggleFilter(loc)}
-                                aria-pressed={modalityFilter === loc}
-                              >
-                                {MODALITY_LABELS[loc]}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     <div className="bk-schedule__side">
@@ -679,8 +680,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
                         <div className="bk-side-empty">
                           <CalendarGlyph />
                           <p>
-                            Selecione uma data no calendário para ver as
-                            especialidades e horários disponíveis.
+                            Selecione uma data no calendário para ver os
+                            horários disponíveis.
                           </p>
                         </div>
                       ) : (
@@ -691,32 +692,11 @@ export default function BookingSection({ presetSpecialty } = {}) {
                             {MONTHS_LONG[selectedDateObj.getMonth()]}
                           </p>
 
-                          <div className="bk-side-block">
-                            <span className="bk-side-block__label">Especialidade</span>
-                            {dateSpecialties.length === 0 ? (
-                              <p className="bk-hint">
-                                Nenhuma especialidade com horário nesta data. Escolha
-                                outro dia.
-                              </p>
-                            ) : (
-                              <div className="bk-chips" role="list">
-                                {dateSpecialties.map((s) => (
-                                  <button
-                                    key={s.id}
-                                    type="button"
-                                    role="listitem"
-                                    className={`bk-chip${specialtyId === s.id ? ' is-selected' : ''}`}
-                                    onClick={() => pickSpecialty(s.id)}
-                                  >
-                                    {s.name}
-                                    <em>{s.slot_duration_min} min</em>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {dateSpecialties.length > 0 && (
+                          {dateSpecialties.length === 0 ? (
+                            <p className="bk-hint">
+                              Nenhum horário disponível nesta data. Escolha outro dia.
+                            </p>
+                          ) : (
                             <div className="bk-side-block">
                               <span className="bk-side-block__label">Horário</span>
                               {slotGroups.map((group) => (
@@ -759,6 +739,26 @@ export default function BookingSection({ presetSpecialty } = {}) {
                                   Escolha outra data.
                                 </p>
                               )}
+                            </div>
+                          )}
+
+                          {dateSpecialties.length > 0 && (
+                            <div className="bk-side-block">
+                              <span className="bk-side-block__label">Especialidade</span>
+                              <div className="bk-chips" role="list">
+                                {dateSpecialties.map((s) => (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    role="listitem"
+                                    className={`bk-chip${specialtyId === s.id ? ' is-selected' : ''}`}
+                                    onClick={() => pickSpecialty(s.id)}
+                                  >
+                                    {s.name}
+                                    <em>{s.slot_duration_min} min</em>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           )}
 
