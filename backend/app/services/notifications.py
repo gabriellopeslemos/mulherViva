@@ -244,6 +244,24 @@ def notify_booking_rescheduled(appt: dict) -> None:
     threading.Thread(target=_send_reschedule_via_resend, args=(appt,), daemon=True).start()
 
 
+def _send_booking_links_via_resend(to_email: str, client_name: str, appts: list[dict]) -> None:
+    email_service.send_booking_links(
+        to_email=to_email,
+        client_name=client_name,
+        appointments=[{**a, "manage_link": manage_url(a.get("token")) or ""} for a in appts],
+    )
+
+
+def notify_booking_links(to_email: str, client_name: str, appts: list[dict]) -> None:
+    """Re-sends the manage link(s) of the patient's upcoming appointments."""
+    appts = [a for a in appts if a.get("token")]
+    if not to_email or not appts:
+        return
+    threading.Thread(
+        target=_send_booking_links_via_resend, args=(to_email, client_name, appts), daemon=True
+    ).start()
+
+
 def _send_internal_new_booking(appt: dict) -> None:
     settings = get_settings()
     recipients = settings.clinic_notification_emails_list

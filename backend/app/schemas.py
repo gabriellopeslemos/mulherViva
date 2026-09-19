@@ -213,6 +213,14 @@ class RescheduleIn(BaseModel):
     start: time
 
 
+class RecoverBookingIn(BaseModel):
+    email: str = Field(pattern=EMAIL_RE, max_length=150)
+
+
+class RecoverBookingOut(BaseModel):
+    message: str
+
+
 # ---- waitlist ----
 
 class WaitlistIn(BaseModel):

@@ -1277,3 +1277,106 @@ fieldset.bk-field {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---- privacy / retention notice under e-mail fields ---- */
+.bk-privacy {
+  margin: 12px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ---- "Quero reagendar": re-send the manage link by e-mail ---- */
+.bk-recover {
+  max-width: 640px;
+  margin: 0 auto clamp(20px, 3vw, 32px);
+  text-align: center;
+}
+
+.bk-recover__toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text-soft);
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.bk-recover__toggle strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.bk-recover__toggle:hover strong {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.bk-recover--open {
+  text-align: left;
+  padding: clamp(18px, 3vw, 28px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.bk-recover__title {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text-strong);
+  margin: 0 0 6px;
+}
+
+.bk-recover__lead {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  color: var(--text-soft);
+}
+
+.bk-recover__row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.bk-recover__row .bk-field {
+  flex: 1;
+}
+
+.bk-recover__row .bk-btn {
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.bk-recover__done {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--text-strong);
+}
+
+.bk-recover__close {
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.bk-recover__close:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .bk-recover__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

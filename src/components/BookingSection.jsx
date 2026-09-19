@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { api } from '../lib/api'
+import { RETENTION_NOTICE } from '../lib/privacy'
+import RecoverBooking from './RecoverBooking'
 import '../styles/booking.css'
 
 const WEEKDAY_HEAD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
@@ -662,6 +664,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
           </p>
         </motion.div>
 
+        {!confirmation && <RecoverBooking />}
+
         {confirmation ? (
           <motion.div
             className="bk-card bk-success"
@@ -1035,6 +1039,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                             />
                           </label>
                         </div>
+                        <p className="bk-privacy">{RETENTION_NOTICE}</p>
                         {selectedDate && (
                           <p className="bk-hint bk-waitlist__hint">
                             Vamos priorizar horários em {fmtLongDate(selectedDate)}.
@@ -1126,6 +1131,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                       />
                     </label>
                   </div>
+                  <p className="bk-privacy">{RETENTION_NOTICE}</p>
                   <div className="bk-form__actions">
                     <button
                       type="button"

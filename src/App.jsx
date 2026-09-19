@@ -218,7 +218,7 @@ const faqItems = [
   {
     question: 'Como remarco ou cancelo minha consulta?',
     answer:
-      'Após o agendamento você recebe um e-mail com um link pessoal de gerenciamento, pelo qual pode remarcar ou cancelar a qualquer momento, sem precisar ligar ou esperar retorno.',
+      'Após o agendamento você recebe um e-mail com um link pessoal de gerenciamento, pelo qual pode remarcar ou cancelar a qualquer momento, sem precisar ligar ou esperar retorno. Perdeu o e-mail? Use o botão "Quero reagendar" na seção de agendamento e reenviamos o link.',
   },
 ]
 
