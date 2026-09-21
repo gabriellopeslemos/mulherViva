@@ -25,6 +25,8 @@ dist-ssr
 images/*
 .github/*
 
+.env
+
 # Backend
 backend/.venv
 backend/.env
@@ -34,4 +36,3 @@ backend/uploads/
 .pytest_cache
 
 .claude/settings.local.json
-.env.development

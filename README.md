@@ -107,7 +107,7 @@ mulherViva/
 npm install
 
 # Criar arquivo de variáveis de ambiente
-cp .env.development .env.development.local
+cp .env.example .env.development.local
 # Edite .env.development.local com seu VITE_GOOGLE_CLIENT_ID
 
 # Iniciar servidor de desenvolvimento
