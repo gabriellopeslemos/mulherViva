@@ -30,6 +30,10 @@ python -m uvicorn app.main:app --reload   # dev server at http://localhost:8000,
 pytest                        # run all backend tests
 pytest tests/test_slots.py    # single file
 pytest tests/test_slots.py::test_basic_window_chopped_into_slots   # single test
+
+alembic revision --autogenerate -m "add foo column"   # generate a migration from a models.py change
+alembic upgrade head                                   # apply pending migrations by hand (the app also does this on startup)
+alembic downgrade -1                                    # revert the last migration
 ```
 
 Tests are plain unit tests (no `conftest.py`, no live DB/HTTP fixtures) — e.g. `tests/test_slots.py` builds `SimpleNamespace` stand-ins for ORM rows and calls service functions directly. Follow that pattern for new tests of pure logic rather than spinning up a DB session.
@@ -40,7 +44,7 @@ Tests are plain unit tests (no `conftest.py`, no live DB/HTTP fixtures) — e.g.
 
 `backend/app/main.py` wires CORS, four routers (`auth`, `public`, `admin`, `google_calendar`), a static `/uploads` mount, and a `lifespan` startup hook.
 
-- **No Alembic.** Schema changes to *existing* tables are applied by hand-adding an entry to the `_TABLE_COLUMNS` dict in `main.py` (table → `{column: SQL type}`), which runs `ALTER TABLE ... ADD COLUMN` for any column missing on an existing DB. New tables need no entry — `create_all` handles those. Forgetting this step means the column exists in `models.py` but never appears in anyone's actual database.
+- **Alembic** (`backend/alembic/`, config in `backend/alembic.ini`) owns all schema changes — `create_all`/manual `ALTER TABLE` are gone. After editing `models.py`, run `alembic revision --autogenerate -m "..."` from `backend/` and check the generated file into `alembic/versions/` (autogenerate misses some changes — column type/server-default tweaks, table/column renames — so review the diff). `app/main.py`'s `lifespan` hook runs `alembic upgrade head` on every startup, so `pip install -r requirements.txt` + `uvicorn --reload` is still enough for local dev; there is no separate migrate step to remember. `alembic/env.py` reads `DATABASE_URL` from `get_settings()`, the same source as the app, and enables SQLite batch mode (`render_as_batch=True`) since SQLite can't `ALTER`/`DROP COLUMN` directly.
 - Two background `asyncio` loops run conditionally on settings flags: Instagram sync (every 24h, if `IG_AUTO_SYNC`) and appointment reminders (hourly, if `NOTIFICATIONS_ENABLED`).
 - Always read config through `get_settings()` (`app/config.py`), never `os.environ` directly — comma-separated vars like `CORS_ORIGINS`/`ALLOWED_ADMIN_EMAILS` only get parsed into lists on that object (`cors_origins_list`, etc.).
 

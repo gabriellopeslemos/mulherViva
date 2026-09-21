@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+alembic
 pydantic-settings
 PyJWT
 google-auth

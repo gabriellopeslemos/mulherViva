@@ -8,14 +8,15 @@ if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     __package__ = "app"
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
-from sqlalchemy import inspect, text
 
 from .config import get_settings
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal
 from .routers import admin, auth, google_calendar, public
 from .routers.admin import UPLOADS_DIR
 from .seed import seed
@@ -27,63 +28,12 @@ IG_SYNC_INTERVAL_SECONDS = 24 * 60 * 60
 
 REMINDER_INTERVAL_SECONDS = 60 * 60
 
-# Lightweight additive migrations (no Alembic): table -> {column name -> SQL type}.
-_TABLE_COLUMNS = {
-    "appointments": {
-        "client_email": "VARCHAR(150)",
-        "client_phone": "VARCHAR(150)",
-        "reason": "VARCHAR(500)",
-        "is_first_visit": "BOOLEAN DEFAULT FALSE",
-        "token": "VARCHAR(64)",
-        "reminder_sent_at": "DATETIME",
-        "google_event_id": "VARCHAR(128)",
-    },
-    "blog_posts": {
-        "status": "VARCHAR(10) NOT NULL DEFAULT 'published'",
-        "pinned": "BOOLEAN NOT NULL DEFAULT 0",
-    },
-    "availability_rules": {
-        "location": "VARCHAR(20) NOT NULL DEFAULT 'presencial_bsb'",
-        "start_date": "DATE",
-        "end_date": "DATE",
-    },
-    "availability_overrides": {
-        "location": "VARCHAR(20)",
-    },
-}
+ALEMBIC_INI_PATH = Path(__file__).resolve().parent.parent / "alembic.ini"
 
 
-def _ensure_columns() -> None:
-    """Add new nullable columns to existing tables when missing.
-
-    create_all() never alters an existing table, so a database created before
-    these columns existed would lack them. This runs the minimal ALTER TABLEs.
-    """
-    inspector = inspect(engine)
-    existing_tables = set(inspector.get_table_names())
-    with engine.begin() as conn:
-        for table, columns in _TABLE_COLUMNS.items():
-            if table not in existing_tables:
-                continue
-            existing = {col["name"] for col in inspector.get_columns(table)}
-            missing = {k: v for k, v in columns.items() if k not in existing}
-            for name, sql_type in missing.items():
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"))
-            if missing:
-                logger.info(
-                    "Added missing %s columns: %s", table, ", ".join(missing)
-                )
-
-
-def _migrate_appointment_locations() -> None:
-    """Backfill the old 2-way 'presencial' appointment type to 'presencial_bsb'.
-
-    Idempotent: after the first run no row matches 'presencial' anymore.
-    """
-    with engine.begin() as conn:
-        conn.execute(
-            text("UPDATE appointments SET type = 'presencial_bsb' WHERE type = 'presencial'")
-        )
+def _run_migrations() -> None:
+    """Apply any pending Alembic migrations. See backend/alembic/versions/."""
+    command.upgrade(Config(str(ALEMBIC_INI_PATH)), "head")
 
 
 async def _instagram_sync_loop() -> None:
@@ -157,9 +107,7 @@ async def _reminder_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    _ensure_columns()
-    _migrate_appointment_locations()
+    _run_migrations()
     with SessionLocal() as db:
         seed(db)
     if get_settings().dev_auth_bypass:
