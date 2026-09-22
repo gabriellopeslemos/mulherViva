@@ -1,12 +1,12 @@
 import { useState } from 'react'
 
 const navLinks = [
-  { label: 'Sobre', href: '/#sobre' },
   { label: 'Especialidades', href: '/#especialidades' },
+  { label: 'Sobre', href: '/#sobre' },
   { label: 'Depoimentos', href: '/#depoimentos' },
   { label: 'Dúvidas', href: '/#duvidas' },
-  { label: 'Blog', href: '/#blog' },
   { label: 'Endereço', href: '/#endereco' },
+  { label: 'Blog', href: '/#blog' },
 ]
 
 function FloatingNavbar({ onOpenAgenda }) {
@@ -48,7 +48,7 @@ function FloatingNavbar({ onOpenAgenda }) {
             </button>
             <a
               href="/#agendamento"
-              className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_24px_color-mix(in_srgb,var(--accent)_35%,transparent)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--accent-strong)] hover:shadow-[0_14px_30px_color-mix(in_srgb,var(--accent-strong)_40%,transparent)]"
+              className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-bold !text-white shadow-[0_10px_24px_color-mix(in_srgb,var(--accent)_35%,transparent)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--accent-strong)] hover:shadow-[0_14px_30px_color-mix(in_srgb,var(--accent-strong)_40%,transparent)]"
             >
               Agendar consulta
             </a>
@@ -93,7 +93,7 @@ function FloatingNavbar({ onOpenAgenda }) {
           <div className="mt-4 grid gap-2 border-t border-[var(--line)] pt-4">
             <a
               href="/#agendamento"
-              className="rounded-full bg-[var(--accent)] px-4 py-3 text-center text-sm font-bold text-white shadow-[0_10px_24px_color-mix(in_srgb,var(--accent)_35%,transparent)] transition-colors duration-200 hover:bg-[var(--accent-strong)]"
+              className="rounded-full bg-[var(--accent)] px-4 py-3 text-center text-sm font-bold !text-white shadow-[0_10px_24px_color-mix(in_srgb,var(--accent)_35%,transparent)] transition-colors duration-200 hover:bg-[var(--accent-strong)]"
               onClick={() => setIsOpen(false)}
             >
               Agendar consulta

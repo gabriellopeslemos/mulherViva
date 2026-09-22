@@ -1455,31 +1455,20 @@ a.blog-card {
   color: var(--text-soft);
 }
 
-.address-tags {
+.address-photos {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-}
-
-.address-tag {
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent-strong);
+  gap: 12px;
+  margin-top: 4px;
 }
 
 .address-photo {
   position: relative;
-  width: min(260px, 65%);
+  width: min(260px, calc(50% - 6px));
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
-  margin-top: 4px;
 }
 
 .address-photo img {
@@ -1501,19 +1490,6 @@ a.blog-card {
     transparent 0%,
     color-mix(in srgb, var(--text-strong) 78%, transparent) 100%
   );
-}
-
-.address-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  margin-top: 4px;
-}
-
-.address-actions .btn {
-  width: var(--address-title-width, auto);
-  max-width: 100%;
 }
 
 .site-footer {

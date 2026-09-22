@@ -32,6 +32,7 @@ import {
   testimonialRandomTwo as testimonialPlaceholderTwo,
   testimonialRandomThree as testimonialPlaceholderThree,
   clinicPhotoImage as clinicPhotoPlaceholder,
+  clinicPhotoImageTwo as clinicPhotoPlaceholderTwo,
 } from './lib/placeholderImages'
 
 // TODO: replace with real WhatsApp number
@@ -671,24 +672,6 @@ function Landing() {
     }
   }, [prefersReducedMotion])
 
-  useEffect(() => {
-    const updateAddressTitleWidth = () => {
-      if (!addressContentRef.current || !addressTitleRef.current) {
-        return
-      }
-      const { width } = addressTitleRef.current.getBoundingClientRect()
-      addressContentRef.current.style.setProperty(
-        '--address-title-width',
-        `${Math.round(width)}px`,
-      )
-    }
-
-    updateAddressTitleWidth()
-    window.addEventListener('resize', updateAddressTitleWidth)
-
-    return () => window.removeEventListener('resize', updateAddressTitleWidth)
-  }, [])
-
   const handleHeroPointerMove = (event) => {
     if (prefersReducedMotion) {
       return
@@ -1057,23 +1040,24 @@ function Landing() {
                     <span className="address-value">Presencial e online</span>
                   </div>
                 </div>
-                <div className="address-tags">
-                  <span className="address-tag">Entrada pela L3</span>
-                  <span className="address-tag">Recepção acolhedora</span>
-                </div>
-                <div className="address-photo" data-reveal style={{ '--delay': '160ms' }}>
-                  <FallbackImage
-                    src="/images/centroLucioCosta.png"
-                    fallback={clinicPhotoPlaceholder}
-                    alt="Fachada e recepção do Centro Médico Lúcio Costa, consultório da Dra. Luciana da Silva Lopes"
-                    loading="lazy"
-                  />
-                  <span className="address-photo__caption">Nosso espaço de acolhimento</span>
-                </div>
-                <div className="address-actions">
-                  <a className="btn btn-primary" href="#agendamento">
-                    Agendar consulta
-                  </a>
+                <div className="address-photos">
+                  <div className="address-photo" data-reveal style={{ '--delay': '160ms' }}>
+                    <FallbackImage
+                      src="/images/centroLucioCosta.png"
+                      fallback={clinicPhotoPlaceholder}
+                      alt="Fachada e recepção do Centro Médico Lúcio Costa, consultório da Dra. Luciana da Silva Lopes"
+                      loading="lazy"
+                    />
+                    <span className="address-photo__caption">Nosso espaço de acolhimento</span>
+                  </div>
+                  <div className="address-photo" data-reveal style={{ '--delay': '220ms' }}>
+                    <FallbackImage
+                      src="/images/centroLucioCostaAcolhimento.png"
+                      fallback={clinicPhotoPlaceholderTwo}
+                      alt="Recepção do Centro Médico Lúcio Costa, consultório da Dra. Luciana da Silva Lopes"
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="map-block" data-reveal style={{ '--delay': '120ms' }}>
