@@ -998,34 +998,16 @@ a.card-link:hover {
 
 .faq-list {
   display: grid;
-  gap: 14px;
   max-width: 780px;
 }
 
 .faq-item {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  border-bottom: 1px solid var(--line);
+  transition: border-color 0.3s ease;
 }
 
-.faq-item:has(.faq-question[aria-expanded='true']) {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  box-shadow: var(--shadow-lg);
-}
-
-.faq-question[aria-expanded='true'] {
-  background: var(--accent-strong);
-  color: var(--surface);
-  padding: 14px 22px;
-  font-size: 15px;
-}
-
-.faq-question[aria-expanded='true'] .faq-icon {
-  border-color: color-mix(in srgb, var(--surface) 40%, transparent);
-  color: var(--surface);
+.faq-item:last-child {
+  border-bottom: none;
 }
 
 .faq-item__heading {
@@ -1036,16 +1018,23 @@ a.card-link:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   width: 100%;
-  padding: 18px 22px;
+  padding: 24px 0;
   border: none;
   background: transparent;
   text-align: left;
   font: inherit;
-  font-weight: 600;
-  font-size: 16px;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.35;
   color: var(--text-strong);
+  transition: color 0.3s ease;
+}
+
+.faq-question[aria-expanded='true'] {
+  color: var(--accent-strong);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1058,12 +1047,12 @@ a.card-link:hover {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 1px solid var(--line);
   color: var(--accent-strong);
-  transition: transform 0.35s var(--ease-out), background-color 0.3s ease;
+  transition: transform 0.35s var(--ease-out), border-color 0.3s ease;
 }
 
 .faq-icon svg {
@@ -1072,7 +1061,7 @@ a.card-link:hover {
 }
 
 .faq-question[aria-expanded='true'] .faq-icon {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent-strong);
   transform: rotate(180deg);
 }
 
@@ -1094,9 +1083,16 @@ a.card-link:hover {
 
 .faq-answer p {
   margin: 0;
-  padding: 18px 22px 20px;
+  padding: 0 0 26px;
   color: var(--text-soft);
   line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .faq-question {
+    font-size: 19px;
+    padding: 20px 0;
+  }
 }
 
 .avatar {

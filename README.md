@@ -6,14 +6,16 @@ Sistema completo de agendamento médico com painel administrativo para a clínic
 
 ## Tecnologias
 
-| Camada | Stack |
-|--------|-------|
-| Frontend | React 19 + Vite + TailwindCSS + Framer Motion |
-| Backend | FastAPI (Python) + SQLAlchemy |
+
+| Camada         | Stack                                             |
+| -------------- | ------------------------------------------------- |
+| Frontend       | React 19 + Vite + TailwindCSS + Framer Motion     |
+| Backend        | FastAPI (Python) + SQLAlchemy                     |
 | Banco de dados | SQLite (padrão) — configurável via `DATABASE_URL` |
-| Autenticação | Google OAuth 2.0 + JWT |
-| Notificações | SMTP (e-mail) + ICS (calendário) |
-| Integrações | Instagram Graph API |
+| Autenticação   | Google OAuth 2.0 + JWT                            |
+| Notificações   | SMTP (e-mail) + ICS (calendário)                  |
+| Integrações    | Instagram Graph API                               |
+
 
 ---
 
@@ -208,23 +210,29 @@ gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
 
 ## Modelos de dados principais
 
-| Modelo | Descrição |
-|--------|-----------|
-| `Specialty` | Especialidades médicas com duração de slot |
-| `AvailabilityRule` | Disponibilidade semanal recorrente por especialidade |
-| `AvailabilityOverride` | Bloqueios/aberturas em datas específicas |
-| `Appointment` | Agendamentos com status (pending / confirmed / cancelled / completed / no_show) |
-| `WaitlistEntry` | Fila de espera para horários indisponíveis |
-| `BlogPost` | Posts do blog (manual ou via Instagram) |
-| `AppSetting` | Configurações dinâmicas da aplicação |
+
+| Modelo                 | Descrição                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `Specialty`            | Especialidades médicas com duração de slot                                       |
+| `AvailabilityRule`     | Disponibilidade semanal recorrente por especialidade                             |
+| `AvailabilityOverride` | Bloqueios/aberturas em datas específicas                                         |
+| `Appointment`          | Agendamentos com status (pending / confirmed / cancelled / completed / no\_show) |
+| `WaitlistEntry`        | Fila de espera para horários indisponíveis                                       |
+| `BlogPost`             | Posts do blog (manual ou via Instagram)                                          |
+| `AppSetting`           | Configurações dinâmicas da aplicação                                             |
+
 
 ---
 
 ## Scripts disponíveis (frontend)
 
-| Comando | Descrição |
-|---------|-----------|
-| `npm run dev` | Inicia o servidor de desenvolvimento Vite |
-| `npm run build` | Gera o build de produção em `dist/` |
-| `npm run preview` | Visualiza o build de produção localmente |
-| `npm run lint` | Executa o ESLint |
+
+| Comando             | Descrição                                 |
+| ------------------- | ----------------------------------------- |
+| `npm run dev`       | Inicia o servidor de desenvolvimento Vite |
+| `npm run build`     | Gera o build de produção em `dist/`       |
+| `npm run preview`   | Visualiza o build de produção localmente  |
+| `npm run lint`      | Executa o ESLint                          |
+| npm run start-local | Start Front-end e Back-end                |
+
+
