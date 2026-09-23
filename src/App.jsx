@@ -12,6 +12,7 @@ import {
 import FloatingNavbar from './components/FloatingNavbar'
 import BookingSection from './components/BookingSection'
 import FallbackImage from './components/FallbackImage'
+import SiteFooter from './components/SiteFooter'
 
 const AdminHub = lazy(() => import('./components/AdminHub'))
 const AgendaPanel = lazy(() => import('./components/AgendaPanel'))
@@ -1234,45 +1235,7 @@ function Landing() {
         </a>
       )}
 
-      <footer className="site-footer">
-        <div className="footer-panel" data-reveal>
-          <div className="container">
-            <div className="footer-cols">
-              <div className="footer-brand">
-                <span className="footer-logo" aria-hidden="true">MV</span>
-                <div>
-                  <strong>Mulher Viva</strong>
-                  <span>Medicina da Saúde Feminina</span>
-                </div>
-              </div>
-              <div className="footer-col">
-                <span className="footer-col__label">Contato</span>
-                <a href="tel:+5561999990000">+55 61 99999-0000</a>
-                <a href="mailto:contato@mulherviva.org">contato@mulherviva.org</a>
-                {/* TODO: replace with real WhatsApp number */}
-                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
-                  WhatsApp
-                </a>
-                <span>Atendimento das 8h às 18h</span>
-              </div>
-              <div className="footer-col">
-                <span className="footer-col__label">Consultório</span>
-                <span>Centro Médico Lúcio Costa</span>
-                <span>SGAS 610, Bloco 2, Sala 250</span>
-                <span>Brasília - DF · Presencial e online</span>
-              </div>
-              <div className="footer-col footer-col--cta">
-                <a className="btn btn-primary" href="#agendamento">
-                  Agendar consulta
-                </a>
-              </div>
-            </div>
-            <div className="footer-bottom">
-              <p>© {year} Dra. Luciana da Silva Lopes. Todos os direitos reservados.</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter whatsappHref={whatsappHref} IconWhatsapp={IconWhatsapp} year={year} />
     </div>
   )
 }
