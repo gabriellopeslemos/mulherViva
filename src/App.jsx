@@ -160,24 +160,43 @@ const testimonialsRowTwo = [
   },
 ]
 
+// Example posts shown until the API returns real ones.
 const fallbackBlogPosts = [
   {
-    title: 'Equilíbrio hormonal no dia a dia',
-    text: 'Ajustes simples de sono, alimentação e rotina para reduzir oscilações.',
-    date: 'Abril 2026',
+    title: 'Equilíbrio hormonal no dia a dia: pequenos ajustes, grandes efeitos',
+    date: '12 de setembro de 2026',
     tag: 'Saúde hormonal',
+    image: '/images/mulherRandom.jpg',
   },
   {
-    title: 'Menopausa com clareza e suporte',
-    text: 'Sinais, cuidados integrativos e escolhas conscientes para cada fase.',
-    date: 'Março 2026',
+    title: 'Menopausa com clareza: sinais, cuidados e escolhas conscientes',
+    date: '28 de agosto de 2026',
     tag: 'Menopausa',
+    image: '/images/hug.jpg',
   },
   {
-    title: 'Autocuidado emocional feminino',
-    text: 'Práticas para regular estresse, ansiedade e fortalecer a vitalidade.',
-    date: 'Fevereiro 2026',
+    title: 'Exames preventivos: quais fazer e com que frequência',
+    date: '14 de agosto de 2026',
+    tag: 'Prevenção',
+    image: '/images/exam.jpg',
+  },
+  {
+    title: 'Gestação humanizada: como se preparar para um parto respeitoso',
+    date: '30 de julho de 2026',
+    tag: 'Obstetrícia',
+    image: '/images/hug2.jpg',
+  },
+  {
+    title: 'Autocuidado emocional feminino: práticas para regular o estresse',
+    date: '9 de julho de 2026',
     tag: 'Bem-estar',
+    image: '/images/mulherRandom2.jpg',
+  },
+  {
+    title: 'O que é medicina ortomolecular e quando ela pode ajudar',
+    date: '21 de junho de 2026',
+    tag: 'Ortomolecular',
+    image: '/images/m.jpg',
   },
 ]
 
@@ -234,11 +253,11 @@ const heroBlobDefs = [
 ]
 
 function formatPostDate(isoDate) {
-  const formatted = new Date(isoDate).toLocaleDateString('pt-BR', {
+  return new Date(isoDate).toLocaleDateString('pt-BR', {
+    day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
 function TestimonialCard({ item }) {
@@ -359,6 +378,8 @@ function Landing() {
   // pure progressive enhancement — deferring it until the section nears the
   // viewport keeps it out of the initial critical request chain.
   const blogSectionRef = useRef(null)
+  const blogRailRef = useRef(null)
+  const [blogEdges, setBlogEdges] = useState({ start: true, end: false })
   const [shouldLoadBlog, setShouldLoadBlog] = useState(false)
   // The track renders many back-to-back copies of `specialties` so stepping
   // past the last card keeps sliding into a real (duplicate) next card
@@ -520,15 +541,15 @@ function Landing() {
   useEffect(() => {
     if (!shouldLoadBlog && blogTick === 0) return
     api
-      .get('/api/blog?limit=6')
+      .get('/api/blog?limit=10')
       .then((data) => {
         if (!data.items.length) return
         setBlogPosts(
           data.items.map((post) => ({
             id: post.id,
             title: post.title,
-            text: post.excerpt,
             date: formatPostDate(post.published_at),
+            image: post.image_url,
             tag: post.tag || 'Blog',
             permalink: post.permalink,
             pinned: post.pinned,
@@ -537,6 +558,33 @@ function Landing() {
       })
       .catch(() => {})
   }, [shouldLoadBlog, blogTick])
+
+  useEffect(() => {
+    const rail = blogRailRef.current
+    if (!rail) return undefined
+    const update = () => {
+      const max = rail.scrollWidth - rail.clientWidth
+      setBlogEdges({ start: rail.scrollLeft <= 2, end: rail.scrollLeft >= max - 2 })
+    }
+    update()
+    rail.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      rail.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [blogPosts])
+
+  const scrollBlog = (direction) => {
+    const rail = blogRailRef.current
+    const card = rail?.querySelector('.blog-slide')
+    if (!rail || !card) return
+    const gap = parseFloat(getComputedStyle(rail).columnGap) || 0
+    rail.scrollBy({
+      left: direction * (card.offsetWidth + gap),
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    })
+  }
 
   useEffect(() => {
     if (prefersReducedMotion || !startYearsCount) return undefined
@@ -1087,51 +1135,85 @@ function Landing() {
           </div>
         </section>
 
-        <section className="section section--soft" id="blog" ref={blogSectionRef}>
+        <section className="section section--soft blog-section" id="blog" ref={blogSectionRef}>
           <div className="container">
-            <div className="section-header" data-reveal>
+            <div className="blog-section__header" data-reveal>
               <p className="eyebrow">Blog</p>
-              <h2>Conteúdo para apoiar a sua jornada.</h2>
-              <p>
-                Artigos, reflexões e orientações clínicas escritas com calma —
-                para você ler no seu tempo.
-              </p>
-              <Link className="card-link" to="/blog">
-                Ver todas as publicações &rarr;
-              </Link>
+              <h2>Conteúdo para apoiar a sua jornada</h2>
             </div>
-            <div className="card-grid blog-grid">
-              {blogPosts.map((post, index) => (
+          </div>
+          <div className="blog-rail" ref={blogRailRef} aria-label="Publicações do blog">
+            {blogPosts.map((post, index) => {
+              const content = (
+                <>
+                  <div className="blog-slide__media">
+                    {post.image ? (
+                      <img src={post.image} alt="" loading="lazy" decoding="async" />
+                    ) : (
+                      <div className="blog-slide__placeholder" aria-hidden="true" />
+                    )}
+                    <span className="blog-slide__cta" aria-hidden="true">
+                      Ler artigo
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 17 17 7M8 7h9v9" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="blog-slide__body">
+                    <p className="blog-slide__tag">
+                      {post.pinned && <span className="blog-slide__pin">Fixado · </span>}
+                      {post.tag}
+                    </p>
+                    <h3>{post.title}</h3>
+                    <p className="blog-slide__date">{post.date}</p>
+                  </div>
+                </>
+              )
+              return (
                 <article
                   key={post.id ?? post.title}
-                  className="blog-card"
+                  className="blog-slide"
                   data-reveal
-                  style={{ '--delay': `${index * 90}ms` }}
+                  style={{ '--delay': `${Math.min(index, 4) * 90}ms` }}
                 >
-                  <div className="blog-meta">
-                    {post.pinned && (
-                      <span className="blog-pin" title="Publicação fixada">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M9 4h6l-.6 6.2 2.6 2.8v2H7v-2l2.6-2.8L9 4z" />
-                          <path d="M12 15v6" />
-                        </svg>
-                        Fixado
-                      </span>
-                    )}
-                    <span className="blog-tag">{post.tag}</span>
-                    <span className="blog-date">{post.date}</span>
-                  </div>
-                  <h3>{post.title}</h3>
-                  <p>{post.text}</p>
                   {post.id ? (
-                    <Link className="card-link" to={`/blog/${post.id}`}>
-                      Ler post &rarr;
+                    <Link className="blog-slide__link" to={`/blog/${post.id}`}>
+                      {content}
                     </Link>
                   ) : (
-                    <span className="card-link">Ler post</span>
+                    <div className="blog-slide__link">{content}</div>
                   )}
                 </article>
-              ))}
+              )
+            })}
+          </div>
+          <div className="container blog-section__footer">
+            <Link className="card-link" to="/blog">
+              Ver todas as publicações &rarr;
+            </Link>
+            <div className="blog-nav">
+              <button
+                type="button"
+                className="blog-nav__btn"
+                onClick={() => scrollBlog(-1)}
+                disabled={blogEdges.start}
+                aria-label="Publicações anteriores"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="blog-nav__btn"
+                onClick={() => scrollBlog(1)}
+                disabled={blogEdges.end}
+                aria-label="Próximas publicações"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
             </div>
           </div>
         </section>
