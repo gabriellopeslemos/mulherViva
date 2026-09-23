@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const navLinks = [
   { label: 'Especialidades', href: '/#especialidades' },
@@ -11,11 +11,27 @@ const navLinks = [
 
 function FloatingNavbar({ onOpenAgenda }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 0)
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const isSolid = isScrolled || isOpen
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 w-full">
-      <nav className="w-full border-b border-[var(--line)] bg-[var(--surface)]/80 shadow-[0_8px_30px_color-mix(in_srgb,var(--accent-strong)_8%,transparent)] backdrop-blur-md">
-        <div className="mx-auto flex w-[min(96%,_1180px)] items-center justify-between gap-6 py-3">
+      <nav
+        className={`w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+          isSolid
+            ? 'border-[var(--line)] bg-[var(--surface)]/80 shadow-[0_8px_30px_color-mix(in_srgb,var(--accent-strong)_8%,transparent)] backdrop-blur-md'
+            : 'border-transparent bg-transparent shadow-none'
+        }`}
+      >
+        <div className="flex w-full items-center justify-between gap-6 px-8 py-3 sm:px-16 lg:px-28">
           <a href="/#inicio" className="flex items-center gap-3" aria-label="Mulher Viva, voltar ao início">
             <img
               src="/logo-mark.png"
@@ -79,7 +95,7 @@ function FloatingNavbar({ onOpenAgenda }) {
       </nav>
 
       {isOpen ? (
-        <div className="mx-auto mt-0 w-[min(96%,_1180px)] rounded-b-3xl border border-t-0 border-[var(--line)] bg-[var(--surface)]/95 p-4 shadow-[0_24px_60px_color-mix(in_srgb,var(--accent-strong)_16%,transparent)] backdrop-blur-md md:hidden">
+        <div className="mt-0 w-full border border-t-0 border-[var(--line)] bg-[var(--surface)]/95 p-4 shadow-[0_24px_60px_color-mix(in_srgb,var(--accent-strong)_16%,transparent)] backdrop-blur-md md:hidden">
           <div className="grid gap-1 text-sm font-semibold text-[var(--text-soft)]">
             {navLinks.map((link) => (
               <a
