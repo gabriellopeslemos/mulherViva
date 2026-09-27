@@ -41,14 +41,11 @@ const STEPS = [
 // Quick-pick topics for step 3. Sent joined as the booking's `reason`, which
 // the clinic sees in the new-booking email and the Google Calendar event.
 const REASON_TAGS = [
-  'Check-up preventivo',
   'Exames de rotina',
   'Saúde hormonal',
   'Menopausa',
-  'Contracepção',
   'Gestação e pré-natal',
   'Fertilidade',
-  'Suplementação',
   'Outros',
 ]
 
