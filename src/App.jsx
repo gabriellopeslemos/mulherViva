@@ -487,8 +487,8 @@ function Landing() {
       const cards = track ? Array.from(track.children) : []
       if (!track || !cards.length) return
       const trackLeft = track.getBoundingClientRect().left
-      // Center against the viewport's own width, not the window's — the
-      // viewport is its own centered, capped-width box, not always edge-to-edge.
+      // Center against the viewport's own width (edge-to-edge, but excludes
+      // the scrollbar, unlike window.innerWidth).
       const viewportWidth = track.parentElement.getBoundingClientRect().width
       const centerOf = (width) => (viewportWidth - width) / 2
       const positions = cards.map((card) => {

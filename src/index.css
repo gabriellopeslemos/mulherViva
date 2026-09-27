@@ -639,10 +639,11 @@ p {
   gap: clamp(20px, 3vh, 32px);
 }
 
+/* Edge-to-edge: the only crop is the screen itself, so the blurred side
+   cards always show as much as fits. */
 .specialties-viewport {
   position: relative;
-  width: min(100% - 32px, 1600px);
-  margin: 0 auto;
+  width: 100%;
   overflow: hidden;
 }
 
