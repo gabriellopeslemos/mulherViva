@@ -1209,6 +1209,7 @@ a.card-link:hover {
   display: flex;
   gap: 16px;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--rail-inset);
   padding-inline: var(--rail-inset);
