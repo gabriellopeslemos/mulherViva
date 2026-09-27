@@ -245,6 +245,23 @@ function ClockIcon() {
   )
 }
 
+function PencilIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+      <path d="m13.5 6.5 4 4" />
+    </svg>
+  )
+}
+
 function BoltIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -687,6 +704,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
   // `transform: translateY(0px)` after a y-animation settles, which promotes the
   // step subtree to a GPU layer rendered at a fractional pixel offset and bakes a
   // 1px rasterization seam into filled, rounded children (selected chips/slots).
+  const firstName = form.name.trim().split(/\s+/)[0] || ''
+
   const motionProps = reducedMotion
     ? { initial: false, animate: { opacity: 1 } }
     : {
@@ -1374,74 +1393,126 @@ export default function BookingSection({ presetSpecialty } = {}) {
 
               {step === 4 && (
                 <motion.div key="step4" className="bk-step bk-form bk-review" {...motionProps}>
-                  <div className="bk-form__head">
-                    <h3 className="bk-step__title">Confira os dados da consulta</h3>
+                  <div className="bk-form__head bk-review__head">
+                    <h3 className="bk-step__title">
+                      {firstName ? (
+                        <>
+                          Quase lá, <em>{firstName}</em>.
+                        </>
+                      ) : (
+                        'Quase lá.'
+                      )}
+                    </h3>
                     <p className="bk-step__lead">
-                      Está tudo certo? Ao confirmar, sua consulta é agendada na hora.
+                      Dê uma última olhada no seu horário. Se algo não estiver como você
+                      imaginou, é só tocar no lápis para ajustar.
                     </p>
                   </div>
 
-                  <dl className="bk-review__list">
-                    <div>
-                      <dt>Data e horário</dt>
-                      <dd>
-                        {selectedDate && fmtLongDate(selectedDate)}
-                        {selectedSlot &&
-                          `, ${fmtTime(selectedSlot.start)} – ${fmtTime(selectedSlot.end)}`}
-                      </dd>
-                      <button type="button" className="bk-review__edit" onClick={() => goToStep(1)}>
-                        Editar
-                      </button>
-                    </div>
-                    <div>
-                      <dt>Modalidade</dt>
-                      <dd>{selectedSlot && MODALITY_LABELS[selectedSlot.location]}</dd>
-                      <button type="button" className="bk-review__edit" onClick={() => goToStep(1)}>
-                        Editar
-                      </button>
-                    </div>
-                    <div>
-                      <dt>Especialidade</dt>
-                      <dd>{specialty?.name}</dd>
-                      <button type="button" className="bk-review__edit" onClick={() => goToStep(3)}>
-                        Editar
-                      </button>
-                    </div>
-                    <div>
-                      <dt>Seus dados</dt>
-                      <dd>
-                        {form.name}
-                        <small>
-                          {form.email} · {form.phone}
-                        </small>
-                      </dd>
-                      <button type="button" className="bk-review__edit" onClick={() => goToStep(2)}>
-                        Editar
-                      </button>
-                    </div>
-                    {(form.firstVisit !== null || form.reasons.length > 0) && (
-                      <div>
-                        <dt>Motivo</dt>
-                        <dd>
-                          {form.firstVisit !== null &&
-                            (form.firstVisit ? 'Primeira consulta' : 'Retorno')}
-                          {form.reasons.length > 0 &&
-                            (form.firstVisit !== null ? (
-                              <small>{form.reasons.join(', ')}</small>
-                            ) : (
-                              form.reasons.join(', ')
-                            ))}
-                        </dd>
+                  <motion.article
+                    className="bk-ticket"
+                    aria-label="Resumo da consulta"
+                    {...(reducedMotion
+                      ? {}
+                      : {
+                          initial: { opacity: 0, y: 14, rotate: -0.6 },
+                          animate: { opacity: 1, y: 0, rotate: 0 },
+                          transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.08 },
+                        })}
+                  >
+                    {selectedDate && selectedSlot && (
+                      <div className="bk-ticket__when">
+                        <div className="bk-ticket__stamp" aria-hidden="true">
+                          <span className="bk-ticket__month">
+                            {MONTHS_LONG[parseIso(selectedDate).getMonth()].slice(0, 3)}
+                          </span>
+                          <span className="bk-ticket__day">{parseIso(selectedDate).getDate()}</span>
+                          <span className="bk-ticket__weekday">
+                            {WEEKDAY_HEAD[parseIso(selectedDate).getDay()]}
+                          </span>
+                        </div>
+                        <div className="bk-ticket__slot">
+                          <span className="bk-ticket__date">{fmtLongDate(selectedDate)}</span>
+                          <strong className="bk-ticket__time">
+                            {fmtTime(selectedSlot.start)}
+                            <span> às {fmtTime(selectedSlot.end)}</span>
+                          </strong>
+                          <span className="bk-ticket__place">
+                            {MODALITY_BY_ID[selectedSlot.location]?.icon}
+                            {MODALITY_LABELS[selectedSlot.location]}
+                          </span>
+                        </div>
                         <button
                           type="button"
-                          className="bk-review__edit"
-                          onClick={() => goToStep(3)}
+                          className="bk-ticket__edit"
+                          onClick={() => goToStep(1)}
+                          aria-label="Alterar data, horário ou modalidade"
+                          title="Alterar"
                         >
-                          Editar
+                          <PencilIcon />
                         </button>
                       </div>
                     )}
-                  </dl>
+
+                    <div className="bk-ticket__tear" aria-hidden="true" />
+
+                    <div className="bk-ticket__body">
+                      <section className="bk-ticket__row">
+                        <div className="bk-ticket__text">
+                          <span className="bk-ticket__kicker">Você vai ser atendida em</span>
+                          <p className="bk-ticket__main">
+                            {specialty?.name}
+                            {form.firstVisit !== null && (
+                              <span className="bk-ticket__badge">
+                                {form.firstVisit ? 'Primeira consulta' : 'Retorno'}
+                              </span>
+                            )}
+                          </p>
+                          {form.reasons.length > 0 && (
+                            <>
+                              <span className="bk-ticket__kicker bk-ticket__kicker--sub">
+                                e quer conversar sobre
+                              </span>
+                              <ul className="bk-ticket__topics">
+                                {form.reasons.map((r) => (
+                                  <li key={r}>{r.replace('-', '‑')}</li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="bk-ticket__edit"
+                          onClick={() => goToStep(3)}
+                          aria-label="Alterar especialidade e motivo"
+                          title="Alterar"
+                        >
+                          <PencilIcon />
+                        </button>
+                      </section>
+
+                      <section className="bk-ticket__row">
+                        <div className="bk-ticket__text">
+                          <span className="bk-ticket__kicker">Vamos falar com você por aqui</span>
+                          <p className="bk-ticket__main bk-ticket__main--sm">{form.name}</p>
+                          <p className="bk-ticket__contact">
+                            <span>{form.email}</span>
+                            <span>{form.phone}</span>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="bk-ticket__edit"
+                          onClick={() => goToStep(2)}
+                          aria-label="Alterar seus dados"
+                          title="Alterar"
+                        >
+                          <PencilIcon />
+                        </button>
+                      </section>
+                    </div>
+                  </motion.article>
 
                   <div className="bk-form__actions">
                     <button

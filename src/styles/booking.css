@@ -1392,70 +1392,314 @@ fieldset.bk-group > legend em {
   }
 }
 
-/* Review (step 4). */
-.bk-review__list {
-  margin: 0;
-  padding: 4px 20px;
+/* Review (step 4): a personal "appointment card" rather than a data table —
+   the slot is the hero, the rest reads as short sentences. */
+.bk-review__head {
+  margin-bottom: 26px;
+}
+
+.bk-review .bk-step__title em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.bk-ticket {
+  --bk-ticket-bg: var(--surface);
+  --bk-ticket-notch: color-mix(in srgb, var(--palette-5) 20%, white); /* = .bk-main bg */
+  position: relative;
+  border-radius: 22px;
+  background: var(--bk-ticket-bg);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--palette-1) 4%, transparent),
+    0 18px 40px -18px color-mix(in srgb, var(--palette-1) 22%, transparent);
+  transform-origin: 30% 100%;
 }
 
-.bk-review__list > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'label edit'
-    'value edit';
+/* ---- top half: the slot ---- */
+
+.bk-ticket__when {
+  position: relative;
+  display: flex;
   align-items: center;
-  column-gap: 16px;
-  padding: 14px 0;
+  gap: clamp(16px, 3cqi, 24px);
+  padding: clamp(20px, 4cqi, 28px) clamp(18px, 4cqi, 28px) clamp(20px, 4cqi, 26px);
+  border-radius: 21px 21px 0 0;
+  background:
+    radial-gradient(
+      120% 140% at 100% 0%,
+      color-mix(in srgb, var(--palette-4) 22%, transparent) 0%,
+      transparent 60%
+    ),
+    color-mix(in srgb, var(--palette-5) 24%, white);
+  overflow: hidden;
 }
 
-.bk-review__list > div + div {
-  border-top: 1px solid var(--line);
+/* A soft petal-like blob in the corner, echoing the site's organic shapes. */
+.bk-ticket__when::after {
+  content: '';
+  position: absolute;
+  right: -40px;
+  bottom: -60px;
+  width: 150px;
+  height: 150px;
+  border-radius: 58% 42% 55% 45% / 50% 60% 40% 50%;
+  background: color-mix(in srgb, var(--palette-4) 16%, transparent);
+  pointer-events: none;
 }
 
-.bk-review__list dt {
-  grid-area: label;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 3px;
+.bk-ticket__stamp {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 78px;
+  padding: 9px 0 10px;
+  border-radius: 18px;
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+  box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--accent-strong) 60%, transparent);
+  transform: rotate(-3deg);
 }
 
-.bk-review__list dd {
-  grid-area: value;
-  margin: 0;
+.bk-ticket__month,
+.bk-ticket__weekday {
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.bk-ticket__day {
+  font-family: var(--serif);
+  font-size: 2.3rem;
+  line-height: 1.05;
+  font-weight: 500;
+}
+
+.bk-ticket__slot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.bk-ticket__date {
+  font-size: 0.92rem;
+  color: var(--text-soft);
+}
+
+.bk-ticket__time {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 5cqi, 2.1rem);
+  font-weight: 500;
+  line-height: 1.1;
   color: var(--text-strong);
 }
 
-.bk-review__list dd small {
-  display: block;
-  font-size: 0.86rem;
-  font-weight: 500;
+.bk-ticket__time span {
+  font-size: 0.55em;
   color: var(--text-muted);
+}
+
+.bk-ticket__place {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.bk-ticket__place svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* Perforation between the two halves, with notches cut from the card edge. */
+.bk-ticket__tear {
+  position: relative;
+  height: 0;
+  margin: 0 22px;
+  border-top: 2px dashed color-mix(in srgb, var(--palette-4) 45%, white);
+}
+
+.bk-ticket__tear::before,
+.bk-ticket__tear::after {
+  content: '';
+  position: absolute;
+  top: -13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bk-ticket-notch);
+  border: 1px solid var(--line);
+}
+
+.bk-ticket__tear::before {
+  left: -35px;
+  clip-path: inset(0 0 0 50%);
+}
+
+.bk-ticket__tear::after {
+  right: -35px;
+  clip-path: inset(0 50% 0 0);
+}
+
+/* ---- bottom half: who, why, contact ---- */
+
+.bk-ticket__body {
+  padding: 6px clamp(18px, 4cqi, 28px) 10px;
+}
+
+.bk-ticket__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 0;
+}
+
+.bk-ticket__row + .bk-ticket__row {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.bk-ticket__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bk-ticket__kicker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+
+.bk-ticket__kicker--sub {
+  margin: 12px 0 8px;
+}
+
+.bk-ticket__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text-strong);
+}
+
+.bk-ticket__main--sm {
+  font-size: 1.12rem;
+}
+
+.bk-ticket__badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--palette-4) 22%, white);
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.bk-ticket__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bk-ticket__topics li {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--palette-4) 50%, white);
+  font-size: 0.84rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.bk-ticket__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.bk-ticket__contact span {
   overflow-wrap: anywhere;
 }
 
-.bk-review__edit {
-  grid-area: edit;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: 8px;
+.bk-ticket__edit {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
   background: none;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--accent);
+  color: var(--text-muted);
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-.bk-review__edit:hover {
-  background: color-mix(in srgb, var(--palette-5) 40%, white);
+.bk-ticket__when .bk-ticket__edit {
+  align-self: flex-start;
+  background: color-mix(in srgb, white 60%, transparent);
+}
+
+.bk-ticket__edit svg {
+  width: 17px;
+  height: 17px;
+}
+
+.bk-ticket__edit:hover,
+.bk-ticket__edit:focus-visible {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--palette-4) 60%, white);
+  background: var(--surface);
+  transform: rotate(-8deg);
+}
+
+.bk-ticket__edit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@container bkmain (max-width: 420px) {
+  .bk-ticket__stamp {
+    width: 64px;
+  }
+
+  .bk-ticket__day {
+    font-size: 1.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bk-ticket__edit:hover,
+  .bk-ticket__edit:focus-visible {
+    transform: none;
+  }
 }
 
 /* ---- buttons ---- */
