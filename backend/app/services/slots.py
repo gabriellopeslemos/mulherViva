@@ -1,10 +1,16 @@
 from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import Appointment, AvailabilityOverride, AvailabilityRule, Specialty
+from ..models import (
+    Appointment,
+    AvailabilityOverride,
+    AvailabilityRule,
+    SchedulePeriod,
+    Specialty,
+)
 from .settings import get_int_setting
 
 Interval = tuple[time, time]
@@ -77,15 +83,79 @@ def _pad(t: time, minutes: int, *, earlier: bool) -> time:
     return shifted.time()
 
 
-def _rule_active_on(r: AvailabilityRule, day: date) -> bool:
-    """A rule only produces slots within its vigência (start_date/end_date), if set."""
-    if not r.active:
+def period_active_on(p: SchedulePeriod, day: date) -> bool:
+    """True when `day` falls inside the period's vigência (open sides unbounded)."""
+    if p.start_date is not None and day < p.start_date:
         return False
-    if r.start_date is not None and day < r.start_date:
-        return False
-    if r.end_date is not None and day > r.end_date:
+    if p.end_date is not None and day > p.end_date:
         return False
     return True
+
+
+def _specificity(p: SchedulePeriod) -> tuple:
+    """Sort key where smaller = more specific: shortest range first (open-ended
+    ranges are infinitely long), then the later start, then the newer period."""
+    if p.start_date is None or p.end_date is None:
+        span = float("inf")
+    else:
+        span = (p.end_date - p.start_date).days
+    start = p.start_date.toordinal() if p.start_date is not None else 0
+    return (span, -start, -p.id)
+
+
+def winning_period(periods: list[SchedulePeriod], day: date) -> SchedulePeriod | None:
+    """The period whose rules govern `day`: the most specific one covering it."""
+    covering = [p for p in periods if period_active_on(p, day)]
+    return min(covering, key=_specificity) if covering else None
+
+
+def rules_for_day(
+    day: date, periods: list[SchedulePeriod], rules: list[AvailabilityRule]
+) -> list[AvailabilityRule]:
+    """Active rules that apply on `day`. Only the winning period counts, so a
+    weekday it has no rule for is closed even if a broader period covers it."""
+    p = winning_period(periods, day)
+    if p is None:
+        return []
+    return [
+        r
+        for r in rules
+        if r.period_id == p.id and r.weekday == day.weekday() and r.active
+    ]
+
+
+def _ranges_overlap(
+    a_start: date | None, a_end: date | None, b_start: date | None, b_end: date | None
+) -> bool:
+    if a_end is not None and b_start is not None and a_end < b_start:
+        return False
+    if b_end is not None and a_start is not None and b_end < a_start:
+        return False
+    return True
+
+
+def prefill_source(
+    start_date: date, end_date: date | None, periods: list[SchedulePeriod]
+) -> SchedulePeriod | None:
+    """Period whose rules a new vigência starts with: the one that governs the
+    first day the new range overlaps anything. None when it overlaps nothing."""
+    overlapping = [
+        p for p in periods if _ranges_overlap(start_date, end_date, p.start_date, p.end_date)
+    ]
+    if not overlapping:
+        return None
+    first_day = max(
+        start_date, min(p.start_date or start_date for p in overlapping)
+    )
+    return winning_period(overlapping, first_day)
+
+
+def rule_locations(r: AvailabilityRule) -> list[str]:
+    """Modalities a rule takes bookings for: its location, plus "online" when a
+    presencial window is flagged `also_online`. At most one presencial city."""
+    if r.also_online and r.location != "online":
+        return [r.location, "online"]
+    return [r.location]
 
 
 def compute_day_slots(
@@ -98,17 +168,21 @@ def compute_day_slots(
     min_lead_hours: int = 0,
     buffer_min: int = 0,
 ) -> list[tuple[time, time, str]]:
-    """Pure interval math for one day. `overrides` and `appointments` must
-    already be filtered to this date (and specialty where applicable).
+    """Pure interval math for one day. `weekday_rules` must already be resolved
+    for this date (`rules_for_day`); `overrides` and `appointments` filtered to
+    it (and to the specialty where applicable).
 
     Windows are grouped by location before merging/chopping: two rules for the
     same weekday but different locations never collapse into one window, so
-    each resulting slot keeps a single, unambiguous location.
+    each resulting slot keeps a single, unambiguous location. A rule that also
+    takes online bookings yields the same times once per modality; booking
+    either one makes both busy, since appointments block regardless of location.
     """
     windows_by_location: dict[str, list[Interval]] = {}
     for r in weekday_rules:
-        if _rule_active_on(r, day):
-            windows_by_location.setdefault(r.location, []).append((r.start_time, r.end_time))
+        if r.active:
+            for loc in rule_locations(r):
+                windows_by_location.setdefault(loc, []).append((r.start_time, r.end_time))
     for o in overrides:
         if o.kind == "open":
             windows_by_location.setdefault(o.location, []).append(_override_interval(o))
@@ -171,11 +245,15 @@ def get_available_slots(
     rules = list(
         db.scalars(
             select(AvailabilityRule).where(
-                AvailabilityRule.specialty_id == specialty.id,
+                or_(
+                    AvailabilityRule.specialty_id.is_(None),
+                    AvailabilityRule.specialty_id == specialty.id,
+                ),
                 AvailabilityRule.active == True,  # noqa: E712
             )
         )
     )
+    periods = list(db.scalars(select(SchedulePeriod)))
     overrides = list(
         db.scalars(
             select(AvailabilityOverride).where(
@@ -197,7 +275,7 @@ def get_available_slots(
     result: dict[date, list[tuple[time, time, str]]] = {}
     day = date_from
     while day <= date_to:
-        day_rules = [r for r in rules if r.weekday == day.weekday()]
+        day_rules = rules_for_day(day, periods, rules)
         day_overrides = [
             o
             for o in overrides
@@ -223,40 +301,52 @@ def find_rule_conflicts(
     weekday: int,
     start_time: time,
     end_time: time,
-    start_date: date | None,
-    end_date: date | None,
     existing_rules: list[AvailabilityRule],
 ) -> list[AvailabilityRule]:
-    """Pure overlap check for a candidate programação against clinic-wide active
-    rules: same weekday + overlapping time + overlapping vigência. Specialty and
-    location are not part of the conflict key, since there is a single
-    professional attending one place at a time.
+    """Pure overlap check for a candidate programação against the active rules
+    of the *same period*: same weekday + overlapping time. Overlapping periods
+    never conflict — precedence picks one per day. Specialty and location are
+    not part of the key, since a single professional attends one place at a time.
     """
-    conflicts = []
-    for r in existing_rules:
-        if r.weekday != weekday:
-            continue
-        if start_time >= r.end_time or r.start_time >= end_time:
-            continue
-        if end_date is not None and r.start_date is not None and end_date < r.start_date:
-            continue
-        if r.end_date is not None and start_date is not None and r.end_date < start_date:
-            continue
-        conflicts.append(r)
-    return conflicts
+    return [
+        r
+        for r in existing_rules
+        if r.weekday == weekday and start_time < r.end_time and r.start_time < end_time
+    ]
 
 
 def appointment_outside_rule(appt: Appointment, rule: AvailabilityRule) -> bool:
-    """True when `appt` no longer fits `rule`'s weekday/time/vigência window."""
+    """True when `appt` doesn't fit `rule`'s weekday/time window or its
+    modalities. Vigência is the period's concern (`rules_for_day`)."""
     if appt.date.weekday() != rule.weekday:
         return True
-    if rule.start_date is not None and appt.date < rule.start_date:
-        return True
-    if rule.end_date is not None and appt.date > rule.end_date:
+    if appt.type not in rule_locations(rule):
         return True
     if appt.start_time < rule.start_time or appt.end_time > rule.end_time:
         return True
     return False
+
+
+def appointment_covered(
+    appt: Appointment, periods: list[SchedulePeriod], rules: list[AvailabilityRule]
+) -> bool:
+    """True when the effective schedule on `appt.date` has a rule it fits in."""
+    return any(
+        not appointment_outside_rule(appt, r) for r in rules_for_day(appt.date, periods, rules)
+    )
+
+
+def find_orphaned_appointments(
+    appointments: list[Appointment],
+    before: tuple[list[SchedulePeriod], list[AvailabilityRule]],
+    after: tuple[list[SchedulePeriod], list[AvailabilityRule]],
+) -> list[Appointment]:
+    """Appointments the schedule covered `before` a change but not `after`."""
+    return [
+        a
+        for a in appointments
+        if appointment_covered(a, *before) and not appointment_covered(a, *after)
+    ]
 
 
 def has_overlap(

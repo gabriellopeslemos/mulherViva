@@ -104,6 +104,85 @@ export const STATUS_LABELS = {
   cancelled: 'Cancelada',
 }
 
+/* ---------- vigências (schedule periods) ----------
+ * Mirrors backend/app/services/slots.py: on any date the most specific period
+ * covering it (shortest range, then later start, then newer) wins outright. */
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function isoDays(iso) {
+  return Math.round(parseIso(iso).getTime() / DAY_MS)
+}
+
+export function periodActiveOn(p, iso) {
+  if (p.start_date && iso < p.start_date) return false
+  if (p.end_date && iso > p.end_date) return false
+  return true
+}
+
+function specificity(p) {
+  const span = p.start_date && p.end_date ? isoDays(p.end_date) - isoDays(p.start_date) : Infinity
+  return [span, p.start_date ? -isoDays(p.start_date) : 0, -p.id]
+}
+
+/** < 0 when `a` is more specific than `b` (it wins where both apply). */
+export function compareSpecificity(a, b) {
+  const ka = specificity(a)
+  const kb = specificity(b)
+  for (let i = 0; i < ka.length; i += 1) {
+    if (ka[i] !== kb[i]) return ka[i] < kb[i] ? -1 : 1
+  }
+  return 0
+}
+
+export function winningPeriod(periods, iso) {
+  const covering = periods.filter((p) => periodActiveOn(p, iso))
+  return covering.sort(compareSpecificity)[0] || null
+}
+
+/** Active rules that apply on `iso` — only the winning period's. */
+export function rulesForDate(iso, periods, rules) {
+  const p = winningPeriod(periods, iso)
+  if (!p) return []
+  const wd = pyWeekday(parseIso(iso))
+  return rules.filter((r) => r.period_id === p.id && r.weekday === wd && r.active)
+}
+
+export function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+  if (aEnd && bStart && aEnd < bStart) return false
+  if (bEnd && aStart && bEnd < aStart) return false
+  return true
+}
+
+/** Period a new vigência copies its rules from (see slots.py::prefill_source). */
+export function prefillSource(startIso, endIso, periods) {
+  const overlapping = periods.filter((p) =>
+    rangesOverlap(startIso, endIso, p.start_date, p.end_date),
+  )
+  if (!overlapping.length) return null
+  const earliest = overlapping.map((p) => p.start_date || startIso).sort()[0]
+  const firstDay = earliest > startIso ? earliest : startIso
+  return winningPeriod(overlapping, firstDay)
+}
+
+/** 'active' | 'future' | 'expired' relative to `todayIso`. */
+export function periodStatus(p, todayIso) {
+  if (p.start_date && p.start_date > todayIso) return 'future'
+  if (p.end_date && p.end_date < todayIso) return 'expired'
+  return 'active'
+}
+
+/** Dates (ISO) of `weekday` inside a bounded period, or null if unbounded. */
+export function weekdayDatesInPeriod(p, weekday) {
+  if (!p.start_date || !p.end_date) return null
+  const out = []
+  const end = parseIso(p.end_date)
+  let d = parseIso(p.start_date)
+  d = addDays(d, (weekday - pyWeekday(d) + 7) % 7)
+  for (; d <= end; d = addDays(d, 7)) out.push(toIso(d))
+  return out
+}
+
 export function mergeIntervals(intervals) {
   if (!intervals.length) return []
   const sorted = intervals.map((i) => i.slice()).sort((a, b) => a[0] - b[0])

@@ -42,14 +42,37 @@ class SpecialtyUpdate(BaseModel):
 LOCATION_RE = "^(online|presencial_bsb|presencial_rj)$"
 
 
+class SchedulePeriodIn(BaseModel):
+    # A new vigência always has a start; only legacy periods may lack one.
+    start_date: date_type
+    end_date: date_type | None = None
+    force: bool = False
+
+
+class SchedulePeriodUpdate(BaseModel):
+    start_date: date_type | None = None
+    end_date: date_type | None = None
+    force: bool = False
+
+
+class SchedulePeriodOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    start_date: date_type | None
+    end_date: date_type | None
+
+
 class AvailabilityRuleIn(BaseModel):
-    specialty_id: int
+    period_id: int
+    # None = serves every specialty; the admin UI no longer sets one.
+    specialty_id: int | None = None
     weekday: int = Field(ge=0, le=6)
     start_time: time
     end_time: time
     location: str = Field(pattern=LOCATION_RE)
-    start_date: date_type | None = None
-    end_date: date_type | None = None
+    # Presencial window that also takes online bookings; ignored for "online".
+    also_online: bool = False
     active: bool = True
 
 
@@ -58,8 +81,7 @@ class AvailabilityRuleUpdate(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     location: str | None = Field(default=None, pattern=LOCATION_RE)
-    start_date: date_type | None = None
-    end_date: date_type | None = None
+    also_online: bool | None = None
     active: bool | None = None
     force: bool = False
 
@@ -68,13 +90,13 @@ class AvailabilityRuleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    specialty_id: int
+    period_id: int
+    specialty_id: int | None
     weekday: int
     start_time: time
     end_time: time
     location: str
-    start_date: date_type | None
-    end_date: date_type | None
+    also_online: bool
     active: bool
 
 

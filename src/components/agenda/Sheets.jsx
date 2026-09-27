@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import {
+  MONTHS_SHORT,
   PY_WEEKDAY_LABELS,
   STATUS_LABELS,
+  compareSpecificity,
   fmtDayLabel,
   fmtFullDate,
   fmtMin,
-  fmtShortDate,
   fmtTime,
   minToTime,
+  parseIso,
+  periodStatus,
+  prefillSource,
+  rangesOverlap,
   startOfToday,
   timeToMin,
   toIso,
+  weekdayDatesInPeriod,
+  winningPeriod,
 } from './utils'
 
 const MODALITY_LABELS = {
@@ -21,11 +28,32 @@ const MODALITY_LABELS = {
 }
 const MODALITY_OPTIONS = Object.entries(MODALITY_LABELS)
 
-const IconEdit = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="m6 16 9.5-9.5a2.1 2.1 0 0 1 3 3L9 19l-4 1 1-4z" />
-  </svg>
-)
+// A programação takes bookings for its `location`, plus online when a
+// presencial window has `also_online`. Never two presencial cities at once.
+function ruleLocations({ location, also_online }) {
+  return also_online && location !== 'online' ? ['online', location] : [location]
+}
+
+// Next selection after clicking `loc`: online toggles freely, a city replaces
+// the other city. Returns null when the click would leave nothing selected.
+function toggleLocation(current, loc) {
+  let next
+  if (current.includes(loc)) next = current.filter((l) => l !== loc)
+  else if (loc === 'online') next = [...current, loc]
+  else next = [...current.filter((l) => l === 'online'), loc]
+  return next.length ? next : null
+}
+
+function locationPayload(locs) {
+  const city = locs.find((l) => l !== 'online')
+  return city
+    ? { location: city, also_online: locs.includes('online') }
+    : { location: 'online', also_online: false }
+}
+
+function locationsLabel(locs, labels = MODALITY_LABELS) {
+  return locs.map((l) => labels[l] || l).join(' + ')
+}
 
 const IconTrash = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -76,12 +104,6 @@ const IconCheck = () => (
   </svg>
 )
 
-const IconInfinity = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z" />
-  </svg>
-)
-
 const IconUser = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="8" r="3.6" />
@@ -93,19 +115,6 @@ const MODALITY_CARD_META = {
   online: { icon: <IconVideo />, label: 'Online', desc: 'Consulta por vídeo' },
   presencial_bsb: { icon: <IconPin />, label: 'Presencial', desc: 'Brasília' },
   presencial_rj: { icon: <IconPin />, label: 'Presencial', desc: 'Rio de Janeiro' },
-}
-
-function ToggleField({ icon, label, checked, onChange }) {
-  return (
-    <label className="ag-toggle">
-      <span className="ag-toggle__label">
-        {icon}
-        {label}
-      </span>
-      <input type="checkbox" checked={checked} onChange={onChange} />
-      <span className="ag-toggle__switch" aria-hidden="true" />
-    </label>
-  )
 }
 
 /* ---------- generic shell ---------- */
@@ -853,368 +862,896 @@ export function OverrideDetails({ ov, specialty, busy, onDelete, onClose }) {
 
 /* ---------- schedules (programações) list ---------- */
 
-function scheduleStatus(rule, todayIso) {
-  if (rule.start_date && rule.start_date > todayIso) return 'future'
-  if (rule.end_date && rule.end_date < todayIso) return 'expired'
-  return 'active'
+
+// '15 out', with the year only when it isn't the current one.
+function fmtPeriodDay(iso) {
+  const d = parseIso(iso)
+  const base = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`
+  return d.getFullYear() === new Date().getFullYear() ? base : `${base} ${d.getFullYear()}`
 }
 
-const SCHEDULE_STATUS_LABELS = {
-  active: 'Ativa agora',
-  future: 'Futura',
-  expired: 'Expirada',
+function periodLabel(p) {
+  if (!p.start_date && !p.end_date) return 'Sempre'
+  if (!p.start_date) return `Até ${fmtPeriodDay(p.end_date)}`
+  if (!p.end_date) return `${fmtPeriodDay(p.start_date)} +`
+  return `${fmtPeriodDay(p.start_date)} – ${fmtPeriodDay(p.end_date)}`
 }
 
-function scheduleVigencyLabel(rule) {
-  const from = rule.start_date ? fmtShortDate(rule.start_date) : 'sempre'
-  const to = rule.end_date ? fmtShortDate(rule.end_date) : 'sem data de término'
-  return `${from} – ${to}`
+function sortPeriods(periods) {
+  return [...periods].sort(
+    (a, b) =>
+      (a.start_date || '').localeCompare(b.start_date || '') ||
+      (a.end_date || '9999').localeCompare(b.end_date || '9999') ||
+      a.id - b.id,
+  )
 }
 
-export function ScheduleList({ rules, specialtiesById, onAdd, onEdit, onDelete, onClose }) {
-  const todayIso = toIso(startOfToday())
-  const sorted = useMemo(
-    () =>
-      [...rules].sort(
-        (a, b) =>
-          (a.start_date || '').localeCompare(b.start_date || '') ||
-          a.weekday - b.weekday ||
-          timeToMin(a.start_time) - timeToMin(b.start_time),
-      ),
-    [rules],
+// More specific periods that take over part of `period`'s range.
+function periodsOverriding(period, periods) {
+  return periods.filter(
+    (p) =>
+      p.id !== period.id &&
+      rangesOverlap(p.start_date, p.end_date, period.start_date, period.end_date) &&
+      compareSpecificity(p, period) < 0,
+  )
+}
+
+const IconPlus = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+
+const IconCopy = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5" />
+    <path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" />
+  </svg>
+)
+
+const IconChevron = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m7 10 5 5 5-5" />
+  </svg>
+)
+
+// Selectable times in the inline pickers: every 30 minutes across the day.
+const SCHEDULE_TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => i * 30)
+
+// Closes a popover on a pointerdown outside `ref` or on Escape. Escape is
+// stopped here so it closes only the popover, not the whole Modal (which
+// listens on window).
+function useDismiss(ref, open, onDismiss) {
+  useEffect(() => {
+    if (!open) return undefined
+    const onPointer = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onDismiss()
+    }
+    document.addEventListener('pointerdown', onPointer)
+    return () => document.removeEventListener('pointerdown', onPointer)
+  }, [ref, open, onDismiss])
+
+  return (e) => {
+    if (open && e.key === 'Escape') {
+      e.stopPropagation()
+      onDismiss()
+    }
+  }
+}
+
+// Arrow up/down moves focus between a listbox's options.
+function moveOptionFocus(listEl, e) {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+  e.preventDefault()
+  const items = [...listEl.querySelectorAll('[role="option"]')]
+  const idx = items.indexOf(document.activeElement)
+  const next = items[Math.min(items.length - 1, Math.max(0, idx + (e.key === 'ArrowDown' ? 1 : -1)))]
+  next?.focus()
+}
+
+const popoverMotion = (reduce) => ({
+  initial: reduce ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: reduce ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 },
+  transition: { duration: reduce ? 0.1 : 0.16, ease: [0.2, 0.8, 0.2, 1] },
+})
+
+const LOCATION_SHORT = {
+  online: 'Online',
+  presencial_bsb: 'Brasília',
+  presencial_rj: 'Rio de Janeiro',
+}
+
+// Multi-select: online plus at most one city. Each click saves right away and
+// the panel stays open so online + city can be picked in a row.
+function LocationPicker({ value, label, open, onOpenChange, onSelect, reduce, disabled }) {
+  const rootRef = useRef(null)
+  const listRef = useRef(null)
+  const close = useCallback(() => onOpenChange(false), [onOpenChange])
+  const onKeyDown = useDismiss(rootRef, open, close)
+
+  useEffect(() => {
+    if (!open) return
+    listRef.current?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true })
+  }, [open])
+
+  const city = value.find((l) => l !== 'online')
+  const full = locationsLabel(value)
+
+  return (
+    <div className={`ag-tpick ag-tpick--loc${open ? ' is-open' : ''}`} ref={rootRef} onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        className="ag-tpick__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${label}: ${full}`}
+        title={full}
+        disabled={disabled}
+        onClick={() => onOpenChange(!open)}
+      >
+        <span className="ag-tpick__icon">{MODALITY_CARD_META[city || 'online'].icon}</span>
+        <span>{locationsLabel(value, LOCATION_SHORT)}</span>
+        <IconChevron />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.ul
+            ref={listRef}
+            className="ag-tpick__panel ag-tpick__panel--loc"
+            role="listbox"
+            aria-label={label}
+            aria-multiselectable="true"
+            onKeyDown={(e) => moveOptionFocus(listRef.current, e)}
+            {...popoverMotion(reduce)}
+          >
+            <li className="ag-tpick__note" aria-hidden="true">
+              Online + uma cidade
+            </li>
+            {MODALITY_OPTIONS.map(([loc]) => {
+              const m = MODALITY_CARD_META[loc]
+              const selected = value.includes(loc)
+              const next = toggleLocation(value, loc)
+              return (
+                <li key={loc}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={selected ? 'is-selected' : ''}
+                    aria-disabled={!next}
+                    title={!next ? 'Selecione ao menos um local' : undefined}
+                    onClick={() => next && !disabled && onSelect(next)}
+                  >
+                    <span className="ag-tpick__opt">
+                      <span className="ag-tpick__icon">{m.icon}</span>
+                      <span>
+                        <strong>{m.label}</strong>
+                        <small>{m.desc}</small>
+                      </span>
+                    </span>
+                    {selected && <IconCheck />}
+                  </button>
+                </li>
+              )
+            })}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function TimePicker({ value, min, max, label, open, onOpenChange, onSelect, reduce, disabled }) {
+  const rootRef = useRef(null)
+  const listRef = useRef(null)
+  const close = useCallback(() => onOpenChange(false), [onOpenChange])
+  const onKeyDown = useDismiss(rootRef, open, close)
+
+  const options = useMemo(() => {
+    const opts = SCHEDULE_TIME_OPTIONS.filter(
+      (m) => (min == null || m > min) && (max == null || m < max),
+    )
+    if (!opts.includes(value)) opts.push(value)
+    return opts.sort((a, b) => a - b)
+  }, [value, min, max])
+
+  // Opening scrolls the current time into view and focuses it, so the list is
+  // keyboard-navigable straight away.
+  useEffect(() => {
+    if (!open) return
+    const selected = listRef.current?.querySelector('[aria-selected="true"]')
+    selected?.scrollIntoView({ block: 'center' })
+    selected?.focus({ preventScroll: true })
+  }, [open])
+
+  const onListKey = (e) => moveOptionFocus(listRef.current, e)
+
+  return (
+    <div className={`ag-tpick${open ? ' is-open' : ''}`} ref={rootRef} onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        className="ag-tpick__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${label}: ${fmtMin(value)}`}
+        disabled={disabled}
+        onClick={() => onOpenChange(!open)}
+      >
+        <span>{fmtMin(value)}</span>
+        <IconChevron />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.ul
+            ref={listRef}
+            className="ag-tpick__panel"
+            role="listbox"
+            aria-label={label}
+            onKeyDown={onListKey}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: reduce ? 0.1 : 0.16, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            {options.map((m) => (
+              <li key={m}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={m === value}
+                  className={m === value ? 'is-selected' : ''}
+                  onClick={() => {
+                    close()
+                    if (m !== value) onSelect(m)
+                  }}
+                >
+                  {fmtMin(m)}
+                  {m === value && <IconCheck />}
+                </button>
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function CopyDayMenu({ weekday, open, onOpenChange, onApply, reduce, disabled }) {
+  const rootRef = useRef(null)
+  const [targets, setTargets] = useState([])
+  const close = useCallback(() => onOpenChange(false), [onOpenChange])
+  const onKeyDown = useDismiss(rootRef, open, close)
+
+  const others = PY_WEEKDAY_LABELS.map((label, idx) => ({ label, idx })).filter(
+    (d) => d.idx !== weekday,
+  )
+  const toggle = (idx) =>
+    setTargets((t) => (t.includes(idx) ? t.filter((x) => x !== idx) : [...t, idx]))
+
+  return (
+    <div className="ag-sched__copy" ref={rootRef} onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        className="ag-sched__iconbtn"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`Copiar horários de ${PY_WEEKDAY_LABELS[weekday].toLowerCase()} para outros dias`}
+        title="Copiar para outros dias"
+        disabled={disabled}
+        onClick={() => {
+          if (!open) setTargets([])
+          onOpenChange(!open)
+        }}
+      >
+        <IconCopy />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="ag-sched__copypanel"
+            role="dialog"
+            aria-label="Copiar horários"
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: reduce ? 0.1 : 0.16, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            <p>Copiar para</p>
+            {others.map((d) => (
+              <label key={d.idx} className="ag-sched__copyopt">
+                <input
+                  type="checkbox"
+                  checked={targets.includes(d.idx)}
+                  onChange={() => toggle(d.idx)}
+                />
+                <span>{d.label}</span>
+              </label>
+            ))}
+            <button
+              type="button"
+              className="ag-btn ag-btn--primary ag-btn--sm"
+              disabled={targets.length === 0}
+              onClick={() => {
+                close()
+                onApply(targets.sort((a, b) => a - b))
+              }}
+            >
+              Aplicar
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// "Só em 16 out", "16 out e 23 out" — only worth saying for a handful of dates.
+function occurrencesLabel(dates) {
+  const labels = dates.map(fmtPeriodDay)
+  if (labels.length === 1) return `Só em ${labels[0]}`
+  return `${labels.slice(0, -1).join(', ')} e ${labels[labels.length - 1]}`
+}
+
+function ScheduleDayRow({
+  weekday,
+  rules,
+  occurrences,
+  reduce,
+  busy,
+  elevated,
+  openPanel,
+  onPanelOpenChange,
+  onAdd,
+  onDelete,
+  onUpdateRule,
+  onCopy,
+  onClearDay,
+}) {
+  const enabled = rules.length > 0
+  const absent = occurrences?.length === 0
+  const label = PY_WEEKDAY_LABELS[weekday]
+  const panelProps = (id) => ({
+    open: openPanel === id,
+    onOpenChange: (open) => onPanelOpenChange(id, open),
+  })
+  const fade = reduce
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    : {
+        initial: { opacity: 0, height: 0 },
+        animate: { opacity: 1, height: 'auto' },
+        exit: { opacity: 0, height: 0 },
+      }
+  const addButton = (
+    <button
+      type="button"
+      className="ag-sched__iconbtn"
+      onClick={() => onAdd(weekday, rules)}
+      aria-label={`Adicionar horário em ${label.toLowerCase()}`}
+      title="Adicionar horário"
+      disabled={busy}
+    >
+      <IconPlus />
+    </button>
   )
 
   return (
-    <Modal title="Programações" onClose={onClose} wide>
-      <p className="ag-form__hint">
-        Cada programação define especialidade, dia da semana, horário, local e
-        uma faixa de vigência. Cadastre programações futuras com antecedência
-        sem afetar a que está ativa hoje.
-      </p>
-      <div className="ag-schedules__toolbar">
-        <button type="button" className="ag-btn ag-btn--primary ag-btn--sm" onClick={onAdd}>
-          + Nova programação
-        </button>
+    <motion.div
+      layout={reduce ? false : 'position'}
+      className={`ag-sched__day${elevated ? ' is-elevated' : ''}${enabled ? '' : ' is-off'}${absent ? ' is-absent' : ''}`}
+    >
+      <div className="ag-sched__dayhead">
+        <label className="ag-sched__switch">
+          <input
+            type="checkbox"
+            checked={enabled}
+            disabled={busy}
+            onChange={() => (enabled ? onClearDay(weekday, rules) : onAdd(weekday, rules))}
+          />
+          <span className="ag-toggle__switch" aria-hidden="true" />
+          <span className="ag-sched__dayname">{label}</span>
+        </label>
+        {occurrences && occurrences.length > 0 && occurrences.length <= 3 && (
+          <small className="ag-sched__occ">{occurrencesLabel(occurrences)}</small>
+        )}
+        {absent && <small className="ag-sched__occ">Não ocorre nesta janela</small>}
       </div>
-      {sorted.length === 0 ? (
-        <p className="ag-list__empty">Nenhuma programação cadastrada.</p>
-      ) : (
-        <ul className="ag-list__rows">
-          {sorted.map((r) => {
-            const status = scheduleStatus(r, todayIso)
-            const specialty = specialtiesById[r.specialty_id]
+
+      <div className="ag-sched__ranges">
+        <AnimatePresence initial={false} mode="popLayout">
+          {!enabled && (
+            <motion.p key="off" className="ag-sched__off" {...fade} transition={{ duration: 0.18 }}>
+              Fechado
+            </motion.p>
+          )}
+          {rules.map((r, i) => {
+            const start = timeToMin(r.start_time)
+            const end = timeToMin(r.end_time)
             return (
-              <li key={r.id}>
-                <div className="ag-list__row ag-list__row--static">
-                  <span className="ag-list__time">
-                    {PY_WEEKDAY_LABELS[r.weekday].slice(0, 3)}
-                    <em>
-                      {fmtTime(r.start_time)}–{fmtTime(r.end_time)}
-                    </em>
-                  </span>
-                  <span className="ag-list__patient">
-                    <strong>{specialty ? specialty.name : '—'}</strong>
-                    <small>
-                      {MODALITY_LABELS[r.location] || r.location} · {scheduleVigencyLabel(r)}
-                    </small>
-                  </span>
-                  <span className={`ag-badge ag-badge--${status}`}>
-                    {SCHEDULE_STATUS_LABELS[status]}
-                  </span>
+              <motion.div
+                key={r.id}
+                layout={reduce ? false : 'position'}
+                className="ag-sched__range"
+                {...fade}
+                transition={{ duration: reduce ? 0.1 : 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+              >
+                <div className="ag-sched__times">
+                  <TimePicker
+                    label={`Início de ${label.toLowerCase()}`}
+                    value={start}
+                    max={end}
+                    reduce={reduce}
+                    disabled={busy}
+                    onSelect={(m) =>
+                      onUpdateRule(r, { start_time: minToTime(m), end_time: minToTime(end) })
+                    }
+                    {...panelProps(`${r.id}-start`)}
+                  />
+                  <span className="ag-sched__dash" aria-hidden="true">–</span>
+                  <TimePicker
+                    label={`Fim de ${label.toLowerCase()}`}
+                    value={end}
+                    min={start}
+                    reduce={reduce}
+                    disabled={busy}
+                    onSelect={(m) =>
+                      onUpdateRule(r, { start_time: minToTime(start), end_time: minToTime(m) })
+                    }
+                    {...panelProps(`${r.id}-end`)}
+                  />
+                  <LocationPicker
+                    label={`Local de ${label.toLowerCase()}`}
+                    value={ruleLocations(r)}
+                    reduce={reduce}
+                    disabled={busy}
+                    onSelect={(locs) => onUpdateRule(r, locationPayload(locs))}
+                    {...panelProps(`${r.id}-loc`)}
+                  />
                 </div>
-                <div className="ag-list__actions">
+                {/* Day-level actions (+, copiar) ride on the first range so the
+                    order reads + · copiar · lixeira; later ranges keep blank
+                    slots there so their trash stays aligned. */}
+                <div className="ag-sched__dayactions">
+                  {i === 0 ? (
+                    <>
+                      {addButton}
+                      <CopyDayMenu
+                        weekday={weekday}
+                        reduce={reduce}
+                        disabled={busy}
+                        onApply={(targets) => onCopy(rules, targets)}
+                        {...panelProps(`copy-${weekday}`)}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <span className="ag-sched__iconslot" aria-hidden="true" />
+                      <span className="ag-sched__iconslot" aria-hidden="true" />
+                    </>
+                  )}
                   <button
                     type="button"
-                    className="ag-iconbtn"
-                    onClick={() => onEdit(r)}
-                    aria-label="Editar programação"
-                    title="Editar programação"
-                  >
-                    <IconEdit />
-                  </button>
-                  <button
-                    type="button"
-                    className="ag-iconbtn ag-iconbtn--danger"
+                    className="ag-sched__iconbtn ag-sched__iconbtn--danger"
                     onClick={() => onDelete(r)}
-                    aria-label="Excluir programação"
-                    title="Excluir programação"
+                    disabled={busy}
+                    aria-label={`Excluir horário de ${label.toLowerCase()}`}
+                    title="Excluir horário"
                   >
                     <IconTrash />
                   </button>
                 </div>
-              </li>
+              </motion.div>
             )
           })}
-        </ul>
-      )}
-    </Modal>
+        </AnimatePresence>
+      </div>
+
+      {!enabled && <div className="ag-sched__dayactions">{addButton}</div>}
+    </motion.div>
   )
 }
 
-/* ---------- schedule (programação) create/edit form ---------- */
+function NewPeriodMenu({ periods, open, onOpenChange, onCreate, reduce, disabled, prominent }) {
+  const rootRef = useRef(null)
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
+  const [openEnded, setOpenEnded] = useState(false)
+  const close = useCallback(() => onOpenChange(false), [onOpenChange])
+  const onKeyDown = useDismiss(rootRef, open, close)
 
-export function ScheduleForm({ initial, specialties, onSubmit, onClose, title }) {
-  const [form, setForm] = useState(() => ({
-    specialty_id: initial.specialty_id || specialties[0]?.id || '',
-    weekday: initial.weekday ?? 0,
-    start: initial.start_time ? fmtTime(initial.start_time) : '08:00',
-    end: initial.end_time ? fmtTime(initial.end_time) : '12:00',
-    location: initial.location || 'presencial_bsb',
-    // Editing a rule with a null start_date means "valid since always" — keep
-    // that accurately reflected instead of silently defaulting to today (which
-    // would narrow the vigência on save). New schedules default to today.
-    openStart: initial.id ? !initial.start_date : false,
-    start_date: initial.start_date || (initial.id ? '' : toIso(startOfToday())),
-    openEnded: !initial.end_date,
-    end_date: initial.end_date || '',
-  }))
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
-  const [orphanWarning, setOrphanWarning] = useState(null)
+  const endIso = openEnded ? null : end || null
+  const missingEnd = !openEnded && !end
+  const backwards = Boolean(start && endIso && endIso < start)
+  const valid = Boolean(start) && !missingEnd && !backwards
 
-  const set = (key) => (e) => {
-    const value = e?.target ? e.target.value : e
-    setForm((f) => ({ ...f, [key]: value }))
-    setOrphanWarning(null)
-    setError(null)
-  }
-
-  const invalidTime =
-    form.start && form.end && timeToMin(form.end) <= timeToMin(form.start)
-  const invalidDates =
-    !form.openStart &&
-    !form.openEnded &&
-    form.start_date &&
-    form.end_date &&
-    form.end_date < form.start_date
-
-  const submit = async (e, force = false) => {
-    e?.preventDefault()
-    if (invalidTime || invalidDates) return
-    setBusy(true)
-    if (!force) setError(null)
-    try {
-      await onSubmit({
-        specialty_id: Number(form.specialty_id),
-        weekday: Number(form.weekday),
-        start_time: minToTime(timeToMin(form.start)),
-        end_time: minToTime(timeToMin(form.end)),
-        location: form.location,
-        start_date: form.openStart ? null : form.start_date || null,
-        end_date: form.openEnded ? null : form.end_date || null,
-        active: true,
-        force,
-      })
-      setOrphanWarning(null)
-    } catch (err) {
-      if (err.status === 409 && err.payload && typeof err.payload === 'object') {
-        setOrphanWarning(err.payload)
-      } else {
-        setOrphanWarning(null)
-        setError(err.detail || 'Não foi possível salvar. Tente novamente.')
-      }
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const weekdayFull = `${PY_WEEKDAY_LABELS[Number(form.weekday)]}-feira`
+  // What the server will do on create: copy the rules of `source`, and win
+  // over every broader period the range touches.
+  const source = valid ? prefillSource(start, endIso, periods) : null
+  const draft = { id: Infinity, start_date: start, end_date: endIso }
+  const alsoReplaces = valid
+    ? periods.filter(
+        (p) =>
+          p !== source &&
+          rangesOverlap(start, endIso, p.start_date, p.end_date) &&
+          compareSpecificity(draft, p) < 0,
+      )
+    : []
 
   return (
-    <Modal
-      title={title}
-      subtitle="Confira o resumo e ajuste os detalhes."
-      headIcon={<IconCalendar />}
-      wide
-      summary={
-        <div className="ag-modal__summary">
-          <div className="ag-modal__summary-row">
-            <IconCalendar />
-            <span>
-              {weekdayFull} · {form.start} – {form.end}
-            </span>
-          </div>
-          <div className="ag-modal__summary-row">
-            <IconPin />
-            <span>{MODALITY_LABELS[form.location] || form.location}</span>
-          </div>
-        </div>
-      }
-      onClose={onClose}
-    >
-      <form className="ag-form" onSubmit={submit}>
-        <div className="ag-field-row">
-          <label className="ag-field">
-            <span>Especialidade</span>
-            <span className="ag-input-icon">
-              <IconStethoscope />
-              <select value={form.specialty_id} onChange={set('specialty_id')}>
-                {specialties.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </span>
-          </label>
-          <label className="ag-field">
-            <span>Dia da semana</span>
-            <span className="ag-input-icon">
-              <IconCalendar />
-              <select value={form.weekday} onChange={set('weekday')}>
-                {PY_WEEKDAY_LABELS.map((label, idx) => (
-                  <option key={label} value={idx}>
-                    {label}-feira
-                  </option>
-                ))}
-              </select>
-            </span>
-          </label>
-        </div>
-        <fieldset className="ag-field">
-          <legend>Horário</legend>
-          <div className="ag-field-row">
-            <label className="ag-field">
-              <span>Início</span>
-              <span className="ag-input-icon">
-                <IconClock />
-                <input type="time" value={form.start} onChange={set('start')} required step={300} />
-              </span>
-            </label>
-            <label className="ag-field">
-              <span>Fim</span>
-              <span className="ag-input-icon">
-                <IconClock />
-                <input type="time" value={form.end} onChange={set('end')} required step={300} />
-              </span>
-            </label>
-          </div>
-        </fieldset>
-        {invalidTime && (
-          <p className="ag-form__error">O horário final deve ser depois do inicial.</p>
-        )}
-        <fieldset className="ag-field">
-          <legend>Local</legend>
-          <div className="ag-modality-cards">
-            {MODALITY_OPTIONS.map(([value]) => {
-              const meta = MODALITY_CARD_META[value]
-              const selected = form.location === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  className={`ag-modality-card${selected ? ' is-selected' : ''}`}
-                  onClick={() => set('location')(value)}
-                >
-                  <span className="ag-modality-card__icon">{meta.icon}</span>
-                  <span className="ag-modality-card__text">
-                    <strong>{meta.label}</strong>
-                    <small>{meta.desc}</small>
-                  </span>
-                  {selected && (
-                    <span className="ag-modality-card__check">
-                      <IconCheck />
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </fieldset>
-        <div className="ag-field-row">
-          <label className="ag-field">
-            <span>Vigência a partir de</span>
-            <span className="ag-input-icon">
-              <IconCalendar />
+    <div className="ag-sched__copy ag-period-add" ref={rootRef} onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        className={`ag-period-add__btn${prominent ? ' is-prominent' : ''}${open ? ' is-open' : ''}`}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Criar janela de horário"
+        title="Criar janela de horário"
+        disabled={disabled}
+        onClick={() => {
+          if (!open) {
+            setStart(toIso(startOfToday()))
+            setEnd('')
+            setOpenEnded(false)
+          }
+          onOpenChange(!open)
+        }}
+      >
+        <IconPlus />
+        <span className="ag-period-add__label">Criar</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="ag-sched__copypanel ag-period-new"
+            role="dialog"
+            aria-label="Nova janela de horário"
+            {...popoverMotion(reduce)}
+          >
+            <p>Nova janela de horário</p>
+            <div className="ag-period-new__dates">
+              <label className="ag-field">
+                <span>De</span>
+                <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+              </label>
+              <label className="ag-field">
+                <span>Até</span>
+                <input
+                  type="date"
+                  value={openEnded ? '' : end}
+                  min={start || undefined}
+                  disabled={openEnded}
+                  onChange={(e) => setEnd(e.target.value)}
+                />
+              </label>
+            </div>
+            <label className="ag-sched__copyopt">
               <input
-                type="date"
-                value={form.start_date}
-                disabled={form.openStart}
-                onChange={set('start_date')}
+                type="checkbox"
+                checked={openEnded}
+                onChange={(e) => setOpenEnded(e.target.checked)}
               />
-            </span>
-          </label>
-          <label className="ag-field">
-            <span>Até</span>
-            <span className="ag-input-icon">
-              <IconCalendar />
-              <input
-                type="date"
-                value={form.end_date}
-                disabled={form.openEnded}
-                onChange={set('end_date')}
-              />
-            </span>
-          </label>
-        </div>
-        <div className="ag-field-row">
-          <ToggleField
-            icon={<IconInfinity />}
-            label="Vale desde sempre"
-            checked={form.openStart}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, openStart: e.target.checked, start_date: '' }))
-            }
-          />
-          <ToggleField
-            icon={<IconCalendar />}
-            label="Sem data de término"
-            checked={form.openEnded}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, openEnded: e.target.checked, end_date: '' }))
-            }
-          />
-        </div>
-        {invalidDates && (
-          <p className="ag-form__error">A data final deve ser depois da inicial.</p>
-        )}
-
-        {orphanWarning && (
-          <div className="ag-form__conflict" role="alert">
-            <p>{orphanWarning.message}</p>
-            <ul className="ag-form__orphans">
-              {orphanWarning.appointments.map((a) => (
-                <li key={a.id}>
-                  {fmtDayLabel(a.date)} · {a.start_time} · {a.client_name}
-                </li>
-              ))}
-            </ul>
+              <span>Sem data de término</span>
+            </label>
+            {backwards && (
+              <p className="ag-period-new__note is-error" role="alert">
+                A data final deve ser depois da inicial.
+              </p>
+            )}
+            {valid && (
+              <div className="ag-period-new__note">
+                {source ? (
+                  <>
+                    Começa com os horários de <strong>{periodLabel(source)}</strong>. Exclua o
+                    que não deve valer nesse intervalo.
+                  </>
+                ) : (
+                  'Começa sem horários.'
+                )}
+                {alsoReplaces.length > 0 && (
+                  <>
+                    {' '}
+                    No intervalo, também passa a valer no lugar de{' '}
+                    <strong>{alsoReplaces.map(periodLabel).join(', ')}</strong>.
+                  </>
+                )}
+              </div>
+            )}
             <button
               type="button"
-              className="ag-btn ag-btn--danger"
-              disabled={busy}
-              onClick={(e) => submit(e, true)}
+              className="ag-btn ag-btn--primary ag-btn--sm"
+              disabled={!valid}
+              onClick={() => {
+                close()
+                onCreate({ start_date: start, end_date: endIso })
+              }}
             >
-              Salvar mesmo assim
+              Criar
             </button>
-          </div>
+          </motion.div>
         )}
-        {error && (
-          <p className="ag-form__error" role="alert">
-            {error}
-          </p>
-        )}
+      </AnimatePresence>
+    </div>
+  )
+}
 
-        <div className="ag-modal__actions">
-          <button type="button" className="ag-btn ag-btn--ghost" onClick={onClose}>
-            Cancelar
-          </button>
+// Dates of the selected vigência, edited in place. Mounted with a key per
+// saved value so a save (or switching tabs) resets the draft.
+function PeriodEditor({ period, periods, busy, onSave, onDelete, onSelect }) {
+  const legacyOpenStart = !period.start_date
+  const [start, setStart] = useState(period.start_date || '')
+  const [end, setEnd] = useState(period.end_date || '')
+
+  const dirty = start !== (period.start_date || '') || end !== (period.end_date || '')
+  const backwards = Boolean(start && end && end < start)
+  const overriding = periodsOverriding(period, periods)
+
+  return (
+    <div className="ag-period">
+      <div className="ag-period__row">
+        <IconCalendar />
+        <label className="ag-period__date">
+          <span>De</span>
+          <input
+            type="date"
+            value={start}
+            max={end || undefined}
+            required={!legacyOpenStart}
+            disabled={busy}
+            onChange={(e) => setStart(e.target.value)}
+            aria-label="Início da janela"
+          />
+          {legacyOpenStart && !start && <em>sempre</em>}
+        </label>
+        <label className="ag-period__date">
+          <span>até</span>
+          <input
+            type="date"
+            value={end}
+            min={start || undefined}
+            disabled={busy}
+            onChange={(e) => setEnd(e.target.value)}
+            aria-label="Fim da janela"
+          />
+          {!end && <em>sem término</em>}
+        </label>
+        {end && (
           <button
-            type="submit"
-            className="ag-btn ag-btn--primary"
-            disabled={busy || invalidTime || invalidDates}
+            type="button"
+            className="ag-period__clear"
+            disabled={busy}
+            onClick={() => setEnd('')}
           >
-            {busy ? (
-              'Salvando…'
-            ) : (
-              <>
-                <IconCheck />
-                Salvar
-              </>
-            )}
+            Sem término
           </button>
+        )}
+        <span className="ag-period__spacer" />
+        {dirty ? (
+          <>
+            <button
+              type="button"
+              className="ag-btn ag-btn--ghost ag-btn--sm"
+              disabled={busy}
+              onClick={() => {
+                setStart(period.start_date || '')
+                setEnd(period.end_date || '')
+              }}
+            >
+              Desfazer
+            </button>
+            <button
+              type="button"
+              className="ag-btn ag-btn--primary ag-btn--sm"
+              disabled={busy || backwards || (!legacyOpenStart && !start)}
+              onClick={() => onSave({ start_date: start || null, end_date: end || null })}
+            >
+              <IconCheck />
+              Salvar datas
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="ag-sched__iconbtn ag-sched__iconbtn--danger"
+            onClick={onDelete}
+            disabled={busy}
+            aria-label="Excluir janela de horário"
+            title="Excluir janela de horário"
+          >
+            <IconTrash />
+          </button>
+        )}
+      </div>
+      {backwards && (
+        <p className="ag-form__error" role="alert">
+          A data final deve ser depois da inicial.
+        </p>
+      )}
+      {overriding.length > 0 && (
+        <p className="ag-period__note">
+          Em parte desse intervalo vale outra janela, mais curta:{' '}
+          {overriding.map((p, i) => (
+            <span key={p.id}>
+              {i > 0 && ', '}
+              <button type="button" className="ag-period__link" onClick={() => onSelect(p.id)}>
+                {periodLabel(p)}
+              </button>
+            </span>
+          ))}
+          .
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function ScheduleList({
+  periods,
+  rules,
+  selectedId,
+  onSelect,
+  busy,
+  onCreatePeriod,
+  onUpdatePeriod,
+  onDeletePeriod,
+  onAdd,
+  onDelete,
+  onUpdateRule,
+  onCopy,
+  onClearDay,
+  onClose,
+}) {
+  const reduce = useReducedMotion() ?? false
+  const todayIso = toIso(startOfToday())
+  const [showExpired, setShowExpired] = useState(false)
+  // Only one popover (time list, copy menu, new vigência) is open at a time;
+  // the row that opened it last stays elevated so its panel paints on top.
+  const [openPanel, setOpenPanel] = useState(null)
+  const [openDay, setOpenDay] = useState(null)
+
+  const sorted = sortPeriods(periods)
+  const todayWinner = winningPeriod(periods, todayIso)
+  // Default tab: what governs today, else the next one to start, else the latest.
+  const selected =
+    periods.find((p) => p.id === selectedId) ||
+    todayWinner ||
+    sorted.find((p) => periodStatus(p, todayIso) === 'future') ||
+    sorted[sorted.length - 1] ||
+    null
+
+  const expiredCount = sorted.filter((p) => periodStatus(p, todayIso) === 'expired').length
+  const visible = sorted.filter(
+    (p) => showExpired || p.id === selected?.id || periodStatus(p, todayIso) !== 'expired',
+  )
+
+  const byDay = PY_WEEKDAY_LABELS.map((_, weekday) =>
+    rules
+      .filter((r) => r.period_id === selected?.id && r.weekday === weekday)
+      .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time)),
+  )
+
+  // A panel whose rule vanished (deleted, other tab) can't report itself
+  // closed — treat it as closed so it doesn't reopen if the rule comes back.
+  const livePanels = new Set(['new-period'])
+  byDay.forEach((list, day) => {
+    if (list.length) livePanels.add(`copy-${day}`)
+    for (const r of list) {
+      livePanels.add(`${r.id}-start`)
+      livePanels.add(`${r.id}-end`)
+      livePanels.add(`${r.id}-loc`)
+    }
+  })
+  const activePanel = livePanels.has(openPanel) ? openPanel : null
+
+  const panelOpenChange = (day, id, open) => {
+    setOpenPanel((current) => (open ? id : current === id ? null : current))
+    if (open) setOpenDay(day)
+  }
+
+  return (
+    <Modal title="Programações" onClose={onClose} wide>
+      <p className="ag-form__hint">
+        Cada janela de horário é um intervalo de datas com a sua semana de atendimento.
+        Quando duas se sobrepõem, vale a mais curta — e nela, dia sem horário
+        fica fechado.
+      </p>
+      <section className="ag-periods" aria-label="Janelas de horário">
+        <div className="ag-periods__head">
+          <span className="ag-periods__title">Janelas de horário</span>
+          {expiredCount > 0 && (
+            <label className="ag-sched__filter">
+              <input
+                type="checkbox"
+                checked={showExpired}
+                onChange={(e) => setShowExpired(e.target.checked)}
+              />
+              Mostrar expiradas ({expiredCount})
+            </label>
+          )}
         </div>
-      </form>
+
+        <div className="ag-periods__bar">
+          {selected ? (
+            <div className="ag-period-tabs" role="tablist" aria-label="Janelas de horário">
+              {visible.map((p) => {
+                const isCurrent = p.id === todayWinner?.id
+                const expired = periodStatus(p, todayIso) === 'expired'
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={p.id === selected.id}
+                    className={`ag-period-tab${isCurrent ? ' is-current' : ''}${expired ? ' is-expired' : ''}${p.id === selected.id ? ' is-selected' : ''}`}
+                    title={isCurrent ? 'Atual — vale hoje' : undefined}
+                    onClick={() => onSelect(p.id)}
+                  >
+                    <span className="ag-period-tab__label">{periodLabel(p)}</span>
+                    {isCurrent && (
+                      <span className="ag-period-tab__live">
+                        <span>(atual)</span>
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="ag-periods__empty">
+              Nenhuma janela de horário criada ainda. Crie a primeira para montar a semana
+              de atendimento.
+            </p>
+          )}
+          <NewPeriodMenu
+            periods={periods}
+            reduce={reduce}
+            disabled={busy}
+            prominent={!selected}
+            onCreate={onCreatePeriod}
+            open={activePanel === 'new-period'}
+            onOpenChange={(open) => panelOpenChange(null, 'new-period', open)}
+          />
+        </div>
+
+        {selected && (
+          <PeriodEditor
+            key={`${selected.id}:${selected.start_date}:${selected.end_date}`}
+            period={selected}
+            periods={periods}
+            busy={busy}
+            onSave={(patch) => onUpdatePeriod(selected, patch)}
+            onDelete={() => onDeletePeriod(selected)}
+            onSelect={onSelect}
+          />
+        )}
+      </section>
+
+      {selected && (
+        <>
+          <LayoutGroup id="ag-schedules">
+            <div className="ag-sched" role="tabpanel">
+              {byDay.map((dayRules, weekday) => (
+                <ScheduleDayRow
+                  key={weekday}
+                  weekday={weekday}
+                  rules={dayRules}
+                  occurrences={weekdayDatesInPeriod(selected, weekday)}
+                  reduce={reduce}
+                  busy={busy}
+                  elevated={openDay === weekday}
+                  openPanel={activePanel}
+                  onPanelOpenChange={(id, open) => panelOpenChange(weekday, id, open)}
+                  onAdd={(wd, list) => onAdd(selected.id, wd, list)}
+                  onDelete={onDelete}
+                  onUpdateRule={onUpdateRule}
+                  onCopy={onCopy}
+                  onClearDay={onClearDay}
+                />
+              ))}
+            </div>
+          </LayoutGroup>
+        </>
+      )}
     </Modal>
   )
 }

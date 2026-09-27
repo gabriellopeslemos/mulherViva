@@ -1,19 +1,24 @@
 from datetime import date, datetime, time
 from types import SimpleNamespace
 
-from app.services.slots import compute_day_slots
+from app.services.slots import appointment_outside_rule, compute_day_slots
 
 DAY = date(2026, 6, 15)  # a Monday
 
 
-def rule(start, end, active=True, location="presencial_bsb", start_date=None, end_date=None):
+def rule(
+    start,
+    end,
+    active=True,
+    location="presencial_bsb",
+    also_online=False,
+):
     return SimpleNamespace(
         start_time=start,
         end_time=end,
         active=active,
         location=location,
-        start_date=start_date,
-        end_date=end_date,
+        also_online=also_online,
     )
 
 
@@ -237,6 +242,51 @@ def test_different_locations_are_not_merged():
     assert len(slots) == 5
 
 
+def test_also_online_rule_yields_both_modalities():
+    slots = compute_day_slots(
+        DAY, [rule(time(8), time(9), location="presencial_rj", also_online=True)], [], [], 60
+    )
+    assert sorted(slots) == [
+        (time(8), time(9), "online"),
+        (time(8), time(9), "presencial_rj"),
+    ]
+
+
+def test_booking_one_modality_blocks_the_other():
+    slots = compute_day_slots(
+        DAY,
+        [rule(time(8), time(10), location="presencial_bsb", also_online=True)],
+        [],
+        [appt(time(8), time(9))],
+        60,
+    )
+    assert sorted(slots) == [
+        (time(9), time(10), "online"),
+        (time(9), time(10), "presencial_bsb"),
+    ]
+
+
+def test_also_online_ignored_for_online_rule():
+    slots = compute_day_slots(
+        DAY, [rule(time(8), time(9), location="online", also_online=True)], [], [], 60
+    )
+    assert slots == [(time(8), time(9), "online")]
+
+
+def test_appointment_outside_rule_checks_modality():
+    r = SimpleNamespace(
+        weekday=0,
+        start_time=time(8),
+        end_time=time(12),
+        location="presencial_bsb",
+        also_online=True,
+    )
+    online = SimpleNamespace(date=DAY, start_time=time(8), end_time=time(9), type="online")
+    assert not appointment_outside_rule(online, r)
+    r.also_online = False
+    assert appointment_outside_rule(online, r)
+
+
 def test_open_override_location_independent_of_rule():
     slots = compute_day_slots(
         DAY,
@@ -248,42 +298,3 @@ def test_open_override_location_independent_of_rule():
     assert (time(8), time(9), "presencial_bsb") in slots
     assert (time(14), time(15), "online") in slots
     assert len(slots) == 2
-
-
-# ---- vigência (start_date / end_date) ----
-
-
-def test_rule_before_start_date_produces_no_slots():
-    slots = compute_day_slots(
-        DAY, [rule(time(8), time(9), start_date=date(2026, 7, 1))], [], [], 60
-    )
-    assert slots == []
-
-
-def test_rule_after_end_date_produces_no_slots():
-    slots = compute_day_slots(
-        DAY, [rule(time(8), time(9), end_date=date(2026, 6, 1))], [], [], 60
-    )
-    assert slots == []
-
-
-def test_rule_within_vigencia_produces_slots():
-    slots = compute_day_slots(
-        DAY,
-        [rule(time(8), time(9), start_date=date(2026, 6, 1), end_date=date(2026, 6, 30))],
-        [],
-        [],
-        60,
-    )
-    assert slots == [(time(8), time(9), "presencial_bsb")]
-
-
-def test_rule_on_boundary_dates_is_active():
-    slots = compute_day_slots(
-        DAY,
-        [rule(time(8), time(9), start_date=DAY, end_date=DAY)],
-        [],
-        [],
-        60,
-    )
-    assert slots == [(time(8), time(9), "presencial_bsb")]

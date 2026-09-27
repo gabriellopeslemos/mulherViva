@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from PIL import Image, ImageOps
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_admin
@@ -18,6 +18,7 @@ from ..models import (
     AvailabilityOverride,
     AvailabilityRule,
     BlogPost,
+    SchedulePeriod,
     Specialty,
     WaitlistEntry,
 )
@@ -36,6 +37,9 @@ from ..schemas import (
     BlogPostOut,
     BlogPostUpdate,
     InstagramSyncResult,
+    SchedulePeriodIn,
+    SchedulePeriodOut,
+    SchedulePeriodUpdate,
     SettingsOut,
     SettingsUpdate,
     SpecialtyOut,
@@ -47,7 +51,12 @@ from ..services import email as email_service
 from ..services import google_calendar, notifications, waitlist
 from ..services.instagram import sync_instagram
 from ..services.settings import get_bool_setting, get_int_setting, set_setting
-from ..services.slots import appointment_outside_rule, find_rule_conflicts, has_overlap
+from ..services.slots import (
+    find_orphaned_appointments,
+    find_rule_conflicts,
+    has_overlap,
+    prefill_source,
+)
 from .public import _excerpt
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
@@ -96,11 +105,10 @@ def _get_or_404(db: Session, model, obj_id: int, name: str):
 
 
 def _rule_conflict_message(db: Session, conflicting: AvailabilityRule) -> str:
-    specialty = db.get(Specialty, conflicting.specialty_id)
     weekday_label = WEEKDAY_LABELS_PT[conflicting.weekday]
     return (
-        f"Conflita com a programação de {specialty.name if specialty else 'outra especialidade'} "
-        f"de {weekday_label} {conflicting.start_time.strftime('%H:%M')}"
+        f"Conflita com a programação de {weekday_label} "
+        f"{conflicting.start_time.strftime('%H:%M')}"
         f"–{conflicting.end_time.strftime('%H:%M')}"
     )
 
@@ -243,12 +251,156 @@ def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
 @router.get("/availability/rules", response_model=list[AvailabilityRuleOut])
 def list_rules(specialty_id: int | None = None, db: Session = Depends(get_db)):
     query = select(AvailabilityRule).order_by(
-        AvailabilityRule.specialty_id, AvailabilityRule.weekday, AvailabilityRule.start_time
+        AvailabilityRule.weekday, AvailabilityRule.start_time
     )
     if specialty_id:
-        query = query.where(AvailabilityRule.specialty_id == specialty_id)
+        query = query.where(
+            or_(
+                AvailabilityRule.specialty_id.is_(None),
+                AvailabilityRule.specialty_id == specialty_id,
+            )
+        )
     return list(db.scalars(query))
 
+
+def _load_schedule(db: Session) -> tuple[list[SchedulePeriod], list[AvailabilityRule]]:
+    return (
+        list(db.scalars(select(SchedulePeriod))),
+        list(db.scalars(select(AvailabilityRule))),
+    )
+
+
+def _snapshot_schedule(periods, rules):
+    """Detached copies, so the "before" side of an orphan check survives the
+    in-place mutation of the ORM objects."""
+    return (
+        [SimpleNamespace(id=p.id, start_date=p.start_date, end_date=p.end_date) for p in periods],
+        [
+            SimpleNamespace(
+                id=r.id,
+                period_id=r.period_id,
+                weekday=r.weekday,
+                start_time=r.start_time,
+                end_time=r.end_time,
+                location=r.location,
+                also_online=r.also_online,
+                active=r.active,
+            )
+            for r in rules
+        ],
+    )
+
+
+def _raise_if_orphaned(db: Session, before, after) -> None:
+    """409 with the confirmed upcoming appointments the change would leave
+    outside the effective schedule; the client resends with `force` to accept."""
+    candidates = list(
+        db.scalars(
+            select(Appointment).where(
+                Appointment.status == "confirmed",
+                Appointment.date >= date_type.today(),
+            )
+        )
+    )
+    orphaned = find_orphaned_appointments(candidates, before, after)
+    if not orphaned:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "orphaned_appointments",
+            "message": "Essa mudança deixaria consultas confirmadas fora do novo horário.",
+            "appointments": [
+                {
+                    "id": a.id,
+                    "date": a.date.isoformat(),
+                    "start_time": a.start_time.strftime("%H:%M"),
+                    "end_time": a.end_time.strftime("%H:%M"),
+                    "client_name": a.client_name,
+                }
+                for a in orphaned
+            ],
+        },
+    )
+
+
+def _check_period_dates(start_date, end_date) -> None:
+    if start_date and end_date and end_date < start_date:
+        raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
+
+
+# ---- schedule periods (vigências) ----
+
+@router.get("/availability/periods", response_model=list[SchedulePeriodOut])
+def list_periods(db: Session = Depends(get_db)):
+    return list(db.scalars(select(SchedulePeriod).order_by(SchedulePeriod.start_date)))
+
+
+@router.post(
+    "/availability/periods",
+    response_model=SchedulePeriodOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_period(body: SchedulePeriodIn, db: Session = Depends(get_db)):
+    """A vigência that overlaps existing ones starts as a copy of the rules
+    governing its first overlapped day, so anything that should stop applying
+    in the new range has to be deleted there on purpose."""
+    _check_period_dates(body.start_date, body.end_date)
+    periods, rules = _load_schedule(db)
+    before = _snapshot_schedule(periods, rules)
+    source = prefill_source(body.start_date, body.end_date, periods)
+
+    period = SchedulePeriod(start_date=body.start_date, end_date=body.end_date)
+    db.add(period)
+    db.flush()
+    clones = [
+        AvailabilityRule(
+            period_id=period.id,
+            specialty_id=r.specialty_id,
+            weekday=r.weekday,
+            start_time=r.start_time,
+            end_time=r.end_time,
+            location=r.location,
+            also_online=r.also_online,
+            active=r.active,
+        )
+        for r in rules
+        if source is not None and r.period_id == source.id
+    ]
+    db.add_all(clones)
+    db.flush()
+    if not body.force:
+        # The copy only matches what the source governed; where the new range
+        # also covers days another period used to win, bookings can fall out.
+        _raise_if_orphaned(db, before, ([*periods, period], [*rules, *clones]))
+    db.commit()
+    db.refresh(period)
+    return period
+
+
+@router.patch("/availability/periods/{period_id}", response_model=SchedulePeriodOut)
+def update_period(period_id: int, body: SchedulePeriodUpdate, db: Session = Depends(get_db)):
+    periods, rules = _load_schedule(db)
+    period = _get_or_404(db, SchedulePeriod, period_id, "Janela de horário")
+    before = _snapshot_schedule(periods, rules)
+    for field, value in body.model_dump(exclude_unset=True, exclude={"force"}).items():
+        setattr(period, field, value)
+    _check_period_dates(period.start_date, period.end_date)
+    if not body.force:
+        _raise_if_orphaned(db, before, (periods, rules))
+    db.commit()
+    db.refresh(period)
+    return period
+
+
+@router.delete("/availability/periods/{period_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_period(period_id: int, db: Session = Depends(get_db)):
+    period = _get_or_404(db, SchedulePeriod, period_id, "Janela de horário")
+    db.delete(period)
+    db.commit()
+
+
+# ---- availability rules ----
 
 @router.post(
     "/availability/rules",
@@ -256,23 +408,28 @@ def list_rules(specialty_id: int | None = None, db: Session = Depends(get_db)):
     status_code=status.HTTP_201_CREATED,
 )
 def create_rule(body: AvailabilityRuleIn, db: Session = Depends(get_db)):
-    _get_or_404(db, Specialty, body.specialty_id, "Especialidade")
+    _get_or_404(db, SchedulePeriod, body.period_id, "Janela de horário")
+    if body.specialty_id is not None:
+        _get_or_404(db, Specialty, body.specialty_id, "Especialidade")
     if body.end_time <= body.start_time:
         raise HTTPException(status_code=422, detail="Horario final deve ser apos o inicial")
-    if body.start_date and body.end_date and body.end_date < body.start_date:
-        raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
     existing = list(
-        db.scalars(select(AvailabilityRule).where(AvailabilityRule.active == True))  # noqa: E712
+        db.scalars(
+            select(AvailabilityRule).where(
+                AvailabilityRule.active == True,  # noqa: E712
+                AvailabilityRule.period_id == body.period_id,
+            )
+        )
     )
-    conflicts = find_rule_conflicts(
-        body.weekday, body.start_time, body.end_time, body.start_date, body.end_date, existing
-    )
+    conflicts = find_rule_conflicts(body.weekday, body.start_time, body.end_time, existing)
     if conflicts:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=_rule_conflict_message(db, conflicts[0]),
         )
     rule = AvailabilityRule(**body.model_dump())
+    if rule.location == "online":
+        rule.also_online = False
     db.add(rule)
     db.commit()
     db.refresh(rule)
@@ -281,32 +438,20 @@ def create_rule(body: AvailabilityRuleIn, db: Session = Depends(get_db)):
 
 @router.patch("/availability/rules/{rule_id}", response_model=AvailabilityRuleOut)
 def update_rule(rule_id: int, body: AvailabilityRuleUpdate, db: Session = Depends(get_db)):
+    periods, rules = _load_schedule(db)
     rule = _get_or_404(db, AvailabilityRule, rule_id, "Regra")
-    old_snapshot = SimpleNamespace(
-        weekday=rule.weekday,
-        start_time=rule.start_time,
-        end_time=rule.end_time,
-        start_date=rule.start_date,
-        end_date=rule.end_date,
-    )
+    before = _snapshot_schedule(periods, rules)
     for field, value in body.model_dump(exclude_unset=True, exclude={"force"}).items():
         setattr(rule, field, value)
+    if rule.location == "online":
+        rule.also_online = False
     if rule.end_time <= rule.start_time:
         raise HTTPException(status_code=422, detail="Horario final deve ser apos o inicial")
-    if rule.start_date and rule.end_date and rule.end_date < rule.start_date:
-        raise HTTPException(status_code=422, detail="Data final deve ser apos a inicial")
 
-    existing = list(
-        db.scalars(
-            select(AvailabilityRule).where(
-                AvailabilityRule.active == True,  # noqa: E712
-                AvailabilityRule.id != rule.id,
-            )
-        )
-    )
-    conflicts = find_rule_conflicts(
-        rule.weekday, rule.start_time, rule.end_time, rule.start_date, rule.end_date, existing
-    )
+    existing = [
+        r for r in rules if r.active and r.period_id == rule.period_id and r.id != rule.id
+    ]
+    conflicts = find_rule_conflicts(rule.weekday, rule.start_time, rule.end_time, existing)
     if conflicts:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -314,42 +459,7 @@ def update_rule(rule_id: int, body: AvailabilityRuleUpdate, db: Session = Depend
         )
 
     if not body.force:
-        today = date_type.today()
-        candidates = list(
-            db.scalars(
-                select(Appointment).where(
-                    Appointment.specialty_id == rule.specialty_id,
-                    Appointment.status == "confirmed",
-                    Appointment.date >= today,
-                )
-            )
-        )
-        orphaned = [
-            a
-            for a in candidates
-            if not appointment_outside_rule(a, old_snapshot)
-            and appointment_outside_rule(a, rule)
-        ]
-        if orphaned:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "code": "orphaned_appointments",
-                    "message": (
-                        "Essa mudança deixaria consultas confirmadas fora do novo horário."
-                    ),
-                    "appointments": [
-                        {
-                            "id": a.id,
-                            "date": a.date.isoformat(),
-                            "start_time": a.start_time.strftime("%H:%M"),
-                            "end_time": a.end_time.strftime("%H:%M"),
-                            "client_name": a.client_name,
-                        }
-                        for a in orphaned
-                    ],
-                },
-            )
+        _raise_if_orphaned(db, before, (periods, rules))
 
     db.commit()
     db.refresh(rule)

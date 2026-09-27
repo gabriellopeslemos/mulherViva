@@ -9,7 +9,6 @@ import {
   ConfirmDialog,
   OverrideDetails,
   OverrideForm,
-  ScheduleForm,
   ScheduleList,
   SlotActions,
 } from './agenda/Sheets'
@@ -48,6 +47,10 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
   const [appointments, setAppointments] = useState([])
   const [overrides, setOverrides] = useState([])
   const [rules, setRules] = useState([])
+  const [periods, setPeriods] = useState([])
+  // Vigência shown in the scheduler; lives here so it survives the confirm
+  // dialogs that temporarily replace the scheduler modal.
+  const [schedulePeriodId, setSchedulePeriodId] = useState(null)
   const [specialties, setSpecialties] = useState([])
   const [showCancelled, setShowCancelled] = useState(false)
   const [modal, setModal] = useState(null)
@@ -97,14 +100,16 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
     [onAuthExpired],
   )
 
-  // Static data: specialties + weekly rules.
+  // Static data: specialties + vigências and their weekly rules.
   useEffect(() => {
     Promise.all([
       api.get('/api/admin/specialties', { auth: true }),
+      api.get('/api/admin/availability/periods', { auth: true }),
       api.get('/api/admin/availability/rules', { auth: true }),
     ])
-      .then(([specs, ruleList]) => {
+      .then(([specs, periodList, ruleList]) => {
         setSpecialties(specs.filter((s) => s.active))
+        setPeriods(periodList)
         setRules(ruleList)
       })
       .catch((err) => {
@@ -296,27 +301,132 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
     }
   }
 
-  const submitSchedule = async (payload, existingId) => {
+  // A 409 with a structured payload means confirmed appointments would fall
+  // outside the effective schedule — ask, then `retry` with force; any other
+  // error is reported as a toast.
+  const handleScheduleError = (err, retry, fallback) => {
+    if (guard(err)) return
+    if (err.status === 409 && err.payload && typeof err.payload === 'object') {
+      setModal({ type: 'confirm-schedule-orphans', warning: err.payload, retry })
+    } else {
+      showToast(err.detail || fallback, 'error')
+    }
+  }
+
+  const reloadSchedule = async () => {
+    const [periodList, ruleList] = await Promise.all([
+      api.get('/api/admin/availability/periods', { auth: true }),
+      api.get('/api/admin/availability/rules', { auth: true }),
+    ])
+    setPeriods(periodList)
+    setRules(ruleList)
+  }
+
+  // The server copies the rules of the vigência it overlaps into the new one.
+  const createPeriod = async (payload, force = false) => {
+    setBusy(true)
     try {
-      if (existingId) {
-        const updated = await api.patch(
-          `/api/admin/availability/rules/${existingId}`,
-          payload,
-          { auth: true },
-        )
-        setRules((list) => list.map((r) => (r.id === existingId ? updated : r)))
-        showToast('Programação atualizada.')
-      } else {
-        const created = await api.post('/api/admin/availability/rules', payload, {
-          auth: true,
-        })
-        setRules((list) => [...list, created])
-        showToast('Programação criada.')
-      }
+      const created = await api.post(
+        '/api/admin/availability/periods',
+        { ...payload, force },
+        { auth: true },
+      )
+      await reloadSchedule()
+      setSchedulePeriodId(created.id)
       setModal({ type: 'schedules' })
+      showToast('Janela de horário criada.')
     } catch (err) {
-      if (guard(err)) return
-      throw err
+      handleScheduleError(
+        err,
+        () => createPeriod(payload, true),
+        'Não foi possível criar a janela de horário.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const updatePeriod = async (period, patch, force = false) => {
+    setBusy(true)
+    try {
+      const updated = await api.patch(
+        `/api/admin/availability/periods/${period.id}`,
+        { ...patch, force },
+        { auth: true },
+      )
+      setPeriods((list) => list.map((p) => (p.id === period.id ? updated : p)))
+      setModal({ type: 'schedules' })
+      showToast('Janela de horário atualizada.')
+    } catch (err) {
+      handleScheduleError(
+        err,
+        () => updatePeriod(period, patch, true),
+        'Não foi possível atualizar a janela de horário.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const deletePeriod = async (period) => {
+    setBusy(true)
+    try {
+      await api.delete(`/api/admin/availability/periods/${period.id}`, { auth: true })
+      setPeriods((list) => list.filter((p) => p.id !== period.id))
+      setRules((list) => list.filter((r) => r.period_id !== period.id))
+      setSchedulePeriodId(null)
+      showToast('Janela de horário excluída.')
+    } catch (err) {
+      if (!guard(err)) showToast(err.detail || 'Não foi possível excluir.', 'error')
+    } finally {
+      setModal({ type: 'schedules' })
+      setBusy(false)
+    }
+  }
+
+  // New range on a day: the first free gap from 08:00 (up to 4h long), with
+  // the local of the day's last range — tweak it inline afterwards.
+  const addScheduleRule = async (periodId, weekday, dayRules) => {
+    const taken = dayRules
+      .map((r) => [timeToMin(r.start_time), timeToMin(r.end_time)])
+      .sort((a, b) => a[0] - b[0])
+    const lastMin = 23 * 60 + 30
+    let start = 8 * 60
+    let end = null
+    for (const [s, e] of taken) {
+      if (start + 60 <= s) {
+        end = Math.min(start + 240, s)
+        break
+      }
+      start = Math.max(start, e)
+    }
+    if (end === null && start + 60 <= lastMin) end = Math.min(start + 240, lastMin)
+    if (end === null) {
+      showToast('Não há espaço livre nesse dia para outro horário.', 'error')
+      return
+    }
+    const periodRules = rules.filter((r) => r.period_id === periodId)
+    const model = dayRules[dayRules.length - 1] || periodRules[periodRules.length - 1]
+    setBusy(true)
+    try {
+      const created = await api.post(
+        '/api/admin/availability/rules',
+        {
+          period_id: periodId,
+          weekday,
+          start_time: minToTime(start),
+          end_time: minToTime(end),
+          location: model?.location || 'presencial_bsb',
+          also_online: model?.also_online || false,
+          active: true,
+        },
+        { auth: true },
+      )
+      setRules((list) => [...list, created])
+    } catch (err) {
+      if (!guard(err)) showToast(err.detail || 'Não foi possível adicionar o horário.', 'error')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -330,6 +440,98 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
     } catch (err) {
       if (!guard(err)) showToast(err.detail || 'Não foi possível excluir.', 'error')
     } finally {
+      setBusy(false)
+    }
+  }
+
+  // Inline edit (times or local) from the weekly scheduler.
+  const updateScheduleRule = async (rule, patch, force = false) => {
+    setBusy(true)
+    try {
+      const updated = await api.patch(
+        `/api/admin/availability/rules/${rule.id}`,
+        { ...patch, force },
+        { auth: true },
+      )
+      setRules((list) => list.map((r) => (r.id === rule.id ? updated : r)))
+      setModal({ type: 'schedules' })
+      showToast('location' in patch ? 'Local atualizado.' : 'Horário atualizado.')
+    } catch (err) {
+      handleScheduleError(
+        err,
+        () => updateScheduleRule(rule, patch, true),
+        'Não foi possível atualizar a programação.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Copies each source rule (same vigência, specialty and local) onto the
+  // target weekdays. Additive: rules that overlap an existing one on the
+  // target day are rejected by the API and reported, never replaced.
+  const copySchedules = async (sourceRules, targets) => {
+    setBusy(true)
+    const created = []
+    let failed = 0
+    try {
+      for (const weekday of targets) {
+        for (const r of sourceRules) {
+          try {
+            created.push(
+              await api.post(
+                '/api/admin/availability/rules',
+                {
+                  period_id: r.period_id,
+                  weekday,
+                  start_time: r.start_time,
+                  end_time: r.end_time,
+                  location: r.location,
+                  also_online: r.also_online,
+                  active: true,
+                },
+                { auth: true },
+              ),
+            )
+          } catch (err) {
+            if (guard(err)) return
+            failed += 1
+          }
+        }
+      }
+    } finally {
+      if (created.length) setRules((list) => [...list, ...created])
+      setBusy(false)
+    }
+    if (failed === 0) {
+      showToast(`${created.length} horário(s) copiado(s).`)
+    } else {
+      showToast(
+        `${created.length} copiado(s), ${failed} ignorado(s) por conflito com horários existentes.`,
+        created.length ? 'ok' : 'error',
+      )
+    }
+  }
+
+  const clearScheduleDay = async (dayRules) => {
+    setBusy(true)
+    let removed = 0
+    try {
+      for (const r of dayRules) {
+        await api.delete(`/api/admin/availability/rules/${r.id}`, { auth: true })
+        removed += 1
+        setRules((list) => list.filter((x) => x.id !== r.id))
+      }
+      showToast('Dia desativado.')
+    } catch (err) {
+      if (!guard(err)) {
+        showToast(
+          err.detail || `Não foi possível remover tudo (${removed} de ${dayRules.length}).`,
+          'error',
+        )
+      }
+    } finally {
+      setModal({ type: 'schedules' })
       setBusy(false)
     }
   }
@@ -625,6 +827,7 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
           endMin={gridEnd}
           appointments={visibleAppointments}
           overrides={overrides}
+          periods={periods}
           rules={rules}
           specialtiesById={specialtiesById}
           onApptTap={(appt) => setModal({ type: 'appt-details', appt })}
@@ -769,33 +972,43 @@ export default function AgendaPanel({ onClose, onAuthExpired }) {
 
       {modal?.type === 'schedules' && (
         <ScheduleList
+          periods={periods}
           rules={rules}
-          specialtiesById={specialtiesById}
-          onAdd={() => setModal({ type: 'schedule-form' })}
-          onEdit={(rule) => setModal({ type: 'schedule-form', initial: rule, editId: rule.id })}
-          onDelete={(rule) => setModal({ type: 'confirm-delete-schedule', rule })}
+          selectedId={schedulePeriodId}
+          onSelect={setSchedulePeriodId}
+          busy={busy}
+          onCreatePeriod={createPeriod}
+          onUpdatePeriod={updatePeriod}
+          onDeletePeriod={(period) => setModal({ type: 'confirm-delete-period', period })}
+          onAdd={addScheduleRule}
+          onDelete={deleteSchedule}
+          onUpdateRule={updateScheduleRule}
+          onCopy={copySchedules}
+          onClearDay={(_weekday, dayRules) => clearScheduleDay(dayRules)}
           onClose={() => setModal(null)}
         />
       )}
 
-      {modal?.type === 'schedule-form' && (
-        <ScheduleForm
-          title={modal.editId ? 'Editar programação' : 'Nova programação'}
-          initial={modal.initial || {}}
-          specialties={specialties}
-          onSubmit={(payload) => submitSchedule(payload, modal.editId)}
-          onClose={() => setModal({ type: 'schedules' })}
+      {modal?.type === 'confirm-schedule-orphans' && (
+        <ConfirmDialog
+          title="Consultas fora do novo horário"
+          message={`${modal.warning.message} (${modal.warning.appointments?.length ?? 0} consulta(s) afetada(s)). Salvar mesmo assim?`}
+          confirmLabel="Salvar mesmo assim"
+          danger
+          busy={busy}
+          onConfirm={modal.retry}
+          onCancel={() => setModal({ type: 'schedules' })}
         />
       )}
 
-      {modal?.type === 'confirm-delete-schedule' && (
+      {modal?.type === 'confirm-delete-period' && (
         <ConfirmDialog
-          title="Excluir programação"
-          message="Excluir definitivamente essa programação? Essa ação não pode ser desfeita."
-          confirmLabel="Excluir"
+          title="Excluir janela de horário"
+          message="Excluir essa janela de horário e todos os horários dela? Nas datas que ela cobria, volta a valer a janela mais ampla (se houver). Consultas já marcadas não são canceladas."
+          confirmLabel="Excluir janela"
           danger
           busy={busy}
-          onConfirm={() => deleteSchedule(modal.rule)}
+          onConfirm={() => deletePeriod(modal.period)}
           onCancel={() => setModal({ type: 'schedules' })}
         />
       )}

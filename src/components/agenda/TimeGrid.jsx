@@ -9,9 +9,9 @@ import {
   fmtTime,
   snap,
   clamp,
-  pyWeekday,
   layoutOverlaps,
   mergeIntervals,
+  rulesForDate,
   startOfToday,
   STATUS_LABELS,
 } from './utils'
@@ -35,6 +35,7 @@ export default function TimeGrid({
   endMin,
   appointments,
   overrides,
+  periods,
   rules,
   specialtiesById,
   onApptTap,
@@ -81,12 +82,9 @@ export default function TimeGrid({
       .filter((a) => days.includes(a.date))
       .reduce((min, a) => Math.min(min, timeToMin(a.start_time)), Infinity)
     const firstRule = days.reduce((min, iso) => {
-      const wd = pyWeekday(parseIso(iso))
-      rules
-        .filter((r) => r.active && r.weekday === wd)
-        .forEach((r) => {
-          min = Math.min(min, timeToMin(r.start_time))
-        })
+      rulesForDate(iso, periods, rules).forEach((r) => {
+        min = Math.min(min, timeToMin(r.start_time))
+      })
       return min
     }, Infinity)
     const target = Number.isFinite(firstAppt)
@@ -120,14 +118,14 @@ export default function TimeGrid({
   const workBandsByDay = useMemo(() => {
     const map = {}
     days.forEach((iso) => {
-      const wd = pyWeekday(parseIso(iso))
-      const intervals = rules
-        .filter((r) => r.active && r.weekday === wd)
-        .map((r) => [timeToMin(r.start_time), timeToMin(r.end_time)])
+      const intervals = rulesForDate(iso, periods, rules).map((r) => [
+        timeToMin(r.start_time),
+        timeToMin(r.end_time),
+      ])
       map[iso] = mergeIntervals(intervals)
     })
     return map
-  }, [days, rules])
+  }, [days, periods, rules])
 
   const overridesByDay = useMemo(() => {
     const map = {}

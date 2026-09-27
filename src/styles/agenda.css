@@ -1307,29 +1307,771 @@
 
 /* ---------- schedules (programações) list ---------- */
 
-.ag-schedules__toolbar {
+/* ---- weekly scheduler ---- */
+
+.ag-sched__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.ag-sched__filter input {
+  accent-color: var(--accent);
+}
+
+.ag-sched {
   display: flex;
-  justify-content: flex-start;
-  margin: 12px 0 4px;
+  flex-direction: column;
 }
 
-.ag-schedules__toolbar .ag-btn {
-  width: 100%;
+.ag-sched__day {
+  position: relative;
+  display: grid;
+  grid-template-columns: 150px 1fr auto;
+  align-items: start;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
 
-.ag-badge--active {
-  background: #e3f2e7;
-  color: #3f7a50;
+.ag-sched__day:last-child {
+  border-bottom: 1px solid var(--line);
 }
 
-.ag-badge--future {
-  background: #e6eefc;
-  color: #2f5ba3;
+.ag-sched__day.is-elevated {
+  z-index: 2;
 }
 
-.ag-badge--expired {
-  background: var(--surface-soft);
+.ag-sched__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.ag-sched__switch input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.ag-sched__switch input:checked + .ag-toggle__switch {
+  background: var(--accent);
+}
+
+.ag-sched__switch input:checked + .ag-toggle__switch::after {
+  transform: translateX(16px);
+}
+
+.ag-sched__switch input:focus-visible + .ag-toggle__switch {
+  outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: 2px;
+}
+
+.ag-sched__switch input:disabled + .ag-toggle__switch {
+  opacity: 0.55;
+}
+
+.ag-sched__dayname {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.ag-sched__day.is-off .ag-sched__dayname {
   color: var(--text-muted);
+}
+
+.ag-sched__ranges {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ag-sched__off {
+  margin: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.ag-sched__range {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ag-sched__times {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ag-sched__dash {
+  color: var(--text-muted);
+}
+
+.ag-sched__dayactions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ag-sched__iconbtn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ag-sched__iconbtn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ag-sched__iconbtn:hover:not(:disabled),
+.ag-sched__iconbtn[aria-expanded='true'] {
+  background: var(--surface-soft);
+  color: var(--accent);
+}
+
+.ag-sched__iconslot {
+  width: 36px;
+  height: 36px;
+}
+
+.ag-sched__iconbtn--danger,
+.ag-sched__iconbtn--danger:hover:not(:disabled) {
+  color: #b3382f;
+}
+
+.ag-sched__iconbtn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #b3382f 10%, transparent);
+}
+
+.ag-sched__iconbtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* time picker */
+
+.ag-tpick {
+  position: relative;
+}
+
+.ag-tpick__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 10px 6px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.ag-tpick__trigger svg {
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+  transition: transform 0.18s ease;
+}
+
+.ag-tpick__trigger:hover:not(:disabled),
+.ag-tpick.is-open .ag-tpick__trigger {
+  border-color: var(--accent);
+}
+
+.ag-tpick.is-open .ag-tpick__trigger svg {
+  transform: rotate(180deg);
+}
+
+.ag-tpick__trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ag-tpick__panel,
+.ag-sched__copypanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--text-strong) 16%, transparent);
+  transform-origin: top left;
+}
+
+.ag-tpick__panel {
+  width: 112px;
+  max-height: 232px;
+  overflow-y: auto;
+}
+
+.ag-tpick__panel button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.ag-tpick__panel button:hover,
+.ag-tpick__panel button:focus-visible {
+  background: var(--surface-soft);
+  outline: none;
+}
+
+.ag-tpick__panel button.is-selected {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ag-tpick__panel button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* local picker */
+
+.ag-tpick--loc {
+  margin-left: 4px;
+}
+
+.ag-tpick__icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.ag-tpick--loc .ag-tpick__trigger .ag-tpick__icon svg {
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+  transform: none;
+}
+
+.ag-tpick--loc .ag-tpick__trigger {
+  font-variant-numeric: normal;
+  padding-left: 11px;
+}
+
+.ag-tpick__panel--loc {
+  left: auto;
+  right: 0;
+  width: 220px;
+  max-height: none;
+  transform-origin: top right;
+}
+
+.ag-tpick__note {
+  padding: 4px 10px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ag-tpick__panel button[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.ag-tpick__opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.ag-tpick__opt .ag-tpick__icon svg {
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
+}
+
+.ag-tpick__opt strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ag-tpick__opt small {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+/* copy menu */
+
+.ag-sched__copy {
+  position: relative;
+}
+
+.ag-sched__copypanel {
+  left: auto;
+  right: 0;
+  width: 190px;
+  padding: 10px;
+  transform-origin: top right;
+}
+
+.ag-sched__copypanel p {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ag-sched__copyopt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.ag-sched__copyopt:hover {
+  background: var(--surface-soft);
+}
+
+.ag-sched__copyopt input {
+  accent-color: var(--accent);
+}
+
+.ag-sched__copypanel .ag-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+@media (max-width: 560px) {
+  .ag-sched__day {
+    grid-template-columns: 1fr auto;
+  }
+
+  .ag-sched__ranges {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .ag-sched__dayactions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+/* ---- vigências (period tabs, editor, new-period popover) ---- */
+
+/* One card groups everything about vigências — picker, "new" and the
+   selected one's dates — so the week below reads as its content. */
+.ag-periods {
+  margin: 14px 0 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.ag-periods__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 2px 10px;
+  min-height: 22px;
+}
+
+.ag-periods__title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ag-periods__head .ag-sched__filter {
+  font-size: 0.8rem;
+}
+
+.ag-periods__bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.ag-periods__empty {
+  flex: 1;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  align-self: center;
+}
+
+.ag-period-tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  padding: 2px 2px 4px;
+  margin: -2px -2px -4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.ag-period-tab {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ag-period-tab.is-expired {
+  opacity: 0.7;
+}
+
+.ag-period-tab:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.ag-period-tab.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  opacity: 1;
+}
+
+.ag-period-tab:focus-visible,
+.ag-period-add__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ag-period-tab__label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+/* The window that governs today: dark tile + a pulsing dot, top right. */
+.ag-period-tab.is-current {
+  border-color: var(--text-strong);
+  background: var(--text-strong);
+}
+
+.ag-period-tab.is-current .ag-period-tab__label {
+  color: var(--surface);
+}
+
+.ag-period-tab.is-current:hover {
+  border-color: color-mix(in srgb, var(--text-strong) 80%, var(--accent));
+}
+
+.ag-period-tab.is-current.is-selected {
+  border-color: var(--text-strong);
+  background: var(--text-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.ag-period-tab__live {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.ag-period-tab__live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ag-period-live 1.6s ease-out infinite;
+}
+
+.ag-period-tab__live > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes ag-period-live {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-period-tab__live::after {
+    animation: none;
+  }
+}
+
+/* "Nova vigência" sits at the end of the tab strip, as the next tab. */
+.ag-period-add {
+  flex: none;
+  display: flex;
+}
+
+.ag-period-add__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 12px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.ag-period-add__btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.ag-period-add__btn:hover:not(:disabled),
+.ag-period-add__btn.is-open {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ag-period-add__btn.is-prominent {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.ag-period-add__btn.is-prominent:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text-strong));
+}
+
+.ag-period-add__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ag-period {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.ag-period__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.ag-period__row > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--accent);
+}
+
+.ag-period__date {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.ag-period__date input {
+  font: inherit;
+  font-weight: 600;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+.ag-period__date input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ag-period__date em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.ag-period__clear,
+.ag-period__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ag-period__spacer {
+  flex: 1;
+}
+
+.ag-period__note {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.ag-period .ag-form__error {
+  margin: 8px 0 0;
+}
+
+.ag-period-new {
+  width: 280px;
+  max-width: calc(100vw - 32px);
+}
+
+.ag-period-new__dates {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ag-period-new__dates .ag-field input {
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 0.88rem;
+}
+
+.ag-period-new__note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-soft);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.ag-period-new__note.is-error {
+  background: none;
+  padding: 0 4px;
+  color: #b3382f;
+}
+
+.ag-sched__dayhead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ag-sched__occ {
+  padding-left: 46px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.ag-sched__day.is-absent .ag-sched__ranges,
+.ag-sched__day.is-absent .ag-sched__dayname {
+  opacity: 0.5;
+}
+
+@media (max-width: 560px) {
+  .ag-period__spacer {
+    display: none;
+  }
+
+  /* Icon-only so the tab strip keeps the width; the empty state keeps the text. */
+  .ag-period-add__btn:not(.is-prominent) {
+    padding: 0 12px;
+  }
+
+  .ag-period-add__btn:not(.is-prominent) .ag-period-add__label {
+    display: none;
+  }
 }
 
 .ag-form__orphans {

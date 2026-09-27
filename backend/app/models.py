@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timezone
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, Time
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -22,21 +23,51 @@ class Specialty(Base):
     rules: Mapped[list["AvailabilityRule"]] = relationship(back_populates="specialty")
 
 
+class SchedulePeriod(Base):
+    """A vigência: a date range whose rules form the weekly schedule there.
+
+    Periods may overlap; on any day the most specific one (shortest range)
+    wins outright — its rules apply and every other period is ignored, so a
+    weekday without a rule in the winning period is closed. See
+    `services/slots.py::winning_period`.
+    """
+
+    __tablename__ = "schedule_periods"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # NULL on either side means the period has no start/end boundary
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    rules: Mapped[list["AvailabilityRule"]] = relationship(
+        back_populates="period", cascade="all, delete-orphan"
+    )
+
+
 class AvailabilityRule(Base):
     __tablename__ = "availability_rules"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    specialty_id: Mapped[int] = mapped_column(ForeignKey("specialties.id"))
+    period_id: Mapped[int] = mapped_column(
+        ForeignKey("schedule_periods.id", ondelete="CASCADE"), index=True
+    )
+    # NULL = the window serves every specialty (the clinic's normal case).
+    specialty_id: Mapped[int | None] = mapped_column(
+        ForeignKey("specialties.id"), nullable=True
+    )
     weekday: Mapped[int] = mapped_column(Integer)  # 0=Mon .. 6=Sun
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
     location: Mapped[str] = mapped_column(String(20), default="presencial_bsb")
-    # vigência: NULL on either side means the rule has no start/end boundary
-    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # A presencial window can also take online bookings (same times, either
+    # modality). Always False when `location` is already "online".
+    also_online: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=sa_false()
+    )
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    specialty: Mapped[Specialty] = relationship(back_populates="rules")
+    specialty: Mapped[Specialty | None] = relationship(back_populates="rules")
+    period: Mapped[SchedulePeriod] = relationship(back_populates="rules")
 
 
 class AvailabilityOverride(Base):
