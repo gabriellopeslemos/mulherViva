@@ -287,6 +287,141 @@ function CalendarGlyph() {
   )
 }
 
+// Motion curves for the review → confirmed morph. EASE_SHEET is the
+// iOS sheet/spring-like curve (fast start, long soft landing); EASE_OUT is the
+// one the ticket already enters with, so the two moments feel related.
+const EASE_SHEET = [0.32, 0.72, 0, 1]
+const EASE_OUT = [0.22, 1, 0.36, 1]
+
+// Height-collapsing presence wrapper: animates real `height`, not a scale
+// transform, so the content below reflows frame by frame instead of jumping.
+// `overflow` is only hidden while animating so focus rings and shadows of the
+// settled content are never clipped.
+function Collapse({ show, reduced, delay = 0, children }) {
+  return (
+    <AnimatePresence initial={false}>
+      {show && (
+        <motion.div
+          initial={reduced ? false : { height: 0, opacity: 0, overflow: 'hidden' }}
+          animate={{
+            height: 'auto',
+            opacity: 1,
+            transitionEnd: { overflow: 'visible' },
+            transition: reduced
+              ? { duration: 0 }
+              : {
+                  height: { duration: 0.55, ease: EASE_SHEET, delay },
+                  opacity: { duration: 0.35, ease: 'easeOut', delay: delay + 0.1 },
+                },
+          }}
+          exit={{
+            height: 0,
+            opacity: 0,
+            overflow: 'hidden',
+            transition: reduced
+              ? { duration: 0 }
+              : {
+                  height: { duration: 0.5, ease: EASE_SHEET, delay: 0.04 },
+                  opacity: { duration: 0.18, ease: 'easeIn' },
+                },
+          }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+// Wraps content whose height changes in place (e.g. a crossfade between two
+// blocks of different size) and eases the container to the new height.
+function AutoHeight({ reduced, children }) {
+  const innerRef = useRef(null)
+  const [height, setHeight] = useState('auto')
+
+  useEffect(() => {
+    const node = innerRef.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => setHeight(node.offsetHeight))
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <motion.div
+      className="bk-autoheight"
+      initial={false}
+      animate={{ height }}
+      transition={reduced ? { duration: 0 } : { duration: 0.55, ease: EASE_SHEET }}
+    >
+      <div ref={innerRef}>{children}</div>
+    </motion.div>
+  )
+}
+
+// Blur-and-lift crossfade for two stacked blocks (see `.bk-swap`). Exits fast,
+// enters late, so the two never read as overlapping text.
+function swapMotion(reduced, enterDelay = 0) {
+  if (reduced) return { initial: false, animate: { opacity: 1 }, exit: { opacity: 0 } }
+  return {
+    initial: { opacity: 0, y: 10, filter: 'blur(8px)' },
+    animate: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.6, ease: EASE_OUT, delay: enterDelay },
+      // Drop the settled transform/filter: a lingering `translateY(0px)` or
+      // `blur(0px)` keeps the subtree on its own GPU layer (see motionProps).
+      transitionEnd: { y: 0, filter: 'none' },
+    },
+    exit: {
+      opacity: 0,
+      y: -6,
+      filter: 'blur(6px)',
+      transition: { duration: 0.22, ease: 'easeIn' },
+    },
+  }
+}
+
+// Confirmation seal: the disc springs in, the check draws itself, and a
+// single soft ring radiates out once.
+function SuccessSeal({ reduced }) {
+  return (
+    <div className="bk-seal" aria-hidden="true">
+      {!reduced && (
+        <motion.span
+          className="bk-seal__halo"
+          initial={{ scale: 0.7, opacity: 0.5 }}
+          animate={{ scale: 2.1, opacity: 0 }}
+          transition={{ duration: 1.2, ease: EASE_OUT, delay: 0.5 }}
+        />
+      )}
+      <motion.span
+        className="bk-seal__disc"
+        initial={reduced ? false : { scale: 0.35, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 22, mass: 0.9, delay: 0.22 }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <motion.path
+            d="M4.5 12.5 10 18 19.5 7"
+            initial={reduced ? false : { pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.45, ease: [0.65, 0, 0.35, 1], delay: 0.48 }}
+          />
+        </svg>
+      </motion.span>
+    </div>
+  )
+}
+
 export default function BookingSection({ presetSpecialty } = {}) {
   const reducedMotion = useReducedMotion()
   const [specialties, setSpecialties] = useState([])
@@ -310,6 +445,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(null)
   const [error, setError] = useState(null)
+  const confirmedTitleRef = useRef(null)
   // Single-select modality (online / presencial RJ / presencial BSB). The
   // calendar and the slot list only show slots of the chosen modality.
   const [modality, setModality] = useState(MODALITIES[0].id)
@@ -351,6 +487,26 @@ export default function BookingSection({ presetSpecialty } = {}) {
     observer.observe(node)
     return () => observer.disconnect()
   }, [])
+
+  // Once the morph has mostly settled, hand focus to the new heading (the
+  // "Confirmar" button that had it is gone) and, if the patient scrolled past
+  // it, glide the heading back into view.
+  useEffect(() => {
+    if (!confirmation) return
+    const timer = setTimeout(
+      () => {
+        const node = confirmedTitleRef.current
+        if (!node) return
+        node.focus({ preventScroll: true })
+        const top = node.getBoundingClientRect().top
+        if (top < 96) {
+          window.scrollBy({ top: top - 140, behavior: reducedMotion ? 'auto' : 'smooth' })
+        }
+      },
+      reducedMotion ? 0 : 520,
+    )
+    return () => clearTimeout(timer)
+  }, [confirmation, reducedMotion])
 
   useEffect(() => {
     if (!shouldLoad) return
@@ -735,50 +891,15 @@ export default function BookingSection({ presetSpecialty } = {}) {
           </p>
         </motion.div>
 
-        {!confirmation && <RecoverBooking />}
+        <Collapse show={!confirmation} reduced={reducedMotion}>
+          <RecoverBooking />
+        </Collapse>
 
-        {confirmation ? (
-          <motion.div
-            className="bk-card bk-success"
-            initial={reducedMotion ? false : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            role="status"
-          >
-            <div className="bk-success__badge">
-              <CheckIcon />
-            </div>
-            <h3>Consulta confirmada!</h3>
-            <p className="bk-success__lead">
-              Tudo certo! Enviamos um e-mail de confirmação para{' '}
-              <strong>{confirmation.client_email}</strong> com os detalhes da sua consulta.
-            </p>
-            <dl className="bk-success__details">
-              <div>
-                <dt>Especialidade</dt>
-                <dd>{specialty?.name}</dd>
-              </div>
-              <div>
-                <dt>Data</dt>
-                <dd>{fmtLongDate(confirmation.date)}</dd>
-              </div>
-              <div>
-                <dt>Horário</dt>
-                <dd>
-                  {fmtTime(confirmation.start_time)} – {fmtTime(confirmation.end_time)}
-                </dd>
-              </div>
-              <div>
-                <dt>Modalidade</dt>
-                <dd>{MODALITY_LABELS[confirmation.type] || confirmation.type}</dd>
-              </div>
-            </dl>
-            <button className="bk-btn bk-btn--ghost" type="button" onClick={reset}>
-              Fazer novo agendamento
-            </button>
-          </motion.div>
-        ) : (
-          <div className="bk-card bk-main">
+        {/* The review step morphs into the confirmation in place: the card and
+            the ticket persist, only the chrome around them (stepper, heading,
+            actions) collapses or crossfades. */}
+        <div className="bk-card bk-main">
+          <Collapse show={!confirmation} reduced={reducedMotion}>
             <ol className="bk-stepper" aria-label="Etapas do agendamento">
               {STEPS.map((s) => {
                 const state = s.id === step ? 'current' : s.id < step ? 'done' : 'upcoming'
@@ -808,746 +929,842 @@ export default function BookingSection({ presetSpecialty } = {}) {
             <p className="bk-stepper__caption" aria-hidden="true">
               Etapa {step} de {STEPS.length} · <strong>{STEPS[step - 1].label}</strong>
             </p>
+          </Collapse>
 
-            <AnimatePresence mode="wait" initial={false}>
-              {step === 1 && (
-                <motion.div key="step1" className="bk-step bk-schedule" {...motionProps}>
-                  {/* ---- column 1: intro + modality ---- */}
-                  <div className="bk-schedule__intro">
-                    <h3 className="bk-schedule__title">Quando você gostaria de ser atendida?</h3>
-                    <p className="bk-schedule__lead">
-                      Escolha a modalidade, data e o horário que melhor se encaixam na sua rotina.
-                    </p>
+          <AnimatePresence mode="wait" initial={false}>
+            {step === 1 && (
+              <motion.div key="step1" className="bk-step bk-schedule" {...motionProps}>
+                {/* ---- column 1: intro + modality ---- */}
+                <div className="bk-schedule__intro">
+                  <h3 className="bk-schedule__title">Quando você gostaria de ser atendida?</h3>
+                  <p className="bk-schedule__lead">
+                    Escolha a modalidade, data e o horário que melhor se encaixam na sua rotina.
+                  </p>
 
-                    <span className="bk-label" id="bk-modality-label">
-                      Selecione o local / formato
+                  <span className="bk-label" id="bk-modality-label">
+                    Selecione o local / formato
+                  </span>
+                  <div
+                    className="bk-segment"
+                    role="radiogroup"
+                    aria-labelledby="bk-modality-label"
+                  >
+                    {MODALITIES.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={modality === m.id}
+                        className={`bk-segment__btn${modality === m.id ? ' is-active' : ''}`}
+                        onClick={() => changeModality(m.id)}
+                      >
+                        <span className="bk-segment__icon">{m.icon}</span>
+                        <span className="bk-segment__text">{m.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="bk-info">
+                    <span className="bk-info__icon">{activeModality.icon}</span>
+                    <div>
+                      <strong>{activeModality.title}</strong>
+                      <span>{activeModality.description}</span>
+                    </div>
+                  </div>
+
+                  <div className="bk-nextfree" aria-live="polite">
+                    <span className="bk-nextfree__icon">
+                      <BoltIcon />
                     </span>
-                    <div
-                      className="bk-segment"
-                      role="radiogroup"
-                      aria-labelledby="bk-modality-label"
-                    >
-                      {MODALITIES.map((m) => (
+                    <div>
+                      <span className="bk-nextfree__label">Próximo horário livre:</span>
+                      {nextFree ? (
                         <button
-                          key={m.id}
                           type="button"
-                          role="radio"
-                          aria-checked={modality === m.id}
-                          className={`bk-segment__btn${modality === m.id ? ' is-active' : ''}`}
-                          onClick={() => changeModality(m.id)}
+                          className="bk-nextfree__link"
+                          onClick={pickNextFree}
                         >
-                          <span className="bk-segment__icon">{m.icon}</span>
-                          <span className="bk-segment__text">{m.label}</span>
+                          {relativeDayLabel(nextFree.iso, today)}, {fmtShortDate(nextFree.iso)} às{' '}
+                          {fmtTime(nextFree.slot.start)}
                         </button>
-                      ))}
-                    </div>
-
-                    <div className="bk-info">
-                      <span className="bk-info__icon">{activeModality.icon}</span>
-                      <div>
-                        <strong>{activeModality.title}</strong>
-                        <span>{activeModality.description}</span>
-                      </div>
-                    </div>
-
-                    <div className="bk-nextfree" aria-live="polite">
-                      <span className="bk-nextfree__icon">
-                        <BoltIcon />
-                      </span>
-                      <div>
-                        <span className="bk-nextfree__label">Próximo horário livre:</span>
-                        {nextFree ? (
-                          <button
-                            type="button"
-                            className="bk-nextfree__link"
-                            onClick={pickNextFree}
-                          >
-                            {relativeDayLabel(nextFree.iso, today)}, {fmtShortDate(nextFree.iso)} às{' '}
-                            {fmtTime(nextFree.slot.start)}
-                          </button>
-                        ) : (
-                          <span className="bk-nextfree__empty">
-                            {loadingMonth ? 'Buscando…' : 'Nenhum nas próximas semanas'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ---- column 2: calendar ---- */}
-                  <div className="bk-panel bk-calendar" aria-busy={loadingMonth}>
-                    <div className="bk-calendar__nav">
-                      <button
-                        type="button"
-                        className="bk-iconbtn"
-                        onClick={() =>
-                          setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))
-                        }
-                        disabled={!canPrevMonth}
-                        aria-label="Mês anterior"
-                      >
-                        <ChevronIcon dir="left" />
-                      </button>
-                      <strong aria-live="polite">
-                        {MONTHS_LONG[cursor.getMonth()]} {cursor.getFullYear()}
-                      </strong>
-                      <button
-                        type="button"
-                        className="bk-iconbtn"
-                        onClick={() =>
-                          setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
-                        }
-                        disabled={!canNextMonth}
-                        aria-label="Próximo mês"
-                      >
-                        <ChevronIcon dir="right" />
-                      </button>
-                    </div>
-                    <div className="bk-calendar__grid" role="group" aria-label="Dias do mês">
-                      {WEEKDAY_HEAD.map((w, i) => (
-                        <span key={`${w}-${i}`} className="bk-calendar__weekday" aria-hidden="true">
-                          {w}
+                      ) : (
+                        <span className="bk-nextfree__empty">
+                          {loadingMonth ? 'Buscando…' : 'Nenhum nas próximas semanas'}
                         </span>
-                      ))}
-                      {buildMonthMatrix(cursor)
-                        .flat()
-                        .map((day) => {
-                          const iso = toIso(day)
-                          const inMonth = day.getMonth() === cursor.getMonth()
-                          const enabled = inMonth && dayHasAvailability(iso)
-                          const isToday = iso === todayIso
-                          return (
-                            <button
-                              key={iso}
-                              type="button"
-                              className={[
-                                'bk-calendar__day',
-                                inMonth ? '' : 'is-outside',
-                                enabled ? 'is-available' : '',
-                                selectedDate === iso ? 'is-selected' : '',
-                                isToday ? 'is-today' : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              disabled={!enabled}
-                              onClick={() => pickDate(iso)}
-                              aria-pressed={selectedDate === iso}
-                              aria-label={`${day.getDate()} de ${MONTHS_LONG[day.getMonth()]}${enabled ? ', com horários disponíveis' : ', indisponível'}`}
-                            >
-                              <span>{day.getDate()}</span>
-                            </button>
-                          )
-                        })}
-                    </div>
-                    <div className="bk-calendar__foot">
-                      {loadingMonth && !error ? (
-                        <p className="bk-calendar__hint">Carregando agenda…</p>
-                      ) : !monthHasSlots ? (
-                        <p className="bk-calendar__hint">
-                          Sem horários neste mês para esta modalidade.
-                        </p>
-                      ) : (
-                        <ul className="bk-legend" aria-hidden="true">
-                          <li className="bk-legend__available">Disponível</li>
-                          <li className="bk-legend__selected">Selecionado</li>
-                        </ul>
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* ---- column 3: time slots ---- */}
-                  <div className="bk-times-wrap">
-                    <div className="bk-panel bk-times">
-                      {!selectedDate ? (
-                        <div className="bk-times__empty">
-                          <CalendarGlyph />
-                          <p>Selecione uma data no calendário para ver os horários disponíveis.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <h4 className="bk-times__title">
-                            Horários do dia <strong>{fmtShortDate(selectedDate)}</strong>
-                          </h4>
-
-                          {slotGroups.length === 0 ? (
-                            <p className="bk-times__hint">
-                              Os horários deste dia acabaram de ser preenchidos. Escolha outra data.
-                            </p>
-                          ) : (
-                            <div
-                              className={`bk-slotlist${daySlots.length > 5 ? ' is-scrollable' : ''}`}
-                              role="radiogroup"
-                              aria-label="Horários disponíveis"
-                            >
-                              {slotGroups.map((group) => (
-                                <div key={group.label} className="bk-slotlist__group">
-                                  {slotGroups.length > 1 && (
-                                    <span className="bk-slotlist__label">{group.label}</span>
-                                  )}
-                                  {group.slots.map((slot) => {
-                                    const isSel =
-                                      selectedSlot?.start === slot.start &&
-                                      selectedSlot?.location === slot.location
-                                    return (
-                                      <button
-                                        key={`${slot.start}-${slot.location}`}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={isSel}
-                                        className={`bk-slot${isSel ? ' is-selected' : ''}`}
-                                        onClick={() => pickSlot(slot)}
-                                      >
-                                        <span className="bk-slot__time">{fmtTime(slot.start)}</span>
-                                        {isSel && (
-                                          <span className="bk-slot__check">
-                                            <CheckIcon />
-                                          </span>
-                                        )}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            className="bk-btn bk-btn--primary bk-times__next"
-                            onClick={() => goToStep(2)}
-                            disabled={!selectedSlot}
-                          >
-                            Próximo passo
-                            <ArrowIcon />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ---- waitlist opt-in (spans all columns) ---- */}
-                  <div className="bk-waitlist">
-                    {!waitlistOpen ? (
-                      <button type="button" className="bk-waitlist__toggle" onClick={openWaitlist}>
-                        Não achou o horário que queria? Entre na lista de espera para ser avisada
-                        quando novos horários aparecerem.
-                      </button>
-                    ) : waitlistDone ? (
-                      <p className="bk-waitlist__done">
-                        <CheckIcon /> Pronto! Avisaremos <strong>{waitlistForm.email}</strong> assim
-                        que um horário abrir.
-                      </p>
-                    ) : (
-                      <form className="bk-waitlist__form" onSubmit={handleWaitlistSubmit}>
-                        <h4 className="bk-waitlist__title">Entrar na lista de espera</h4>
-                        <div className="bk-form__grid">
-                          <label className="bk-field bk-field--full" htmlFor="wl-specialty">
-                            <span>Especialidade</span>
-                            <select
-                              id="wl-specialty"
-                              value={waitlistSpecialtyId || ''}
-                              onChange={(e) => setWaitlistSpecialtyId(Number(e.target.value))}
-                              required
-                            >
-                              <option value="" disabled>
-                                Selecione…
-                              </option>
-                              {specialties.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="bk-field bk-field--full" htmlFor="wl-name">
-                            <span>Nome completo</span>
-                            <input
-                              id="wl-name"
-                              type="text"
-                              autoComplete="name"
-                              value={waitlistForm.name}
-                              onChange={(e) =>
-                                setWaitlistForm((f) => ({
-                                  ...f,
-                                  name: e.target.value,
-                                }))
-                              }
-                              required
-                              minLength={2}
-                            />
-                          </label>
-                          <label className="bk-field" htmlFor="wl-email">
-                            <span>E-mail</span>
-                            <input
-                              id="wl-email"
-                              type="email"
-                              autoComplete="email"
-                              value={waitlistForm.email}
-                              onChange={(e) =>
-                                setWaitlistForm((f) => ({
-                                  ...f,
-                                  email: e.target.value,
-                                }))
-                              }
-                              required
-                            />
-                          </label>
-                          <label className="bk-field" htmlFor="wl-phone">
-                            <span>
-                              Telefone <em>(opcional)</em>
-                            </span>
-                            <input
-                              id="wl-phone"
-                              type="tel"
-                              inputMode="tel"
-                              autoComplete="tel"
-                              value={waitlistForm.phone}
-                              onChange={(e) =>
-                                setWaitlistForm((f) => ({
-                                  ...f,
-                                  phone: e.target.value,
-                                }))
-                              }
-                            />
-                          </label>
-                        </div>
-                        <p className="bk-privacy">{RETENTION_NOTICE}</p>
-                        {selectedDate && (
-                          <p className="bk-hint bk-waitlist__hint">
-                            Vamos priorizar horários em {fmtLongDate(selectedDate)}.
-                          </p>
-                        )}
-                        {waitlistError && (
-                          <p className="bk-error" role="alert">
-                            {waitlistError}
-                          </p>
-                        )}
-                        <div className="bk-waitlist__actions">
-                          <button
-                            type="button"
-                            className="bk-btn bk-btn--ghost"
-                            onClick={() => setWaitlistOpen(false)}
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            type="submit"
-                            className="bk-btn bk-btn--primary"
-                            disabled={waitlistSubmitting || !waitlistSpecialtyId}
-                          >
-                            {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 2 && (
-                <motion.form
-                  key="step2"
-                  className="bk-step bk-form"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    goToStep(3)
-                  }}
-                  {...motionProps}
-                >
-                  <div className="bk-form__head">
-                    <h3 className="bk-step__title">Quase lá! Seus dados</h3>
-                    <p className="bk-step__lead">
-                      Usamos esses dados apenas para confirmar e lembrar você da consulta.
-                    </p>
-                  </div>
-                  <div className="bk-form__grid">
-                    <label className="bk-field bk-field--full" htmlFor="bk-name">
-                      <span>Nome completo</span>
-                      <input
-                        id="bk-name"
-                        type="text"
-                        autoComplete="name"
-                        placeholder="Como devemos te chamar?"
-                        value={form.name}
-                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                        required
-                        minLength={2}
-                        autoFocus
-                      />
-                    </label>
-                    <label className="bk-field" htmlFor="bk-phone">
-                      <span>Telefone / WhatsApp</span>
-                      <input
-                        id="bk-phone"
-                        type="tel"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        placeholder="(00) 00000-0000"
-                        value={form.phone}
-                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                        required
-                        minLength={8}
-                      />
-                    </label>
-                    <label className="bk-field" htmlFor="bk-email">
-                      <span>E-mail</span>
-                      <input
-                        id="bk-email"
-                        type="email"
-                        inputMode="email"
-                        autoComplete="email"
-                        placeholder="voce@email.com"
-                        value={form.email}
-                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                        required
-                      />
-                    </label>
-                  </div>
-                  <p className="bk-privacy">{RETENTION_NOTICE}</p>
-                  <div className="bk-form__actions">
+                {/* ---- column 2: calendar ---- */}
+                <div className="bk-panel bk-calendar" aria-busy={loadingMonth}>
+                  <div className="bk-calendar__nav">
                     <button
                       type="button"
-                      className="bk-btn bk-btn--ghost"
-                      onClick={() => goToStep(1)}
+                      className="bk-iconbtn"
+                      onClick={() =>
+                        setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))
+                      }
+                      disabled={!canPrevMonth}
+                      aria-label="Mês anterior"
                     >
-                      <ArrowIcon dir="left" />
-                      Voltar
+                      <ChevronIcon dir="left" />
                     </button>
-                    <button className="bk-btn bk-btn--primary" type="submit">
-                      Próximo passo
-                      <ArrowIcon />
-                    </button>
-                  </div>
-                </motion.form>
-              )}
-
-              {step === 3 && (
-                <motion.form
-                  key="step3"
-                  className="bk-step bk-form"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    if (specialtyId) goToStep(4)
-                  }}
-                  {...motionProps}
-                >
-                  <div className="bk-form__head">
-                    <h3 className="bk-step__title">Motivo da consulta</h3>
-                    <p className="bk-step__lead">
-                      Escolha a especialidade e, se quiser, marque os assuntos que deseja tratar.
-                    </p>
-                  </div>
-
-                  {selectedDate && selectedSlot && (
-                    <div className="bk-when">
-                      <span className="bk-when__icon">
-                        {MODALITY_BY_ID[selectedSlot.location]?.icon}
-                      </span>
-                      <span className="bk-when__text">
-                        <strong>
-                          {fmtLongDate(selectedDate)}, {fmtTime(selectedSlot.start)}
-                        </strong>
-                        <span>{MODALITY_LABELS[selectedSlot.location]}</span>
-                      </span>
-                      <button type="button" className="bk-when__edit" onClick={() => goToStep(1)}>
-                        Alterar
-                      </button>
-                    </div>
-                  )}
-
-                  <fieldset className="bk-field bk-field--full bk-group">
-                    <legend>
-                      <span className="bk-group__num">1</span>
-                      Especialidade
-                    </legend>
-                    {slotSpecialties.length === 0 ? (
-                      <p className="bk-hint">
-                        Nenhuma especialidade atende nesse horário. Volte e escolha outro.
-                      </p>
-                    ) : (
-                      <div
-                        className={`bk-chips${slotSpecialties.length === 1 ? ' bk-chips--single' : ''}`}
-                        role="radiogroup"
-                        aria-label="Especialidade"
-                        onKeyDown={handleSpecialtyKeyDown}
-                        // Column count that never leaves a lone card on the
-                        // last row: 1–3 side by side, then rows of 3 or 2.
-                        style={{
-                          '--bk-chip-cols':
-                            slotSpecialties.length <= 3
-                              ? slotSpecialties.length
-                              : slotSpecialties.length % 3 === 0
-                                ? 3
-                                : 2,
-                        }}
-                      >
-                        {slotSpecialties.map((s, i) => {
-                          const checked = specialtyId === s.id
-                          const focusable = checked || (!specialtyId && i === 0)
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              role="radio"
-                              aria-checked={checked}
-                              tabIndex={focusable ? 0 : -1}
-                              className={`bk-chip${checked ? ' is-selected' : ''}`}
-                              onClick={() => setSpecialtyId(s.id)}
-                            >
-                              <span className="bk-chip__radio" aria-hidden="true">
-                                <CheckIcon />
-                              </span>
-                              <span className="bk-chip__name">{s.name}</span>
-                              <em>
-                                <ClockIcon />
-                                {s.slot_duration_min} min
-                              </em>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </fieldset>
-
-                  <div className="bk-group bk-group--inline">
-                    <span className="bk-group__label" id="bk-first-visit-label">
-                      <span className="bk-group__num">2</span>
-                      É sua primeira consulta?
-                    </span>
-                    <div
-                      className="bk-toggle"
-                      role="radiogroup"
-                      aria-labelledby="bk-first-visit-label"
+                    <strong aria-live="polite">
+                      {MONTHS_LONG[cursor.getMonth()]} {cursor.getFullYear()}
+                    </strong>
+                    <button
+                      type="button"
+                      className="bk-iconbtn"
+                      onClick={() =>
+                        setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
+                      }
+                      disabled={!canNextMonth}
+                      aria-label="Próximo mês"
                     >
-                      {[
-                        { value: true, label: 'Sim' },
-                        { value: false, label: 'Não' },
-                      ].map((opt) => (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          role="radio"
-                          aria-checked={form.firstVisit === opt.value}
-                          className={`bk-toggle__opt${form.firstVisit === opt.value ? ' is-selected' : ''}`}
-                          onClick={() =>
-                            setForm((f) => ({
-                              ...f,
-                              firstVisit: f.firstVisit === opt.value ? null : opt.value,
-                            }))
-                          }
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
+                      <ChevronIcon dir="right" />
+                    </button>
                   </div>
-
-                  <fieldset className="bk-field bk-field--full bk-group">
-                    <legend>
-                      <span className="bk-group__num">3</span>
-                      Sobre o que você quer conversar?{' '}
-                      <em>(opcional, marque quantos quiser)</em>
-                    </legend>
-                    <div className="bk-tags">
-                      {REASON_TAGS.map((tag) => {
-                        const on = form.reasons.includes(tag)
+                  <div className="bk-calendar__grid" role="group" aria-label="Dias do mês">
+                    {WEEKDAY_HEAD.map((w, i) => (
+                      <span key={`${w}-${i}`} className="bk-calendar__weekday" aria-hidden="true">
+                        {w}
+                      </span>
+                    ))}
+                    {buildMonthMatrix(cursor)
+                      .flat()
+                      .map((day) => {
+                        const iso = toIso(day)
+                        const inMonth = day.getMonth() === cursor.getMonth()
+                        const enabled = inMonth && dayHasAvailability(iso)
+                        const isToday = iso === todayIso
                         return (
                           <button
-                            key={tag}
+                            key={iso}
                             type="button"
-                            aria-pressed={on}
-                            className={`bk-tag${on ? ' is-selected' : ''}`}
-                            onClick={() => toggleReason(tag)}
+                            className={[
+                              'bk-calendar__day',
+                              inMonth ? '' : 'is-outside',
+                              enabled ? 'is-available' : '',
+                              selectedDate === iso ? 'is-selected' : '',
+                              isToday ? 'is-today' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            disabled={!enabled}
+                            onClick={() => pickDate(iso)}
+                            aria-pressed={selectedDate === iso}
+                            aria-label={`${day.getDate()} de ${MONTHS_LONG[day.getMonth()]}${enabled ? ', com horários disponíveis' : ', indisponível'}`}
                           >
-                            <span className="bk-tag__box" aria-hidden="true">
+                            <span>{day.getDate()}</span>
+                          </button>
+                        )
+                      })}
+                  </div>
+                  <div className="bk-calendar__foot">
+                    {loadingMonth && !error ? (
+                      <p className="bk-calendar__hint">Carregando agenda…</p>
+                    ) : !monthHasSlots ? (
+                      <p className="bk-calendar__hint">
+                        Sem horários neste mês para esta modalidade.
+                      </p>
+                    ) : (
+                      <ul className="bk-legend" aria-hidden="true">
+                        <li className="bk-legend__available">Disponível</li>
+                        <li className="bk-legend__selected">Selecionado</li>
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                {/* ---- column 3: time slots ---- */}
+                <div className="bk-times-wrap">
+                  <div className="bk-panel bk-times">
+                    {!selectedDate ? (
+                      <div className="bk-times__empty">
+                        <CalendarGlyph />
+                        <p>Selecione uma data no calendário para ver os horários disponíveis.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <h4 className="bk-times__title">
+                          Horários do dia <strong>{fmtShortDate(selectedDate)}</strong>
+                        </h4>
+
+                        {slotGroups.length === 0 ? (
+                          <p className="bk-times__hint">
+                            Os horários deste dia acabaram de ser preenchidos. Escolha outra data.
+                          </p>
+                        ) : (
+                          <div
+                            className={`bk-slotlist${daySlots.length > 5 ? ' is-scrollable' : ''}`}
+                            role="radiogroup"
+                            aria-label="Horários disponíveis"
+                          >
+                            {slotGroups.map((group) => (
+                              <div key={group.label} className="bk-slotlist__group">
+                                {slotGroups.length > 1 && (
+                                  <span className="bk-slotlist__label">{group.label}</span>
+                                )}
+                                {group.slots.map((slot) => {
+                                  const isSel =
+                                    selectedSlot?.start === slot.start &&
+                                    selectedSlot?.location === slot.location
+                                  return (
+                                    <button
+                                      key={`${slot.start}-${slot.location}`}
+                                      type="button"
+                                      role="radio"
+                                      aria-checked={isSel}
+                                      className={`bk-slot${isSel ? ' is-selected' : ''}`}
+                                      onClick={() => pickSlot(slot)}
+                                    >
+                                      <span className="bk-slot__time">{fmtTime(slot.start)}</span>
+                                      {isSel && (
+                                        <span className="bk-slot__check">
+                                          <CheckIcon />
+                                        </span>
+                                      )}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          className="bk-btn bk-btn--primary bk-times__next"
+                          onClick={() => goToStep(2)}
+                          disabled={!selectedSlot}
+                        >
+                          Próximo passo
+                          <ArrowIcon />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* ---- waitlist opt-in (spans all columns) ---- */}
+                <div className="bk-waitlist">
+                  {!waitlistOpen ? (
+                    <button type="button" className="bk-waitlist__toggle" onClick={openWaitlist}>
+                      Não achou o horário que queria? Entre na lista de espera para ser avisada
+                      quando novos horários aparecerem.
+                    </button>
+                  ) : waitlistDone ? (
+                    <p className="bk-waitlist__done">
+                      <CheckIcon /> Pronto! Avisaremos <strong>{waitlistForm.email}</strong> assim
+                      que um horário abrir.
+                    </p>
+                  ) : (
+                    <form className="bk-waitlist__form" onSubmit={handleWaitlistSubmit}>
+                      <h4 className="bk-waitlist__title">Entrar na lista de espera</h4>
+                      <div className="bk-form__grid">
+                        <label className="bk-field bk-field--full" htmlFor="wl-specialty">
+                          <span>Especialidade</span>
+                          <select
+                            id="wl-specialty"
+                            value={waitlistSpecialtyId || ''}
+                            onChange={(e) => setWaitlistSpecialtyId(Number(e.target.value))}
+                            required
+                          >
+                            <option value="" disabled>
+                              Selecione…
+                            </option>
+                            {specialties.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="bk-field bk-field--full" htmlFor="wl-name">
+                          <span>Nome completo</span>
+                          <input
+                            id="wl-name"
+                            type="text"
+                            autoComplete="name"
+                            value={waitlistForm.name}
+                            onChange={(e) =>
+                              setWaitlistForm((f) => ({
+                                ...f,
+                                name: e.target.value,
+                              }))
+                            }
+                            required
+                            minLength={2}
+                          />
+                        </label>
+                        <label className="bk-field" htmlFor="wl-email">
+                          <span>E-mail</span>
+                          <input
+                            id="wl-email"
+                            type="email"
+                            autoComplete="email"
+                            value={waitlistForm.email}
+                            onChange={(e) =>
+                              setWaitlistForm((f) => ({
+                                ...f,
+                                email: e.target.value,
+                              }))
+                            }
+                            required
+                          />
+                        </label>
+                        <label className="bk-field" htmlFor="wl-phone">
+                          <span>
+                            Telefone <em>(opcional)</em>
+                          </span>
+                          <input
+                            id="wl-phone"
+                            type="tel"
+                            inputMode="tel"
+                            autoComplete="tel"
+                            value={waitlistForm.phone}
+                            onChange={(e) =>
+                              setWaitlistForm((f) => ({
+                                ...f,
+                                phone: e.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+                      </div>
+                      <p className="bk-privacy">{RETENTION_NOTICE}</p>
+                      {selectedDate && (
+                        <p className="bk-hint bk-waitlist__hint">
+                          Vamos priorizar horários em {fmtLongDate(selectedDate)}.
+                        </p>
+                      )}
+                      {waitlistError && (
+                        <p className="bk-error" role="alert">
+                          {waitlistError}
+                        </p>
+                      )}
+                      <div className="bk-waitlist__actions">
+                        <button
+                          type="button"
+                          className="bk-btn bk-btn--ghost"
+                          onClick={() => setWaitlistOpen(false)}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="bk-btn bk-btn--primary"
+                          disabled={waitlistSubmitting || !waitlistSpecialtyId}
+                        >
+                          {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.form
+                key="step2"
+                className="bk-step bk-form"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  goToStep(3)
+                }}
+                {...motionProps}
+              >
+                <div className="bk-form__head">
+                  <h3 className="bk-step__title">Quase lá! Seus dados</h3>
+                  <p className="bk-step__lead">
+                    Usamos esses dados apenas para confirmar e lembrar você da consulta.
+                  </p>
+                </div>
+                <div className="bk-form__grid">
+                  <label className="bk-field bk-field--full" htmlFor="bk-name">
+                    <span>Nome completo</span>
+                    <input
+                      id="bk-name"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Como devemos te chamar?"
+                      value={form.name}
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      required
+                      minLength={2}
+                      autoFocus
+                    />
+                  </label>
+                  <label className="bk-field" htmlFor="bk-phone">
+                    <span>Telefone / WhatsApp</span>
+                    <input
+                      id="bk-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="(00) 00000-0000"
+                      value={form.phone}
+                      onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                      required
+                      minLength={8}
+                    />
+                  </label>
+                  <label className="bk-field" htmlFor="bk-email">
+                    <span>E-mail</span>
+                    <input
+                      id="bk-email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="voce@email.com"
+                      value={form.email}
+                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      required
+                    />
+                  </label>
+                </div>
+                <p className="bk-privacy">{RETENTION_NOTICE}</p>
+                <div className="bk-form__actions">
+                  <button
+                    type="button"
+                    className="bk-btn bk-btn--ghost"
+                    onClick={() => goToStep(1)}
+                  >
+                    <ArrowIcon dir="left" />
+                    Voltar
+                  </button>
+                  <button className="bk-btn bk-btn--primary" type="submit">
+                    Próximo passo
+                    <ArrowIcon />
+                  </button>
+                </div>
+              </motion.form>
+            )}
+
+            {step === 3 && (
+              <motion.form
+                key="step3"
+                className="bk-step bk-form"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (specialtyId) goToStep(4)
+                }}
+                {...motionProps}
+              >
+                <div className="bk-form__head">
+                  <h3 className="bk-step__title">Motivo da consulta</h3>
+                  <p className="bk-step__lead">
+                    Escolha a especialidade e, se quiser, marque os assuntos que deseja tratar.
+                  </p>
+                </div>
+
+                {selectedDate && selectedSlot && (
+                  <div className="bk-when">
+                    <span className="bk-when__icon">
+                      {MODALITY_BY_ID[selectedSlot.location]?.icon}
+                    </span>
+                    <span className="bk-when__text">
+                      <strong>
+                        {fmtLongDate(selectedDate)}, {fmtTime(selectedSlot.start)}
+                      </strong>
+                      <span>{MODALITY_LABELS[selectedSlot.location]}</span>
+                    </span>
+                    <button type="button" className="bk-when__edit" onClick={() => goToStep(1)}>
+                      Alterar
+                    </button>
+                  </div>
+                )}
+
+                <fieldset className="bk-field bk-field--full bk-group">
+                  <legend>
+                    <span className="bk-group__num">1</span>
+                    Especialidade
+                  </legend>
+                  {slotSpecialties.length === 0 ? (
+                    <p className="bk-hint">
+                      Nenhuma especialidade atende nesse horário. Volte e escolha outro.
+                    </p>
+                  ) : (
+                    <div
+                      className={`bk-chips${slotSpecialties.length === 1 ? ' bk-chips--single' : ''}`}
+                      role="radiogroup"
+                      aria-label="Especialidade"
+                      onKeyDown={handleSpecialtyKeyDown}
+                      // Column count that never leaves a lone card on the
+                      // last row: 1–3 side by side, then rows of 3 or 2.
+                      style={{
+                        '--bk-chip-cols':
+                          slotSpecialties.length <= 3
+                            ? slotSpecialties.length
+                            : slotSpecialties.length % 3 === 0
+                              ? 3
+                              : 2,
+                      }}
+                    >
+                      {slotSpecialties.map((s, i) => {
+                        const checked = specialtyId === s.id
+                        const focusable = checked || (!specialtyId && i === 0)
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={checked}
+                            tabIndex={focusable ? 0 : -1}
+                            className={`bk-chip${checked ? ' is-selected' : ''}`}
+                            onClick={() => setSpecialtyId(s.id)}
+                          >
+                            <span className="bk-chip__radio" aria-hidden="true">
                               <CheckIcon />
                             </span>
-                            {/* Non-breaking hyphen so "pré-natal" never splits. */}
-                            {tag.replace('-', '‑')}
+                            <span className="bk-chip__name">{s.name}</span>
+                            <em>
+                              <ClockIcon />
+                              {s.slot_duration_min} min
+                            </em>
                           </button>
                         )
                       })}
                     </div>
-                  </fieldset>
+                  )}
+                </fieldset>
 
-                  <div className="bk-form__actions">
-                    <button
-                      type="button"
-                      className="bk-btn bk-btn--ghost"
-                      onClick={() => goToStep(2)}
-                    >
-                      <ArrowIcon dir="left" />
-                      Voltar
-                    </button>
-                    <button
-                      className="bk-btn bk-btn--primary"
-                      type="submit"
-                      disabled={!specialtyId}
-                    >
-                      Revisar agendamento
-                      <ArrowIcon />
-                    </button>
-                  </div>
-                </motion.form>
-              )}
-
-              {step === 4 && (
-                <motion.div key="step4" className="bk-step bk-form bk-review" {...motionProps}>
-                  <div className="bk-form__head bk-review__head">
-                    <h3 className="bk-step__title">
-                      {firstName ? (
-                        <>
-                          Quase lá, <em>{firstName}</em>.
-                        </>
-                      ) : (
-                        'Quase lá.'
-                      )}
-                    </h3>
-                    <p className="bk-step__lead">
-                      Dê uma última olhada no seu horário. Se algo não estiver como você
-                      imaginou, é só tocar no lápis para ajustar.
-                    </p>
-                  </div>
-
-                  <motion.article
-                    className="bk-ticket"
-                    aria-label="Resumo da consulta"
-                    {...(reducedMotion
-                      ? {}
-                      : {
-                          initial: { opacity: 0, y: 14, rotate: -0.6 },
-                          animate: { opacity: 1, y: 0, rotate: 0 },
-                          transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.08 },
-                        })}
+                <div className="bk-group bk-group--inline">
+                  <span className="bk-group__label" id="bk-first-visit-label">
+                    <span className="bk-group__num">2</span>
+                    É sua primeira consulta?
+                  </span>
+                  <div
+                    className="bk-toggle"
+                    role="radiogroup"
+                    aria-labelledby="bk-first-visit-label"
                   >
-                    {selectedDate && selectedSlot && (
-                      <div className="bk-ticket__when">
-                        <div className="bk-ticket__stamp" aria-hidden="true">
-                          <span className="bk-ticket__month">
-                            {MONTHS_LONG[parseIso(selectedDate).getMonth()].slice(0, 3)}
-                          </span>
-                          <span className="bk-ticket__day">{parseIso(selectedDate).getDate()}</span>
-                          <span className="bk-ticket__weekday">
-                            {WEEKDAY_HEAD[parseIso(selectedDate).getDay()]}
-                          </span>
-                        </div>
-                        <div className="bk-ticket__slot">
-                          <span className="bk-ticket__date">{fmtLongDate(selectedDate)}</span>
-                          <strong className="bk-ticket__time">
-                            {fmtTime(selectedSlot.start)}
-                            <span> às {fmtTime(selectedSlot.end)}</span>
-                          </strong>
-                          <span className="bk-ticket__place">
-                            {MODALITY_BY_ID[selectedSlot.location]?.icon}
-                            {MODALITY_LABELS[selectedSlot.location]}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="bk-ticket__edit"
-                          onClick={() => goToStep(1)}
-                          aria-label="Alterar data, horário ou modalidade"
-                          title="Alterar"
-                        >
-                          <PencilIcon />
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="bk-ticket__tear" aria-hidden="true" />
-
-                    <div className="bk-ticket__body">
-                      <section className="bk-ticket__row">
-                        <div className="bk-ticket__text">
-                          <span className="bk-ticket__kicker">Você vai ser atendida em</span>
-                          <p className="bk-ticket__main">
-                            {specialty?.name}
-                            {form.firstVisit !== null && (
-                              <span className="bk-ticket__badge">
-                                {form.firstVisit ? 'Primeira consulta' : 'Retorno'}
-                              </span>
-                            )}
-                          </p>
-                          {form.reasons.length > 0 && (
-                            <>
-                              <span className="bk-ticket__kicker bk-ticket__kicker--sub">
-                                e quer conversar sobre
-                              </span>
-                              <ul className="bk-ticket__topics">
-                                {form.reasons.map((r) => (
-                                  <li key={r}>{r.replace('-', '‑')}</li>
-                                ))}
-                              </ul>
-                            </>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          className="bk-ticket__edit"
-                          onClick={() => goToStep(3)}
-                          aria-label="Alterar especialidade e motivo"
-                          title="Alterar"
-                        >
-                          <PencilIcon />
-                        </button>
-                      </section>
-
-                      <section className="bk-ticket__row">
-                        <div className="bk-ticket__text">
-                          <span className="bk-ticket__kicker">Vamos falar com você por aqui</span>
-                          <p className="bk-ticket__main bk-ticket__main--sm">{form.name}</p>
-                          <p className="bk-ticket__contact">
-                            <span>{form.email}</span>
-                            <span>{form.phone}</span>
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          className="bk-ticket__edit"
-                          onClick={() => goToStep(2)}
-                          aria-label="Alterar seus dados"
-                          title="Alterar"
-                        >
-                          <PencilIcon />
-                        </button>
-                      </section>
-                    </div>
-                  </motion.article>
-
-                  <div className="bk-form__actions">
-                    <button
-                      type="button"
-                      className="bk-btn bk-btn--ghost"
-                      onClick={() => goToStep(3)}
-                      disabled={submitting}
-                    >
-                      <ArrowIcon dir="left" />
-                      Voltar
-                    </button>
-                    <button
-                      className="bk-btn bk-btn--primary"
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                    >
-                      {submitting ? 'Confirmando…' : 'Confirmar agendamento'}
-                    </button>
+                    {[
+                      { value: true, label: 'Sim' },
+                      { value: false, label: 'Não' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        role="radio"
+                        aria-checked={form.firstVisit === opt.value}
+                        className={`bk-toggle__opt${form.firstVisit === opt.value ? ' is-selected' : ''}`}
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            firstVisit: f.firstVisit === opt.value ? null : opt.value,
+                          }))
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
-                  <p className="bk-form__note">
-                    Sem pagamento agora. Você recebe os detalhes e o link para gerenciar a consulta
-                    por e-mail.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
 
-            {error && (
-              <p className="bk-error" role="alert">
-                {error}
-              </p>
+                <fieldset className="bk-field bk-field--full bk-group">
+                  <legend>
+                    <span className="bk-group__num">3</span>
+                    Sobre o que você quer conversar?{' '}
+                    <em>(opcional, marque quantos quiser)</em>
+                  </legend>
+                  <div className="bk-tags">
+                    {REASON_TAGS.map((tag) => {
+                      const on = form.reasons.includes(tag)
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          aria-pressed={on}
+                          className={`bk-tag${on ? ' is-selected' : ''}`}
+                          onClick={() => toggleReason(tag)}
+                        >
+                          <span className="bk-tag__box" aria-hidden="true">
+                            <CheckIcon />
+                          </span>
+                          {/* Non-breaking hyphen so "pré-natal" never splits. */}
+                          {tag.replace('-', '‑')}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </fieldset>
+
+                <div className="bk-form__actions">
+                  <button
+                    type="button"
+                    className="bk-btn bk-btn--ghost"
+                    onClick={() => goToStep(2)}
+                  >
+                    <ArrowIcon dir="left" />
+                    Voltar
+                  </button>
+                  <button
+                    className="bk-btn bk-btn--primary"
+                    type="submit"
+                    disabled={!specialtyId}
+                  >
+                    Revisar agendamento
+                    <ArrowIcon />
+                  </button>
+                </div>
+              </motion.form>
             )}
-          </div>
-        )}
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                className={`bk-step bk-form bk-review${confirmation ? ' is-confirmed' : ''}`}
+                {...motionProps}
+              >
+                <AutoHeight reduced={reducedMotion}>
+                  <div className="bk-form__head bk-review__head bk-swap">
+                    <AnimatePresence initial={false}>
+                      {confirmation ? (
+                        <motion.div
+                          key="done"
+                          className="bk-swap__item bk-review__done"
+                          role="status"
+                          {...swapMotion(reducedMotion, 0.34)}
+                        >
+                          <SuccessSeal reduced={reducedMotion} />
+                          <h3 className="bk-step__title" ref={confirmedTitleRef} tabIndex={-1}>
+                            {firstName ? (
+                              <>
+                                Consulta confirmada, <em>{firstName}</em>.
+                              </>
+                            ) : (
+                              'Consulta confirmada!'
+                            )}
+                          </h3>
+                          <p className="bk-step__lead">
+                            Enviamos os detalhes e o link para gerenciar a consulta para{' '}
+                            <strong>{confirmation.client_email}</strong>.
+                          </p>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="review"
+                          className="bk-swap__item"
+                          {...swapMotion(reducedMotion)}
+                        >
+                          <h3 className="bk-step__title">
+                            {firstName ? (
+                              <>
+                                Quase lá, <em>{firstName}</em>.
+                              </>
+                            ) : (
+                              'Quase lá.'
+                            )}
+                          </h3>
+                          <p className="bk-step__lead">
+                            Dê uma última olhada no seu horário. Se algo não estiver como você
+                            imaginou, é só tocar no lápis para ajustar.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </AutoHeight>
+
+                <motion.article
+                  className="bk-ticket"
+                  aria-label="Resumo da consulta"
+                  {...(reducedMotion
+                    ? {}
+                    : {
+                        initial: { opacity: 0, y: 14, rotate: -0.6 },
+                        animate: { opacity: 1, y: 0, rotate: 0 },
+                        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.08 },
+                      })}
+                >
+                  {selectedDate && selectedSlot && (
+                    <div className="bk-ticket__when">
+                      <div className="bk-ticket__stamp" aria-hidden="true">
+                        <span className="bk-ticket__month">
+                          {MONTHS_LONG[parseIso(selectedDate).getMonth()].slice(0, 3)}
+                        </span>
+                        <span className="bk-ticket__day">{parseIso(selectedDate).getDate()}</span>
+                        <span className="bk-ticket__weekday">
+                          {WEEKDAY_HEAD[parseIso(selectedDate).getDay()]}
+                        </span>
+                        <AnimatePresence>
+                          {confirmation && (
+                            <motion.span
+                              className="bk-ticket__verified"
+                              initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{
+                                type: 'spring',
+                                stiffness: 520,
+                                damping: 20,
+                                delay: 0.95,
+                              }}
+                            >
+                              <CheckIcon />
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                      <div className="bk-ticket__slot">
+                        <span className="bk-ticket__date">{fmtLongDate(selectedDate)}</span>
+                        <strong className="bk-ticket__time">
+                          {fmtTime(selectedSlot.start)}
+                          <span> às {fmtTime(selectedSlot.end)}</span>
+                        </strong>
+                        <span className="bk-ticket__place">
+                          {MODALITY_BY_ID[selectedSlot.location]?.icon}
+                          {MODALITY_LABELS[selectedSlot.location]}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="bk-ticket__edit"
+                        onClick={() => goToStep(1)}
+                        disabled={!!confirmation}
+                        aria-label="Alterar data, horário ou modalidade"
+                        title="Alterar"
+                      >
+                        <PencilIcon />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="bk-ticket__tear" aria-hidden="true" />
+
+                  <div className="bk-ticket__body">
+                    <section className="bk-ticket__row">
+                      <div className="bk-ticket__text">
+                        <span className="bk-ticket__kicker">Você vai ser atendida em</span>
+                        <p className="bk-ticket__main">
+                          {specialty?.name}
+                          {form.firstVisit !== null && (
+                            <span className="bk-ticket__badge">
+                              {form.firstVisit ? 'Primeira consulta' : 'Retorno'}
+                            </span>
+                          )}
+                        </p>
+                        {form.reasons.length > 0 && (
+                          <>
+                            <span className="bk-ticket__kicker bk-ticket__kicker--sub">
+                              e quer conversar sobre
+                            </span>
+                            <ul className="bk-ticket__topics">
+                              {form.reasons.map((r) => (
+                                <li key={r}>{r.replace('-', '‑')}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="bk-ticket__edit"
+                        onClick={() => goToStep(3)}
+                        disabled={!!confirmation}
+                        aria-label="Alterar especialidade e motivo"
+                        title="Alterar"
+                      >
+                        <PencilIcon />
+                      </button>
+                    </section>
+
+                    <section className="bk-ticket__row">
+                      <div className="bk-ticket__text">
+                        <span className="bk-ticket__kicker">Vamos falar com você por aqui</span>
+                        <p className="bk-ticket__main bk-ticket__main--sm">{form.name}</p>
+                        <p className="bk-ticket__contact">
+                          <span>{form.email}</span>
+                          <span>{form.phone}</span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="bk-ticket__edit"
+                        onClick={() => goToStep(2)}
+                        disabled={!!confirmation}
+                        aria-label="Alterar seus dados"
+                        title="Alterar"
+                      >
+                        <PencilIcon />
+                      </button>
+                    </section>
+                  </div>
+
+                  {/* One light sweep across the ticket as it becomes "real" —
+                      the Wallet-pass-added moment. */}
+                  {confirmation && !reducedMotion && (
+                    <span className="bk-ticket__sheen" aria-hidden="true">
+                      <motion.span
+                        initial={{ x: '-120%' }}
+                        animate={{ x: '120%' }}
+                        transition={{ duration: 1.25, ease: [0.45, 0, 0.2, 1], delay: 0.62 }}
+                      />
+                    </span>
+                  )}
+                </motion.article>
+
+                <AutoHeight reduced={reducedMotion}>
+                  <div className="bk-swap">
+                    <AnimatePresence initial={false}>
+                      {confirmation ? (
+                        <motion.div
+                          key="done"
+                          className="bk-swap__item bk-review__after"
+                          {...swapMotion(reducedMotion, 0.8)}
+                        >
+                          <button className="bk-btn bk-btn--ghost" type="button" onClick={reset}>
+                            Fazer novo agendamento
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="review"
+                          className="bk-swap__item"
+                          {...swapMotion(reducedMotion)}
+                        >
+                          <div className="bk-form__actions">
+                            <button
+                              type="button"
+                              className="bk-btn bk-btn--ghost"
+                              onClick={() => goToStep(3)}
+                              disabled={submitting}
+                            >
+                              <ArrowIcon dir="left" />
+                              Voltar
+                            </button>
+                            <button
+                              className={`bk-btn bk-btn--primary${submitting ? ' is-busy' : ''}`}
+                              type="button"
+                              onClick={handleSubmit}
+                              disabled={submitting}
+                            >
+                              {submitting && <span className="bk-spinner" aria-hidden="true" />}
+                              {submitting ? 'Confirmando…' : 'Confirmar agendamento'}
+                            </button>
+                          </div>
+                          <p className="bk-form__note">
+                            Sem pagamento agora. Você recebe os detalhes e o link para gerenciar
+                            a consulta por e-mail.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </AutoHeight>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {error && (
+            <p className="bk-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   )
