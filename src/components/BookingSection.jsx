@@ -765,7 +765,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
                           className={`bk-segment__btn${modality === m.id ? ' is-active' : ''}`}
                           onClick={() => changeModality(m.id)}
                         >
-                          {m.label}
+                          <span className="bk-segment__icon">{m.icon}</span>
+                          <span className="bk-segment__text">{m.label}</span>
                         </button>
                       ))}
                     </div>
