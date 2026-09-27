@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion'
 import { api } from '../lib/api'
 import { RETENTION_NOTICE } from '../lib/privacy'
 import RecoverBooking from './RecoverBooking'
@@ -359,6 +359,97 @@ function AutoHeight({ reduced, children }) {
   )
 }
 
+// Hosts the step switch and eases the card between the two steps' heights.
+// `mode="wait"` swaps steps sequentially, so the height is pinned the moment
+// the step changes (the old step is still mounted) and released into the new
+// step's height once the old one has left — the card glides instead of
+// snapping from the tall schedule grid to a short form.
+function StepViewport({ stepKey, direction, reduced, children }) {
+  const outerRef = useRef(null)
+  const innerRef = useRef(null)
+  const animRef = useRef(null)
+  const prevKey = useRef(stepKey)
+
+  useLayoutEffect(() => {
+    if (prevKey.current === stepKey) return
+    prevKey.current = stepKey
+    const outer = outerRef.current
+    if (!outer || reduced) return
+    animRef.current?.stop()
+    outer.style.height = `${outer.offsetHeight}px`
+    outer.classList.add('is-animating')
+  }, [stepKey, reduced])
+
+  useEffect(() => () => animRef.current?.stop(), [])
+
+  const release = () => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner || !outer.style.height) return
+    // Two frames so the incoming step has been committed and laid out.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const done = () => {
+          outer.style.height = ''
+          outer.classList.remove('is-animating')
+        }
+        const from = outer.offsetHeight
+        const to = inner.offsetHeight
+        if (Math.abs(from - to) < 2) return done()
+        animRef.current = animate(
+          outer,
+          { height: [`${from}px`, `${to}px`] },
+          { duration: 0.6, ease: EASE_SHEET, onComplete: done },
+        )
+      }),
+    )
+  }
+
+  return (
+    <div ref={outerRef} className="bk-viewport">
+      <div ref={innerRef} className="bk-viewport__inner">
+        <AnimatePresence mode="wait" initial={false} custom={direction} onExitComplete={release}>
+          {children}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
+// Direction-aware step transition: forward slides in from the right, "Voltar"
+// from the left. The outgoing step leaves quickly and slightly blurred; the
+// incoming one lands on a long soft curve. Settled transform/filter are
+// dropped (see motionProps note in BookingSection) to avoid a 1px seam.
+function stepMotion(reduced, direction) {
+  if (reduced) return { initial: false, animate: { opacity: 1 } }
+  return {
+    custom: direction,
+    initial: 'enter',
+    animate: 'center',
+    exit: 'exit',
+    variants: {
+      enter: (dir) => ({ opacity: 0, x: dir * 40, filter: 'blur(4px)' }),
+      center: {
+        opacity: 1,
+        x: 0,
+        filter: 'blur(0px)',
+        transition: {
+          x: { duration: 0.6, ease: EASE_OUT },
+          opacity: { duration: 0.4, ease: 'easeOut' },
+          filter: { duration: 0.4, ease: 'easeOut' },
+        },
+        transitionEnd: { x: 0, filter: 'none' },
+      },
+      exit: (dir) => ({
+        opacity: 0,
+        x: dir * -24,
+        filter: 'blur(4px)',
+        transition: { duration: 0.22, ease: [0.4, 0, 1, 1] },
+      }),
+    },
+  }
+}
+
 // Blur-and-lift crossfade for two stacked blocks (see `.bk-swap`). Exits fast,
 // enters late, so the two never read as overlapping text.
 function swapMotion(reduced, enterDelay = 0) {
@@ -435,6 +526,9 @@ export default function BookingSection({ presetSpecialty } = {}) {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [step, setStep] = useState(1)
+  // +1 forward, -1 back, 0 before any navigation (no entrance on page load).
+  const [direction, setDirection] = useState(0)
+  const cardRef = useRef(null)
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -752,6 +846,26 @@ export default function BookingSection({ presetSpecialty } = {}) {
     setError(null)
   }
 
+  // Switches step with a direction for the transition and, if the patient
+  // scrolled down the tall schedule grid, glides the card top back into view
+  // while the old step fades out.
+  const changeStep = (target) => {
+    if (target === step) return
+    setDirection(target > step ? 1 : -1)
+    setStep(target)
+    const node = cardRef.current
+    if (!node) return
+    const top = node.getBoundingClientRect().top
+    if (top < 80) {
+      window.scrollBy({ top: top - 110, behavior: reducedMotion ? 'auto' : 'smooth' })
+    }
+  }
+
+  // Step 2's first field takes focus on mount without the browser's own
+  // scroll-into-view, which would cut the smooth scroll above short. Stable
+  // callback so it doesn't re-run (and steal focus) on every keystroke.
+  const focusOnMount = useCallback((node) => node?.focus({ preventScroll: true }), [])
+
   const goToStep = (target) => {
     setError(null)
     if (target === 3) {
@@ -763,7 +877,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
         setSpecialtyId(preset?.id ?? (slotSpecialties.length === 1 ? slotSpecialties[0].id : null))
       }
     }
-    setStep(target)
+    changeStep(target)
   }
 
   const toggleReason = (tag) =>
@@ -794,6 +908,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
     setMonthCache({})
     setError(null)
     autoPickedRef.current = false
+    // A fresh booking reads as moving on, not going back.
+    setDirection(1)
     setStep(1)
   }
 
@@ -817,7 +933,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
       if (err.status === 409) {
         setMonthCache({})
         setSelectedSlot(null)
-        setStep(1)
+        changeStep(1)
         setError('Esse horário acabou de ser reservado. Escolha outro, por favor.')
       } else {
         setError(err.detail || 'Não foi possível concluir o agendamento. Tente novamente.')
@@ -856,20 +972,16 @@ export default function BookingSection({ presetSpecialty } = {}) {
 
   if (unavailable) return null
 
-  // Fade only — no `y` translate. Framer-motion leaves a lingering
-  // `transform: translateY(0px)` after a y-animation settles, which promotes the
-  // step subtree to a GPU layer rendered at a fractional pixel offset and bakes a
-  // 1px rasterization seam into filled, rounded children (selected chips/slots).
   const firstName = form.name.trim().split(/\s+/)[0] || ''
 
-  const motionProps = reducedMotion
-    ? { initial: false, animate: { opacity: 1 } }
-    : {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0 },
-        transition: { duration: 0.26, ease: 'easeOut' },
-      }
+  // Framer-motion can leave a lingering `transform: translateX(0px)` after a
+  // slide settles, which promotes the step subtree to a GPU layer rendered at a
+  // fractional pixel offset and bakes a 1px rasterization seam into filled,
+  // rounded children (selected chips/slots) — hence `transitionEnd` in
+  // stepMotion. `bk-step--enter` staggers the step's blocks in (CSS), only
+  // after a real navigation so the page-load render stays still.
+  const motionProps = stepMotion(reducedMotion, direction)
+  const enterCls = direction !== 0 && !reducedMotion ? ' bk-step--enter' : ''
 
   const activeModality = MODALITY_BY_ID[modality]
 
@@ -898,7 +1010,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
         {/* The review step morphs into the confirmation in place: the card and
             the ticket persist, only the chrome around them (stepper, heading,
             actions) collapses or crossfades. */}
-        <div className="bk-card bk-main">
+        <div className="bk-card bk-main" ref={cardRef}>
           <Collapse show={!confirmation} reduced={reducedMotion}>
             <ol className="bk-stepper" aria-label="Etapas do agendamento">
               {STEPS.map((s) => {
@@ -931,9 +1043,9 @@ export default function BookingSection({ presetSpecialty } = {}) {
             </p>
           </Collapse>
 
-          <AnimatePresence mode="wait" initial={false}>
+          <StepViewport stepKey={step} direction={direction} reduced={reducedMotion}>
             {step === 1 && (
-              <motion.div key="step1" className="bk-step bk-schedule" {...motionProps}>
+              <motion.div key="step1" className={`bk-step bk-schedule${enterCls}`} {...motionProps}>
                 {/* ---- column 1: intro + modality ---- */}
                 <div className="bk-schedule__intro">
                   <h3 className="bk-schedule__title">Quando você gostaria de ser atendida?</h3>
@@ -1269,7 +1381,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
             {step === 2 && (
               <motion.form
                 key="step2"
-                className="bk-step bk-form"
+                className={`bk-step bk-form${enterCls}`}
                 onSubmit={(e) => {
                   e.preventDefault()
                   goToStep(3)
@@ -1294,7 +1406,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       required
                       minLength={2}
-                      autoFocus
+                      ref={focusOnMount}
                     />
                   </label>
                   <label className="bk-field" htmlFor="bk-phone">
@@ -1346,7 +1458,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
             {step === 3 && (
               <motion.form
                 key="step3"
-                className="bk-step bk-form"
+                className={`bk-step bk-form${enterCls}`}
                 onSubmit={(e) => {
                   e.preventDefault()
                   if (specialtyId) goToStep(4)
@@ -1516,7 +1628,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
             {step === 4 && (
               <motion.div
                 key="step4"
-                className={`bk-step bk-form bk-review${confirmation ? ' is-confirmed' : ''}`}
+                className={`bk-step bk-form bk-review${enterCls}${confirmation ? ' is-confirmed' : ''}`}
                 {...motionProps}
               >
                 <AutoHeight reduced={reducedMotion}>
@@ -1757,7 +1869,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                 </AutoHeight>
               </motion.div>
             )}
-          </AnimatePresence>
+          </StepViewport>
 
           {error && (
             <p className="bk-error" role="alert">

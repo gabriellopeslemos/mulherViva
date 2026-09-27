@@ -68,11 +68,14 @@
   left: calc(50% + 20px);
   width: calc(100% - 40px);
   height: 1.5px;
-  background: var(--line);
+  /* The accent fill is a gradient layer grown via background-size, so the
+     line draws itself toward the next step instead of switching colour. */
+  background: linear-gradient(var(--accent), var(--accent)) 0 0 / 0% 100% no-repeat var(--line);
+  transition: background-size 0.6s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .bk-stepper__item.is-done:not(:last-child)::after {
-  background: var(--accent);
+  background-size: 100% 100%;
 }
 
 .bk-stepper__btn {
@@ -104,7 +107,11 @@
   font-size: 0.86rem;
   font-weight: 700;
   color: var(--text-muted);
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .bk-stepper__num svg {
@@ -126,6 +133,15 @@
   border-color: transparent;
   color: var(--accent-contrast);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  /* Waits for the connector to reach it, then pops. */
+  animation: bk-stepper-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s backwards;
+}
+
+@keyframes bk-stepper-pop {
+  from {
+    transform: scale(0.78);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 16%, transparent);
+  }
 }
 
 .bk-stepper__item.is-current .bk-stepper__label {
@@ -157,6 +173,47 @@
 
 .bk-stepper__caption strong {
   color: var(--text-strong);
+}
+
+/* ---- step transitions (see StepViewport / stepMotion) ---- */
+
+/* flow-root keeps child margins inside, so the measured height is the real one. */
+.bk-viewport,
+.bk-viewport__inner {
+  display: flow-root;
+}
+
+/* Clipped only while the card eases between step heights; the extra clip
+   margin keeps focus rings and panel shadows near the edges intact. */
+.bk-viewport.is-animating {
+  overflow: hidden;
+}
+
+@supports (overflow-clip-margin: 1px) {
+  .bk-viewport.is-animating {
+    overflow: clip;
+    overflow-clip-margin: 14px;
+  }
+}
+
+/* The incoming step's blocks rise in one after another. `backwards` fill only,
+   so no transform lingers once settled. The ticket has its own entrance. */
+.bk-step--enter > :not(.bk-ticket) {
+  animation: bk-step-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(0.05s + var(--bk-i, 0) * 0.06s);
+}
+
+.bk-step--enter > :nth-child(2) { --bk-i: 1; }
+.bk-step--enter > :nth-child(3) { --bk-i: 2; }
+.bk-step--enter > :nth-child(4) { --bk-i: 3; }
+.bk-step--enter > :nth-child(5) { --bk-i: 4; }
+.bk-step--enter > :nth-child(n + 6) { --bk-i: 5; }
+
+@keyframes bk-step-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
 }
 
 /* ---- shared step bits ---- */
@@ -1969,6 +2026,11 @@ fieldset.bk-group > legend em {
 @media (prefers-reduced-motion: reduce) {
   .bk-section * {
     transition-duration: 0.01ms !important;
+  }
+
+  .bk-stepper__item.is-current .bk-stepper__num,
+  .bk-step--enter > * {
+    animation: none;
   }
 }
 
