@@ -30,15 +30,6 @@ function buildSpiralPath({ turns = 2.7, cx = 200, cy = 200, maxR = 176, steps = 
 
 const spiralPath = buildSpiralPath({})
 
-const ribbonWords = [
-  'Ginecologia natural',
-  'Obstetrícia humanizada',
-  'Ortomolecular',
-  'Escuta sem pressa',
-  'Cuidado integral',
-  'Presencial e online',
-]
-
 const footerNav = [
   { label: 'Especialidades', href: '#especialidades' },
   { label: 'Sobre a doutora', href: '#sobre' },
@@ -52,12 +43,6 @@ const INSTAGRAM_HANDLE = '@mulherviva'
 const INSTAGRAM_URL = 'https://www.instagram.com/mulherviva/'
 
 const headlineWords = ['Seu', 'corpo', 'fala.', 'Vamos', 'ouvir', 'juntas?']
-
-const SpiralGlyph = ({ className }) => (
-  <svg className={className} viewBox="0 0 400 400" aria-hidden="true">
-    <path d={spiralPath} fill="none" stroke="currentColor" strokeWidth="26" strokeLinecap="round" />
-  </svg>
-)
 
 function MagneticButton({ children, className, href, ...rest }) {
   const x = useMotionValue(0)
@@ -126,17 +111,6 @@ function SiteFooter({ whatsappHref, IconWhatsapp, year }) {
 
   return (
     <footer className="site-footer" ref={footerRef}>
-      <div className="footer-ribbon" aria-hidden="true">
-        <div className="footer-ribbon__track">
-          {[...ribbonWords, ...ribbonWords].map((word, index) => (
-            <span className="footer-ribbon__item" key={`${word}-${index}`}>
-              {word}
-              <SpiralGlyph className="footer-ribbon__glyph" />
-            </span>
-          ))}
-        </div>
-      </div>
-
       <div className="footer-stage">
         <div className="footer-stage__glow" aria-hidden="true" />
 
