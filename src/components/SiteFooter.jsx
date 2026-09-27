@@ -12,15 +12,18 @@ import {
 // rebuilt here as a stroke path so it can be "drawn" as the footer scrolls in.
 // Archimedean spiral (r grows linearly with the angle), slightly wider than
 // tall like the original mark.
-function buildSpiralPath({ turns = 2.7, cx = 200, cy = 200, maxR = 176, steps = 260 }) {
-  const maxTheta = turns * Math.PI * 2
+// `tail` extends the path past `turns` at the same pitch, so the loose end
+// sweeps under the spiral instead of stopping at the (off-screen) right edge.
+function buildSpiralPath({ turns = 3, tail = 0.15, cx = 200, cy = 200, maxR = 176, steps = 280 }) {
+  const bodyTheta = turns * Math.PI * 2
+  const maxTheta = (turns + tail) * Math.PI * 2
   const points = []
   for (let i = 0; i <= steps; i += 1) {
     const theta = (i / steps) * maxTheta
-    const r = 8 + (theta / maxTheta) * (maxR - 8)
+    const r = 8 + (theta / bodyTheta) * (maxR - 8)
     // Start pointing right-down (like the inner end of the logo) and wind
-    // counter-clockwise outward.
-    const angle = -theta + Math.PI * 0.35
+    // clockwise outward, so the loose tail also ends right-down.
+    const angle = theta + Math.PI * 0.35
     points.push([cx + Math.cos(angle) * r * 1.06, cy + Math.sin(angle) * r])
   }
   return points
