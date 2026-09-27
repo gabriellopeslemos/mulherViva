@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const navLinks = [
   { label: 'Especialidades', href: '/#especialidades' },
@@ -9,29 +9,65 @@ const navLinks = [
   { label: 'Blog', href: '/#blog' },
 ]
 
-function FloatingNavbar({ onOpenAgenda }) {
+// `notched`: instead of a full-width bar, the nav is a tab cut into the top
+// edge of the CTA hero's dark stage (see `.nav-notch` in index.css).
+function FloatingNavbar({ onOpenAgenda, notched = false }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const headerRef = useRef(null)
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 0)
+    const header = headerRef.current
+    const handleScroll = () => {
+      if (!notched) {
+        setIsScrolled(window.scrollY > 0)
+        return
+      }
+      // The tab starts one gutter below the viewport top (where the stage
+      // begins) and scrolls with the page until it reaches the top, then
+      // sticks there — so it never carries an empty strip above it.
+      const gutter = parseFloat(getComputedStyle(header).top) || 0
+      const shift = Math.min(window.scrollY, gutter)
+      header.style.transform = `translate(-50%, ${-shift}px)`
+      setIsScrolled(window.scrollY >= gutter)
+    }
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    window.addEventListener('resize', handleScroll)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+      header.style.transform = ''
+    }
+  }, [notched])
 
   const isSolid = isScrolled || isOpen
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 w-full">
+    <header
+      ref={headerRef}
+      className={
+        notched
+          ? `nav-notch${isSolid ? ' is-solid' : ''}`
+          : 'fixed inset-x-0 top-0 z-50 w-full'
+      }
+    >
       <nav
-        className={`w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
-          isSolid
-            ? 'border-[var(--line)] bg-[var(--surface)]/80 shadow-[0_8px_30px_color-mix(in_srgb,var(--accent-strong)_8%,transparent)] backdrop-blur-md'
-            : 'border-transparent bg-transparent shadow-none'
-        }`}
+        className={
+          notched
+            ? 'nav-notch__tab'
+            : `w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+                isSolid
+                  ? 'border-[var(--line)] bg-[var(--surface)]/80 shadow-[0_8px_30px_color-mix(in_srgb,var(--accent-strong)_8%,transparent)] backdrop-blur-md'
+                  : 'border-transparent bg-transparent shadow-none'
+              }`
+        }
       >
-        <div className="flex w-full items-center justify-between gap-6 px-8 py-3 sm:px-16 lg:px-28">
+        <div
+          className={`flex w-full items-center justify-between gap-6 ${
+            notched ? 'px-4 py-3 sm:px-6' : 'px-8 py-3 sm:px-16 lg:px-28'
+          }`}
+        >
           <a href="/#inicio" className="flex items-center gap-3" aria-label="Mulher Viva, voltar ao início">
             <img
               src="/logo-mark.png"

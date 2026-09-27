@@ -1714,7 +1714,7 @@ a.blog-card {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  padding-top: clamp(96px, 12vw, 160px);
+  padding-top: clamp(56px, 7vw, 96px);
   border-radius: clamp(28px, 5vw, 56px) clamp(28px, 5vw, 56px) 0 0;
   background: var(--bg-alt);
 }
@@ -1736,7 +1736,116 @@ a.blog-card {
   animation: footerGlow 14s ease-in-out infinite alternate;
 }
 
-.footer-spiral {
+/* ---- alternative hero: dark stage with the drawn spiral (ex-footer CTA) ---- */
+
+/* The stage fills the viewport inside a thin gutter; the navbar (.nav-notch)
+   is a tab of that same gutter color cut into the stage's top edge. The solid
+   --bg (fading out in the bottom gutter) keeps gutter and tab one surface. */
+:root {
+  --hero-cta-gutter: clamp(8px, 1.2vw, 16px);
+}
+
+.hero--cta {
+  padding: var(--hero-cta-gutter) var(--hero-cta-gutter) calc(var(--hero-cta-gutter) * 2);
+  background: linear-gradient(
+    180deg,
+    var(--bg) 0%,
+    var(--bg) calc(100% - var(--hero-cta-gutter) * 2),
+    transparent 100%
+  );
+}
+
+/* ---- notched navbar (paired with the CTA hero) ---- */
+
+.nav-notch {
+  --notch-radius: 24px;
+  position: fixed;
+  /* FloatingNavbar slides it up by this much as the page scrolls. */
+  top: var(--hero-cta-gutter);
+  left: 50%;
+  z-index: 50;
+  width: min(1180px, calc(100% - 2 * (var(--hero-cta-gutter) + var(--notch-radius) + 12px)));
+  transform: translateX(-50%);
+}
+
+.nav-notch__tab {
+  position: relative;
+  border-radius: 0 0 var(--notch-radius) var(--notch-radius);
+  background: var(--bg);
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+/* Inverted corners where the tab meets the stage's top edge. */
+.nav-notch__tab::before,
+.nav-notch__tab::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: var(--notch-radius);
+  height: var(--notch-radius);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.nav-notch__tab::before {
+  right: 100%;
+  background: radial-gradient(
+    circle at 0 100%,
+    transparent calc(var(--notch-radius) - 0.5px),
+    var(--bg) var(--notch-radius)
+  );
+}
+
+.nav-notch__tab::after {
+  left: 100%;
+  background: radial-gradient(
+    circle at 100% 100%,
+    transparent calc(var(--notch-radius) - 0.5px),
+    var(--bg) var(--notch-radius)
+  );
+}
+
+/* Once the page scrolls the stage is gone, so the tab floats on its own. */
+.nav-notch.is-solid .nav-notch__tab {
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--accent-strong) 12%, transparent);
+}
+
+.nav-notch.is-solid .nav-notch__tab::before,
+.nav-notch.is-solid .nav-notch__tab::after {
+  opacity: 0;
+}
+
+.hero-cta {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  padding: clamp(120px, 16vh, 180px) 0 clamp(56px, 8vw, 96px);
+  border-radius: clamp(28px, 5vw, 56px);
+  background: var(--bg-alt);
+  color: var(--accent-contrast);
+}
+
+.hero-cta__glow {
+  position: absolute;
+  inset: -20% -10% auto auto;
+  z-index: -1;
+  width: min(900px, 110vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--palette-3) 55%, transparent) 0%,
+    color-mix(in srgb, var(--palette-2) 25%, transparent) 40%,
+    transparent 70%
+  );
+  filter: blur(20px);
+  animation: footerGlow 14s ease-in-out infinite alternate;
+}
+
+.hero-cta__spiral {
   position: absolute;
   z-index: -1;
   top: clamp(40px, 6vw, 80px);
@@ -1746,40 +1855,40 @@ a.blog-card {
   pointer-events: none;
 }
 
-.footer-spiral path {
+.hero-cta__spiral path {
   fill: none;
   stroke-linecap: round;
   stroke-width: 22;
 }
 
-.footer-spiral__ghost {
+.hero-cta__spiral-ghost {
   stroke: color-mix(in srgb, var(--palette-5) 7%, transparent);
 }
 
-.footer-spiral__line {
+.hero-cta__spiral-line {
   stroke: color-mix(in srgb, var(--palette-4) 45%, transparent);
 }
 
-/* The footer breaks out of the 1180px content column and lines up with the
-   navbar's side gutters, so the closing CTA fills wide screens. */
-.footer-stage > .container {
+/* The footer and the CTA hero break out of the 1180px content column and line
+   up with the navbar's side gutters, so they fill wide screens. */
+.footer-stage > .container,
+.hero-cta > .container {
   width: calc(100% - 2 * clamp(24px, 5.8vw, 112px));
   max-width: 1760px;
 }
 
-.footer-title-break {
+.hero-cta__title-break {
   display: block;
 }
 
-.footer-cta {
+.hero-cta__content {
   position: relative;
   display: grid;
   justify-items: start;
   gap: clamp(18px, 2.4vw, 28px);
-  padding-bottom: clamp(56px, 8vw, 110px);
 }
 
-.footer-cta__eyebrow {
+.hero-cta__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -1795,14 +1904,14 @@ a.blog-card {
   color: var(--palette-5);
 }
 
-.footer-cta__eyebrow img {
+.hero-cta__eyebrow img {
   width: 28px;
   height: 28px;
   border-radius: 50%;
   background: var(--palette-5);
 }
 
-.footer-cta__title {
+.hero-cta__title {
   margin: 0;
   font-family: var(--serif);
   font-weight: 500;
@@ -1812,16 +1921,16 @@ a.blog-card {
   color: var(--accent-contrast);
 }
 
-.footer-cta__word-mask {
+.hero-cta__word-mask {
   display: inline-block;
   padding-bottom: 0.08em;
 }
 
-.footer-cta__word {
+.hero-cta__word {
   display: inline-block;
 }
 
-.footer-cta__word--accent {
+.hero-cta__word--accent {
   font-style: italic;
   background: linear-gradient(100deg, var(--palette-4), var(--palette-5) 60%, var(--palette-4));
   background-size: 200% 100%;
@@ -1831,7 +1940,7 @@ a.blog-card {
   animation: footerShimmer 6s ease-in-out infinite;
 }
 
-.footer-cta__lead {
+.hero-cta__lead {
   margin: 0;
   max-width: 64ch;
   font-size: clamp(16px, 1.5vw, 19px);
@@ -1839,14 +1948,14 @@ a.blog-card {
   color: color-mix(in srgb, var(--palette-5) 78%, transparent);
 }
 
-.footer-cta__actions {
+.hero-cta__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 6px;
 }
 
-.footer-btn {
+.hero-cta__btn {
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -1861,13 +1970,13 @@ a.blog-card {
     box-shadow 0.4s var(--ease-out);
 }
 
-.footer-btn--solid {
+.hero-cta__btn--solid {
   background: var(--palette-5);
   color: var(--palette-1);
   box-shadow: 0 20px 50px color-mix(in srgb, var(--palette-4) 30%, transparent);
 }
 
-.footer-btn__arrow {
+.hero-cta__btn-arrow {
   display: grid;
   place-items: center;
   width: 40px;
@@ -1878,39 +1987,39 @@ a.blog-card {
   transition: transform 0.45s var(--ease-out), background 0.35s ease;
 }
 
-.footer-btn__arrow svg {
+.hero-cta__btn-arrow svg {
   width: 18px;
   height: 18px;
 }
 
-.footer-btn--ghost {
+.hero-cta__btn--ghost {
   padding: 10px 26px;
   border: 1px solid color-mix(in srgb, var(--palette-5) 35%, transparent);
   color: var(--palette-5);
 }
 
-.footer-btn--ghost svg {
+.hero-cta__btn--ghost svg {
   width: 22px;
   height: 22px;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .footer-btn--solid:hover {
+  .hero-cta__btn--solid:hover {
     background: var(--palette-4);
     box-shadow: 0 26px 70px color-mix(in srgb, var(--palette-4) 45%, transparent);
   }
 
-  .footer-btn--solid:hover .footer-btn__arrow {
+  .hero-cta__btn--solid:hover .hero-cta__btn-arrow {
     transform: rotate(-45deg);
   }
 
-  .footer-btn--ghost:hover {
+  .hero-cta__btn--ghost:hover {
     background: color-mix(in srgb, var(--palette-5) 10%, transparent);
     border-color: var(--palette-5);
   }
 }
 
-.footer-cta__promises {
+.hero-cta__promises {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 26px;
@@ -1921,13 +2030,13 @@ a.blog-card {
   color: color-mix(in srgb, var(--palette-5) 70%, transparent);
 }
 
-.footer-cta__promises li {
+.hero-cta__promises li {
   display: inline-flex;
   align-items: center;
   gap: 10px;
 }
 
-.footer-cta__promises li::before {
+.hero-cta__promises li::before {
   content: "";
   width: 7px;
   height: 7px;
@@ -1940,8 +2049,6 @@ a.blog-card {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(24px, 3vw, 44px);
-  padding-top: clamp(32px, 4vw, 48px);
-  border-top: 1px solid color-mix(in srgb, var(--palette-5) 16%, transparent);
 }
 
 
@@ -2071,7 +2178,7 @@ a.blog-card {
     grid-column: 1 / -1;
   }
 
-  .footer-spiral {
+  .hero-cta__spiral {
     opacity: 0.55;
   }
 }
@@ -2085,21 +2192,63 @@ a.blog-card {
     grid-column: auto;
   }
 
-  .footer-btn {
+  .hero-cta__btn {
     width: 100%;
     justify-content: space-between;
   }
 
-  .footer-btn--ghost {
+  .hero-cta__btn--ghost {
     justify-content: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .footer-stage__glow,
-  .footer-cta__word--accent {
+  .hero-cta__glow,
+  .hero-cta__word--accent {
     animation: none;
   }
+}
+
+/* ---- temporary hero switch (client review) ---- */
+
+.hero-toggle {
+  position: fixed;
+  left: clamp(16px, 3vw, 28px);
+  bottom: clamp(16px, 3vw, 28px);
+  z-index: 55;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-lg);
+}
+
+.hero-toggle__btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.hero-toggle__btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.hero-toggle__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 @media (max-width: 980px) {

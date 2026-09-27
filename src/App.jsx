@@ -13,6 +13,8 @@ import FloatingNavbar from './components/FloatingNavbar'
 import BookingSection from './components/BookingSection'
 import FallbackImage from './components/FallbackImage'
 import SiteFooter from './components/SiteFooter'
+import HeroCta from './components/HeroCta'
+import HeroVariantToggle from './components/HeroVariantToggle'
 
 const AdminHub = lazy(() => import('./components/AdminHub'))
 const AgendaPanel = lazy(() => import('./components/AgendaPanel'))
@@ -364,7 +366,50 @@ const pageGlows = [
   { top: '94%', left: '-10%', size: 440, color: 'var(--palette-4)', mix: 55 },
 ]
 
+function HeroRibbon() {
+  return (
+    <div className="ribbon" aria-hidden="true">
+      <div className="ribbon-track">
+        {/* Two identical halves so the -50% marquee loops seamlessly. */}
+        {[...ribbonItems, ...ribbonItems].map((item, index) => (
+          <span key={`${item}-${index}`} className="ribbon-item">
+            {item}
+            <i>✦</i>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Which hero to show while the client compares the two options: `?hero=cta`
+// or `?hero=classic` wins (handy for sending a direct link), then the last
+// choice made with the toggle.
+const HERO_VARIANT_KEY = 'mv-hero-variant'
+const HERO_VARIANTS = ['classic', 'cta']
+
+function readHeroVariant() {
+  const fromUrl = new URLSearchParams(window.location.search).get('hero')
+  if (HERO_VARIANTS.includes(fromUrl)) return fromUrl
+  try {
+    const stored = window.localStorage.getItem(HERO_VARIANT_KEY)
+    if (HERO_VARIANTS.includes(stored)) return stored
+  } catch {
+    // storage blocked — fall through to the default
+  }
+  return 'classic'
+}
+
 function Landing() {
+  const [heroVariant, setHeroVariant] = useState(readHeroVariant)
+  const changeHeroVariant = (next) => {
+    setHeroVariant(next)
+    try {
+      window.localStorage.setItem(HERO_VARIANT_KEY, next)
+    } catch {
+      // storage blocked — the choice just won't persist
+    }
+  }
   // null = fechado | 'hub' | 'agenda' | 'blog'
   const [adminScreen, setAdminScreen] = useState(null)
   const [manageToken, setManageToken] = useState(() =>
@@ -663,7 +708,8 @@ function Landing() {
     }
     // Blog cards are keyed by post.id and replace the fallback DOM nodes once
     // the real posts load, so this must re-scan for new [data-reveal] elements.
-  }, [blogPosts])
+    // Same for the classic hero, which remounts when the hero toggle flips.
+  }, [blogPosts, heroVariant])
 
   useEffect(() => {
     if (prefersReducedMotion) {
@@ -719,7 +765,7 @@ function Landing() {
       window.cancelAnimationFrame(frameId)
       blobs.forEach((blob) => blob.el.remove())
     }
-  }, [prefersReducedMotion])
+  }, [prefersReducedMotion, heroVariant])
 
   const handleHeroPointerMove = (event) => {
     if (prefersReducedMotion) {
@@ -767,7 +813,10 @@ function Landing() {
         style={{ scaleX: pageProgressSpring }}
         aria-hidden="true"
       />
-      <FloatingNavbar onOpenAgenda={() => setAdminScreen('hub')} />
+      <FloatingNavbar
+        onOpenAgenda={() => setAdminScreen('hub')}
+        notched={heroVariant === 'cta'}
+      />
 
       <Suspense fallback={null}>
         {manageToken && (
@@ -815,6 +864,11 @@ function Landing() {
       </Suspense>
 
       <main>
+        {heroVariant === 'cta' ? (
+          <section className="hero hero--cta" id="inicio" tabIndex={-1}>
+            <HeroCta whatsappHref={whatsappHref} IconWhatsapp={IconWhatsapp} />
+          </section>
+        ) : (
         <section className="hero hero-bg" id="inicio" tabIndex={-1}>
           <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
@@ -874,18 +928,9 @@ function Landing() {
             </div>
           </div>
 
-          <div className="ribbon" aria-hidden="true">
-            <div className="ribbon-track">
-              {/* Two identical halves so the -50% marquee loops seamlessly. */}
-              {[...ribbonItems, ...ribbonItems].map((item, index) => (
-                <span key={`${item}-${index}`} className="ribbon-item">
-                  {item}
-                  <i>✦</i>
-                </span>
-              ))}
-            </div>
-          </div>
+          <HeroRibbon />
         </section>
+        )}
 
         <section className="section specialties-section" id="especialidades" tabIndex={-1}>
           <div className="container">
@@ -1235,7 +1280,8 @@ function Landing() {
         </a>
       )}
 
-      <SiteFooter whatsappHref={whatsappHref} IconWhatsapp={IconWhatsapp} year={year} />
+      <SiteFooter year={year} />
+      <HeroVariantToggle value={heroVariant} onChange={changeHeroVariant} />
     </div>
   )
 }
