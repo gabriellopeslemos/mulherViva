@@ -38,6 +38,20 @@ const STEPS = [
   { id: 4, label: 'Confirmação' },
 ]
 
+// Quick-pick topics for step 3. Sent joined as the booking's `reason`, which
+// the clinic sees in the new-booking email and the Google Calendar event.
+const REASON_TAGS = [
+  'Check-up preventivo',
+  'Exames de rotina',
+  'Saúde hormonal',
+  'Menopausa',
+  'Contracepção',
+  'Gestação e pré-natal',
+  'Fertilidade',
+  'Suplementação',
+  'Outros',
+]
+
 function toIso(date) {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -214,6 +228,23 @@ function ChevronIcon({ dir }) {
   )
 }
 
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  )
+}
+
 function BoltIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -256,7 +287,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
     name: '',
     phone: '',
     email: '',
-    notes: '',
+    reasons: [],
+    firstVisit: null,
   })
   const [submitting, setSubmitting] = useState(false)
   const [confirmation, setConfirmation] = useState(null)
@@ -561,12 +593,31 @@ export default function BookingSection({ presetSpecialty } = {}) {
     setStep(target)
   }
 
+  const toggleReason = (tag) =>
+    setForm((f) => ({
+      ...f,
+      reasons: f.reasons.includes(tag) ? f.reasons.filter((r) => r !== tag) : [...f.reasons, tag],
+    }))
+
+  // Arrow keys move through the specialty radios (roving tabindex), as a
+  // native radio group would.
+  const handleSpecialtyKeyDown = (event) => {
+    const delta = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key]
+    if (!delta || slotSpecialties.length === 0) return
+    event.preventDefault()
+    const current = slotSpecialties.findIndex((s) => s.id === specialtyId)
+    const n = slotSpecialties.length
+    const next = current === -1 ? (delta > 0 ? 0 : n - 1) : (current + delta + n) % n
+    setSpecialtyId(slotSpecialties[next].id)
+    event.currentTarget.querySelectorAll('[role="radio"]')[next]?.focus()
+  }
+
   const reset = () => {
     setConfirmation(null)
     setSpecialtyId(null)
     setSelectedDate(null)
     setSelectedSlot(null)
-    setForm({ name: '', phone: '', email: '', notes: '' })
+    setForm({ name: '', phone: '', email: '', reasons: [], firstVisit: null })
     setMonthCache({})
     setError(null)
     autoPickedRef.current = false
@@ -585,7 +636,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
         client_name: form.name.trim(),
         client_phone: form.phone.trim(),
         client_email: form.email.trim(),
-        notes: form.notes.trim() || null,
+        reason: form.reasons.join(', ') || null,
+        is_first_visit: form.firstVisit === true,
       })
       setConfirmation(booking)
     } catch (err) {
@@ -1163,49 +1215,141 @@ export default function BookingSection({ presetSpecialty } = {}) {
                   <div className="bk-form__head">
                     <h3 className="bk-step__title">Motivo da consulta</h3>
                     <p className="bk-step__lead">
-                      Escolha a especialidade e, se quiser, conte um pouco sobre o que você precisa.
+                      Escolha a especialidade e, se quiser, marque os assuntos que deseja tratar.
                     </p>
                   </div>
 
-                  <fieldset className="bk-field bk-field--full">
-                    <legend>Especialidade</legend>
+                  {selectedDate && selectedSlot && (
+                    <div className="bk-when">
+                      <span className="bk-when__icon">
+                        {MODALITY_BY_ID[selectedSlot.location]?.icon}
+                      </span>
+                      <span className="bk-when__text">
+                        <strong>
+                          {fmtLongDate(selectedDate)}, {fmtTime(selectedSlot.start)}
+                        </strong>
+                        <span>{MODALITY_LABELS[selectedSlot.location]}</span>
+                      </span>
+                      <button type="button" className="bk-when__edit" onClick={() => goToStep(1)}>
+                        Alterar
+                      </button>
+                    </div>
+                  )}
+
+                  <fieldset className="bk-field bk-field--full bk-group">
+                    <legend>
+                      <span className="bk-group__num">1</span>
+                      Especialidade
+                    </legend>
                     {slotSpecialties.length === 0 ? (
                       <p className="bk-hint">
                         Nenhuma especialidade atende nesse horário. Volte e escolha outro.
                       </p>
                     ) : (
-                      <div className="bk-chips" role="radiogroup" aria-label="Especialidade">
-                        {slotSpecialties.map((s) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            role="radio"
-                            aria-checked={specialtyId === s.id}
-                            className={`bk-chip${specialtyId === s.id ? ' is-selected' : ''}`}
-                            onClick={() => setSpecialtyId(s.id)}
-                          >
-                            <span>{s.name}</span>
-                            <em>{s.slot_duration_min} min</em>
-                          </button>
-                        ))}
+                      <div
+                        className={`bk-chips${slotSpecialties.length === 1 ? ' bk-chips--single' : ''}`}
+                        role="radiogroup"
+                        aria-label="Especialidade"
+                        onKeyDown={handleSpecialtyKeyDown}
+                        // Column count that never leaves a lone card on the
+                        // last row: 1–3 side by side, then rows of 3 or 2.
+                        style={{
+                          '--bk-chip-cols':
+                            slotSpecialties.length <= 3
+                              ? slotSpecialties.length
+                              : slotSpecialties.length % 3 === 0
+                                ? 3
+                                : 2,
+                        }}
+                      >
+                        {slotSpecialties.map((s, i) => {
+                          const checked = specialtyId === s.id
+                          const focusable = checked || (!specialtyId && i === 0)
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              role="radio"
+                              aria-checked={checked}
+                              tabIndex={focusable ? 0 : -1}
+                              className={`bk-chip${checked ? ' is-selected' : ''}`}
+                              onClick={() => setSpecialtyId(s.id)}
+                            >
+                              <span className="bk-chip__radio" aria-hidden="true">
+                                <CheckIcon />
+                              </span>
+                              <span className="bk-chip__name">{s.name}</span>
+                              <em>
+                                <ClockIcon />
+                                {s.slot_duration_min} min
+                              </em>
+                            </button>
+                          )
+                        })}
                       </div>
                     )}
                   </fieldset>
 
-                  <div className="bk-form__grid">
-                    <label className="bk-field bk-field--full" htmlFor="bk-notes">
-                      <span>
-                        Mensagem <em>(opcional)</em>
-                      </span>
-                      <textarea
-                        id="bk-notes"
-                        rows={4}
-                        placeholder="Conte um pouco sobre o que você precisa"
-                        value={form.notes}
-                        onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                      />
-                    </label>
+                  <div className="bk-group bk-group--inline">
+                    <span className="bk-group__label" id="bk-first-visit-label">
+                      <span className="bk-group__num">2</span>
+                      É sua primeira consulta?
+                    </span>
+                    <div
+                      className="bk-toggle"
+                      role="radiogroup"
+                      aria-labelledby="bk-first-visit-label"
+                    >
+                      {[
+                        { value: true, label: 'Sim' },
+                        { value: false, label: 'Não' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          role="radio"
+                          aria-checked={form.firstVisit === opt.value}
+                          className={`bk-toggle__opt${form.firstVisit === opt.value ? ' is-selected' : ''}`}
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              firstVisit: f.firstVisit === opt.value ? null : opt.value,
+                            }))
+                          }
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  <fieldset className="bk-field bk-field--full bk-group">
+                    <legend>
+                      <span className="bk-group__num">3</span>
+                      Sobre o que você quer conversar?{' '}
+                      <em>(opcional, marque quantos quiser)</em>
+                    </legend>
+                    <div className="bk-tags">
+                      {REASON_TAGS.map((tag) => {
+                        const on = form.reasons.includes(tag)
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            aria-pressed={on}
+                            className={`bk-tag${on ? ' is-selected' : ''}`}
+                            onClick={() => toggleReason(tag)}
+                          >
+                            <span className="bk-tag__box" aria-hidden="true">
+                              <CheckIcon />
+                            </span>
+                            {/* Non-breaking hyphen so "pré-natal" never splits. */}
+                            {tag.replace('-', '‑')}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
 
                   <div className="bk-form__actions">
                     <button
@@ -1275,10 +1419,19 @@ export default function BookingSection({ presetSpecialty } = {}) {
                         Editar
                       </button>
                     </div>
-                    {form.notes.trim() && (
+                    {(form.firstVisit !== null || form.reasons.length > 0) && (
                       <div>
-                        <dt>Mensagem</dt>
-                        <dd className="bk-review__notes">{form.notes.trim()}</dd>
+                        <dt>Motivo</dt>
+                        <dd>
+                          {form.firstVisit !== null &&
+                            (form.firstVisit ? 'Primeira consulta' : 'Retorno')}
+                          {form.reasons.length > 0 &&
+                            (form.firstVisit !== null ? (
+                              <small>{form.reasons.join(', ')}</small>
+                            ) : (
+                              form.reasons.join(', ')
+                            ))}
+                        </dd>
                         <button
                           type="button"
                           className="bk-review__edit"
