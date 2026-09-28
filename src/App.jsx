@@ -67,7 +67,7 @@ const IconGraduation = () => (
 
 const aboutTags = [
   'Medicina humanizada',
-  'Obstetrícia humanizada',
+  'Obstetrícia',
   'Ortomolecular',
 ]
 
@@ -205,7 +205,7 @@ const fallbackBlogPosts = [
 
 const ribbonItems = [
   'Ginecologia natural',
-  'Obstetrícia humanizada',
+  'Obstetrícia',
   'Ortomolecular',
   'Medicina humanizada',
   'Escuta profunda',
@@ -382,6 +382,33 @@ function HeroRibbon() {
   )
 }
 
+// Classic hero entrance, same choreography as HeroCta: the headline rises
+// word by word out of a mask, then each following line fades up in turn.
+const classicHeadlineWords = [
+  'Um', 'novo', 'olhar', 'para', 'a', 'saúde', 'feminina:',
+  'mais', 'humano,', 'mais', 'completo',
+]
+const CLASSIC_ACCENT_FROM = 7
+
+const heroWordVariants = {
+  hidden: { opacity: 0, y: '0.6em', filter: 'blur(8px)' },
+  visible: (i) => ({
+    opacity: 1,
+    y: '0em',
+    filter: 'blur(0px)',
+    transition: { delay: 0.25 + 0.06 * i, duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+  }),
+}
+
+const heroFadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay, duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+  }),
+}
+
 // Which hero to show while the client compares the two options: `?hero=cta`
 // or `?hero=classic` wins (handy for sending a direct link), then the last
 // choice made with the toggle.
@@ -449,6 +476,9 @@ function Landing() {
   const heroBlobLayerRef = useRef(null)
   const aboutSectionRef = useRef(null)
   const prefersReducedMotion = useReducedMotion()
+  const heroMotionProps = prefersReducedMotion
+    ? { initial: false, animate: 'visible' }
+    : { initial: 'hidden', animate: 'visible' }
   const [years, setYears] = useState(0)
   const [startYearsCount, setStartYearsCount] = useState(false)
   const isAboutInView = useInView(aboutSectionRef, { once: true, amount: 0.3 })
@@ -872,35 +902,46 @@ function Landing() {
         <section className="hero hero-bg" id="inicio" tabIndex={-1}>
           <div className="hero-blob-layer" ref={heroBlobLayerRef} aria-hidden="true" />
           <div className="container hero-grid">
-            <div className="hero-content" data-reveal style={{ '--delay': '120ms' }}>
-              <p className="eyebrow">Ginecologia · Obstetrícia · Ortomolecular</p>
-              <h1>
-                Um novo olhar para a saúde feminina: <em>mais humano, mais completo</em>.
-              </h1>
-              <p className="lead">
+            <div className="hero-content">
+              <motion.p className="eyebrow" variants={heroFadeUp} custom={0.1} {...heroMotionProps}>
+                Ginecologia · Obstetrícia · Ortomolecular
+              </motion.p>
+              <motion.h1 {...heroMotionProps}>
+                {classicHeadlineWords.map((word, i) => (
+                  <span key={i}>
+                    <span className="hero-word-mask">
+                      <motion.span className="hero-word" custom={i} variants={heroWordVariants}>
+                        {i >= CLASSIC_ACCENT_FROM ? <em>{word}</em> : word}
+                        {i === classicHeadlineWords.length - 1 && '.'}
+                      </motion.span>
+                    </span>{' '}
+                  </span>
+                ))}
+              </motion.h1>
+              <motion.p className="lead" variants={heroFadeUp} custom={0.95} {...heroMotionProps}>
                 Medicina para mulheres que buscam um cuidado
                 profundo, personalizado e consciente, em todas as fases da vida.
-              </p>
-              <div className="hero-actions">
+              </motion.p>
+              <motion.div className="hero-actions" variants={heroFadeUp} custom={1.1} {...heroMotionProps}>
                 <a className="btn btn-primary" href="#agendamento">
                   Agendar consulta
                 </a>
                 <a className="btn btn-outline" href="#sobre">
                   Conhecer a doutora
                 </a>
-              </div>
+              </motion.div>
               <ul className="hero-trust">
                 {[
                   '20+ anos de experiência',
                   'Atendimento humanizado',
                   'Presencial e online',
-                ].map((item) => (
-                  <li key={item}>
+                ].map((item, i) => (
+                  <motion.li key={item} variants={heroFadeUp} custom={1.25 + 0.12 * i} {...heroMotionProps}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M4.5 12.5 10 18 19.5 7" />
                     </svg>
                     {item}
-                  </li>
+                  </motion.li>
                 ))}
               </ul>
             </div>

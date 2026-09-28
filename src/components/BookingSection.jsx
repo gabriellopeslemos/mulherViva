@@ -38,17 +38,6 @@ const STEPS = [
   { id: 4, label: 'Confirmação' },
 ]
 
-// Quick-pick topics for step 3. Sent joined as the booking's `reason`, which
-// the clinic sees in the new-booking email and the Google Calendar event.
-const REASON_TAGS = [
-  'Exames de rotina',
-  'Saúde hormonal',
-  'Menopausa',
-  'Gestação e pré-natal',
-  'Fertilidade',
-  'Outros',
-]
-
 function toIso(date) {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -530,7 +519,6 @@ export default function BookingSection({ presetSpecialty } = {}) {
     name: '',
     phone: '',
     email: '',
-    reasons: [],
     firstVisit: null,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -699,9 +687,8 @@ export default function BookingSection({ presetSpecialty } = {}) {
   }, [specialties, monthCache, selectedDate, selectedSlot])
 
   // A specialty card's "Agendar Consulta" link sets this to its title; once
-  // specialties load we resolve it to a real specialty id (names differ
-  // slightly, e.g. card "Ginecologia" vs. seeded "Ginecologia Integrativa",
-  // so match by substring).
+  // specialties load we resolve it to a real specialty id (admin-edited names
+  // may differ slightly from the card title, so match by substring).
   const presetSpecialtyId = useMemo(() => {
     if (!presetSpecialty) return null
     const needle = presetSpecialty.toLowerCase()
@@ -877,12 +864,6 @@ export default function BookingSection({ presetSpecialty } = {}) {
     changeStep(target)
   }
 
-  const toggleReason = (tag) =>
-    setForm((f) => ({
-      ...f,
-      reasons: f.reasons.includes(tag) ? f.reasons.filter((r) => r !== tag) : [...f.reasons, tag],
-    }))
-
   // Arrow keys move through the specialty radios (roving tabindex), as a
   // native radio group would.
   const handleSpecialtyKeyDown = (event) => {
@@ -901,7 +882,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
     setSpecialtyId(null)
     setSelectedDate(null)
     setSelectedSlot(null)
-    setForm({ name: '', phone: '', email: '', reasons: [], firstVisit: null })
+    setForm({ name: '', phone: '', email: '', firstVisit: null })
     setMonthCache({})
     setError(null)
     autoPickedRef.current = false
@@ -922,7 +903,6 @@ export default function BookingSection({ presetSpecialty } = {}) {
         client_name: form.name.trim(),
         client_phone: form.phone.trim(),
         client_email: form.email.trim(),
-        reason: form.reasons.join(', ') || null,
         is_first_visit: form.firstVisit === true,
       })
       setConfirmation(booking)
@@ -1573,34 +1553,6 @@ export default function BookingSection({ presetSpecialty } = {}) {
                   </div>
                 </div>
 
-                <fieldset className="bk-field bk-field--full bk-group">
-                  <legend>
-                    <span className="bk-group__num">3</span>
-                    Sobre o que você quer conversar?{' '}
-                    <em>(opcional, marque quantos quiser)</em>
-                  </legend>
-                  <div className="bk-tags">
-                    {REASON_TAGS.map((tag) => {
-                      const on = form.reasons.includes(tag)
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          aria-pressed={on}
-                          className={`bk-tag${on ? ' is-selected' : ''}`}
-                          onClick={() => toggleReason(tag)}
-                        >
-                          <span className="bk-tag__box" aria-hidden="true">
-                            <CheckIcon />
-                          </span>
-                          {/* Non-breaking hyphen so "pré-natal" never splits. */}
-                          {tag.replace('-', '‑')}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </fieldset>
-
                 <div className="bk-form__actions">
                   <button
                     type="button"
@@ -1756,25 +1708,13 @@ export default function BookingSection({ presetSpecialty } = {}) {
                             </span>
                           )}
                         </p>
-                        {form.reasons.length > 0 && (
-                          <>
-                            <span className="bk-ticket__kicker bk-ticket__kicker--sub">
-                              e quer conversar sobre
-                            </span>
-                            <ul className="bk-ticket__topics">
-                              {form.reasons.map((r) => (
-                                <li key={r}>{r.replace('-', '‑')}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
                       </div>
                       <button
                         type="button"
                         className="bk-ticket__edit"
                         onClick={() => goToStep(3)}
                         disabled={!!confirmation}
-                        aria-label="Alterar especialidade e motivo"
+                        aria-label="Alterar especialidade"
                         title="Alterar"
                       >
                         <PencilIcon />

@@ -5,9 +5,9 @@ from .config import get_settings
 from .models import AppSetting, Specialty
 
 SPECIALTIES = [
-    ("Ginecologia Integrativa", "ginecologia-integrativa"),
-    ("Obstetrícia Humanizada", "obstetricia-humanizada"),
-    ("Medicina Ortomolecular", "medicina-ortomolecular"),
+    ("Ginecologia", "ginecologia"),
+    ("Obstetrícia", "obstetricia"),
+    ("Ortomolecular", "ortomolecular"),
 ]
 
 

@@ -299,6 +299,15 @@ p {
   color: var(--accent);
 }
 
+.hero-word-mask {
+  display: inline-block;
+  padding-bottom: 0.08em;
+}
+
+.hero-word {
+  display: inline-block;
+}
+
 .hero-trust {
   display: flex;
   flex-wrap: wrap;

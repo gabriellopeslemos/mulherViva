@@ -1344,94 +1344,7 @@ fieldset.bk-group > legend em {
   color: var(--accent-contrast);
 }
 
-/* Topic quick-picks: an even grid of checkbox rows. Square boxes (vs. the
-   round specialty radios) signal that several can be picked. */
-.bk-tags {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-@container bkmain (min-width: 480px) {
-  .bk-tags {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.bk-tag {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1.5px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--text-strong);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease;
-}
-
-.bk-tag__box {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  border: 1.5px solid color-mix(in srgb, var(--palette-4) 80%, white);
-  background: var(--surface);
-  color: var(--accent-contrast);
-  transition: background 0.16s ease, border-color 0.16s ease;
-}
-
-.bk-tag__box svg {
-  width: 12px;
-  height: 12px;
-  opacity: 0;
-  transition: opacity 0.16s ease;
-}
-
-.bk-tag:not(.is-selected):hover {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-  background: color-mix(in srgb, var(--palette-5) 22%, white);
-}
-
-.bk-tag.is-selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--palette-5) 28%, white);
-}
-
-.bk-tag.is-selected .bk-tag__box {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.bk-tag.is-selected .bk-tag__box svg {
-  opacity: 1;
-}
-
 @container bkmain (max-width: 479px) {
-  /* Equal-height rows even when a label wraps to two lines. */
-  .bk-tags {
-    grid-auto-rows: 1fr;
-  }
-
-  .bk-tag {
-    padding: 8px 10px;
-    font-size: 0.85rem;
-  }
-
-  /* Two columns leave "Outros" (the 9th, last item) alone — let it span. */
-  .bk-tag:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-
   /* Keep Sim / Não on the same line as the question. */
   .bk-toggle__opt {
     min-width: 52px;
@@ -1640,10 +1553,6 @@ fieldset.bk-group > legend em {
   color: var(--text-muted);
 }
 
-.bk-ticket__kicker--sub {
-  margin: 12px 0 8px;
-}
-
 .bk-ticket__main {
   display: flex;
   flex-wrap: wrap;
@@ -1669,24 +1578,6 @@ fieldset.bk-group > legend em {
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--accent-strong);
-}
-
-.bk-ticket__topics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.bk-ticket__topics li {
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--palette-4) 50%, white);
-  font-size: 0.84rem;
-  color: var(--text-soft);
-  white-space: nowrap;
 }
 
 .bk-ticket__contact {
