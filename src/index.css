@@ -624,6 +624,14 @@ p {
   line-height: 1.7;
 }
 
+.about-content .about-crm {
+  margin-top: -6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
 .about-tags {
   display: flex;
   flex-wrap: wrap;

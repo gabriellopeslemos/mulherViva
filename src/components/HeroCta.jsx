@@ -177,7 +177,7 @@ function HeroCta({ whatsappHref, IconWhatsapp }) {
         <motion.ul className="hero-cta__promises" variants={fadeUp} custom={1.15} {...motionProps}>
           <li>Agendamento online em minutos</li>
           <li>Remarque ou cancele pelo link do e-mail</li>
-          <li>Atendimento presencial em Brasília ou online</li>
+          <li>Atendimento presencial ou online</li>
         </motion.ul>
       </div>
     </div>

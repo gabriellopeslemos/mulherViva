@@ -672,11 +672,11 @@ function Landing() {
     const tick = (ts) => {
       if (!start) start = ts
       const progress = Math.min(1, (ts - start) / duration)
-      setYears(Math.floor(progress * 20))
+      setYears(Math.floor(progress * 25))
       if (progress < 1) {
         rafId = window.requestAnimationFrame(tick)
       } else {
-        setYears(20)
+        setYears(25)
       }
     }
     rafId = window.requestAnimationFrame(tick)
@@ -932,7 +932,7 @@ function Landing() {
               </motion.div>
               <ul className="hero-trust">
                 {[
-                  '20+ anos de experiência',
+                  '25+ anos de experiência',
                   'Atendimento humanizado',
                   'Presencial e online',
                 ].map((item, i) => (
@@ -1075,7 +1075,7 @@ function Landing() {
                     <IconGraduation />
                   </span>
                   <div>
-                      <strong>{prefersReducedMotion ? 20 : years}+ anos</strong>
+                      <strong>{prefersReducedMotion ? 25 : years}+ anos</strong>
                       <span>Experiência médica</span>
                     </div>
                 </div>
@@ -1083,6 +1083,7 @@ function Landing() {
               <div className="about-content">
                 <p className="about-label">Sobre mim</p>
                 <h2>Presença clínica com rigor e sensibilidade.</h2>
+                <p className="about-crm">Dra. Luciana da Silva Lopes · CRM 52.72428-9</p>
                 <p>
                   Atendo mulheres em todas as fases da vida, com escuta profunda
                   e condutas individualizadas que respeitam história e contexto.
@@ -1168,7 +1169,6 @@ function Landing() {
                   <div className="address-item">
                     <span className="address-label">Endereço</span>
                     <span className="address-value">SGAS 610, Bloco 2, Sala 250</span>
-                    <span className="address-subvalue">Brasília - DF</span>
                   </div>
                   <div className="address-item">
                     <span className="address-label">Atendimento</span>
@@ -1213,7 +1213,7 @@ function Landing() {
 
                   <span className="map-block__info">
                     <strong>Centro Médico Lúcio Costa</strong>
-                    <span>SGAS 610, Bloco 2, Sala 250, Brasília - DF</span>
+                    <span>SGAS 610, Bloco 2, Sala 250</span>
                   </span>
                   <span className="map-block__cta">Ver no Maps &rarr;</span>
                 </a>

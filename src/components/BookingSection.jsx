@@ -143,6 +143,9 @@ const MODALITIES = [
     title: 'Presencial — Brasília',
     description: 'Atendimento no consultório',
     icon: HOUSE_ICON,
+    // Not offered on the landing page anymore; kept so labels still resolve
+    // for existing presencial_bsb slots/appointments.
+    hidden: true,
   },
 ]
 
@@ -1038,7 +1041,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
                     role="radiogroup"
                     aria-labelledby="bk-modality-label"
                   >
-                    {MODALITIES.map((m) => (
+                    {MODALITIES.filter((m) => !m.hidden).map((m) => (
                       <button
                         key={m.id}
                         type="button"

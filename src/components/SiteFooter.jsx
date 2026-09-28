@@ -52,13 +52,13 @@ function SiteFooter({ year }) {
             <span className="footer-info__label">Consultório</span>
             <span>Centro Médico Lúcio Costa</span>
             <span>SGAS 610, Bloco 2, Sala 250</span>
-            <span>Asa Sul, Brasília - DF</span>
+            <span>Asa Sul</span>
             <a href="#endereco">Ver no mapa</a>
           </div>
         </div>
 
         <p className="footer-legal">
-          © {year} Mulher Viva. Todos os direitos reservados.
+          © {year} Mulher Viva · Dra. Luciana da Silva Lopes · CRM 52.72428-9. Todos os direitos reservados.
         </p>
 
         <div className="footer-wordmark" aria-hidden="true">
