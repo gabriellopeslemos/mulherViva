@@ -36,3 +36,6 @@ backend/uploads/
 .pytest_cache
 
 .claude/settings.local.json
+# e2e
+test-results/
+playwright-report/
