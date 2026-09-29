@@ -168,6 +168,37 @@ export async function listAppointments(admin, params = {}) {
   return ok(await admin.get('/api/admin/appointments', { params }), 'listar consultas')
 }
 
+/** Consulta criada pelo admin (status `confirmed` por padrão, `force` para ignorar conflito). */
+export async function createAdminAppointment(
+  admin,
+  { specialtyId, date, start_time, end_time, ...rest },
+) {
+  return ok(
+    await admin.post('/api/admin/appointments', {
+      data: {
+        specialty_id: specialtyId,
+        date,
+        start_time,
+        end_time,
+        client_name: 'Paciente Admin E2E',
+        client_contact: '',
+        type: 'online',
+        status: 'confirmed',
+        ...rest,
+      },
+    }),
+    'criar consulta (admin)',
+  )
+}
+
+/** Remove toda consulta cujo nome começa com `prefix` (limpeza dos specs do admin). */
+export async function deleteAppointmentsNamed(admin, prefix) {
+  const all = await listAppointments(admin)
+  for (const a of all) {
+    if (a.client_name.startsWith(prefix)) await admin.delete(`/api/admin/appointments/${a.id}`)
+  }
+}
+
 // ---- configurações ----
 
 export async function setSettings(admin, patch) {
