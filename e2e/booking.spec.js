@@ -14,6 +14,7 @@ import {
   resetSettings,
   uniquePhone,
 } from './helpers/api.js'
+import { RETENTION_NOTICE } from '../src/lib/privacy.js'
 
 // A LP só oferece "Online" e "Rio de Janeiro" (Brasília está oculta), e o
 // wizard abre em "Online". Todas as regras aqui são online para que os slots
@@ -461,4 +462,300 @@ test('override parcial (10:00-11:00) bloqueia só aquele horário', async ({ pag
   await openWizard(page)
   await pickDate(page, date)
   await expect(slotRadios(page)).toHaveText(['09:00', '11:00'])
+})
+
+// ---- Rodada 2/3: modalidade, formulário, políticas, lista de espera, erros ----
+
+test('modalidade: trocar para Rio de Janeiro oferece só slots presenciais e grava o tipo escolhido', async ({
+  page,
+}) => {
+  const date = futureDate(12)
+  const online = await openDay(admin.ctx, date, {
+    start_time: '09:00:00',
+    end_time: '11:00:00',
+    location: 'online',
+  })
+  cleanups.push(online.cleanup)
+  const rio = await openDay(admin.ctx, date, {
+    start_time: '14:00:00',
+    end_time: '16:00:00',
+    location: 'presencial_rj',
+  })
+  cleanups.push(rio.cleanup)
+  const person = { name: 'Rita Presencial', phone: uniquePhone(), email: 'rita.rj@example.com' }
+
+  // O tipo do slot precisa bater com o `type` do pedido.
+  const wrong = await api.post('/api/bookings', {
+    data: {
+      specialty_id: spec.id,
+      date,
+      start: '14:00:00',
+      type: 'online',
+      client_name: person.name,
+      client_email: person.email,
+      client_phone: person.phone,
+    },
+  })
+  expect(wrong.status()).toBe(409)
+
+  await openWizard(page)
+  await pickDate(page, date)
+  await expect(slotRadios(page)).toHaveText(['09:00', '10:00'])
+
+  await page.getByRole('radio', { name: 'Rio de Janeiro' }).click()
+  await expect(page.getByRole('radio', { name: 'Rio de Janeiro' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  await pickDate(page, date)
+  await expect(slotRadios(page)).toHaveText(['14:00', '15:00'])
+  await pickSlot(page, '15:00')
+  await next(page)
+  await fillPersonal(page, person)
+  await next(page)
+  await chooseSpecialty(page, spec.name)
+  await page.getByRole('radio', { name: 'Sim', exact: true }).click()
+  await next(page, 'Revisar agendamento')
+  await expect(page.getByRole('article', { name: 'Resumo da consulta' })).toContainText(
+    'Presencial — Rio de Janeiro',
+  )
+
+  const responsePromise = waitBooking(page)
+  await page.getByRole('button', { name: 'Confirmar agendamento' }).click()
+  const response = await responsePromise
+  expect(response.status()).toBe(201)
+  const booking = await response.json()
+  created.push(booking.id)
+  expect(booking.type).toBe('presencial_rj')
+  expect(booking.start_time).toBe('15:00:00')
+})
+
+test('validação do formulário: obrigatórios, e-mail inválido e Voltar preserva os dados', async ({
+  page,
+}) => {
+  const date = futureDate(13)
+  const { cleanup } = await openDay(admin.ctx, date, { location: LOCATION })
+  cleanups.push(cleanup)
+
+  await openWizard(page)
+  await pickDate(page, date)
+  await pickSlot(page, '09:00')
+  await next(page)
+  await expect(currentStep(page)).toContainText('Dados pessoais')
+
+  const name = page.getByLabel('Nome completo')
+  const phone = page.getByLabel('Telefone / WhatsApp')
+  const email = page.getByLabel('E-mail')
+  const invalid = (loc) => loc.evaluate((el) => !el.validity.valid)
+
+  // Tudo vazio: a validação nativa bloqueia o avanço.
+  await next(page)
+  await expect(currentStep(page)).toContainText('Dados pessoais')
+  expect(await invalid(name)).toBe(true)
+  expect(await invalid(phone)).toBe(true)
+  expect(await invalid(email)).toBe(true)
+
+  // E-mail inválido com o resto preenchido continua bloqueando.
+  await name.fill('Bia Validação')
+  await phone.fill(uniquePhone())
+  await email.fill('isto-nao-e-email')
+  await next(page)
+  await expect(currentStep(page)).toContainText('Dados pessoais')
+  expect(await invalid(email)).toBe(true)
+  expect(await invalid(name)).toBe(false)
+
+  // Telefone curto demais também.
+  await email.fill('bia@example.com')
+  await phone.fill('123')
+  await next(page)
+  await expect(currentStep(page)).toContainText('Dados pessoais')
+  expect(await invalid(phone)).toBe(true)
+
+  const validPhone = uniquePhone()
+  await phone.fill(validPhone)
+  await next(page)
+  await expect(currentStep(page)).toContainText('Motivo da consulta')
+
+  // Voltar mantém o que foi digitado, inclusive o horário do passo 1.
+  await page.getByRole('button', { name: 'Voltar' }).click()
+  await expect(name).toHaveValue('Bia Validação')
+  await expect(phone).toHaveValue(validPhone)
+  await expect(email).toHaveValue('bia@example.com')
+  await page.getByRole('button', { name: 'Voltar' }).click()
+  await expect(currentStep(page)).toContainText('Data e horário')
+  await expect(page.getByRole('radio', { name: '09:00', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+})
+
+test('auto_confirm_bookings: a consulta nasce confirmada', async ({ page }) => {
+  const date = futureDate(14)
+  const { cleanup } = await openDay(admin.ctx, date, { location: LOCATION })
+  cleanups.push(cleanup)
+  await setSettings(admin.ctx, { auto_confirm_bookings: true })
+  const person = { name: 'Clara Auto', phone: uniquePhone(), email: 'clara.auto@example.com' }
+
+  await openWizard(page)
+  await walkToReview(page, { date, time: '11:00', person, specialtyName: spec.name })
+  const responsePromise = waitBooking(page)
+  await page.getByRole('button', { name: 'Confirmar agendamento' }).click()
+  const response = await responsePromise
+  expect(response.status()).toBe(201)
+  const booking = await response.json()
+  created.push(booking.id)
+  expect(booking.status).toBe('confirmed')
+  await expect(page.getByRole('heading', { name: /Consulta confirmada, Clara\./ })).toBeVisible()
+
+  const list = await listAppointments(admin.ctx, { date_from: date, date_to: date })
+  expect(list.find((a) => a.id === booking.id)?.status).toBe('confirmed')
+})
+
+test('antecedência máxima: dias além de max_booking_advance_days não têm slots (API e LP)', async ({
+  page,
+}) => {
+  const near = futureDate(2)
+  const far = futureDate(8)
+  for (const d of [near, far]) {
+    const { cleanup } = await openDay(admin.ctx, d, { location: LOCATION })
+    cleanups.push(cleanup)
+  }
+  await setSettings(admin.ctx, { max_booking_advance_days: 4 })
+
+  expect((await getSlots(api, spec.id, near)).length).toBe(3)
+  expect(await getSlots(api, spec.id, far)).toEqual([])
+
+  await openWizard(page)
+  await gotoMonth(page, far)
+  await expect(dayButton(page, far, false)).toBeDisabled()
+  await gotoMonth(page, near)
+  await expect(dayButton(page, near)).toBeEnabled()
+
+  // Sem o limite o dia distante volta a ser oferecido.
+  await setSettings(admin.ctx, { max_booking_advance_days: 60 })
+  expect((await getSlots(api, spec.id, far)).length).toBe(3)
+})
+
+test('limite de 3 pendentes por telefone: o 4º pedido recebe 429 e a UI mostra a mensagem', async ({
+  page,
+}) => {
+  const date = futureDate(15)
+  const { cleanup } = await openDay(admin.ctx, date, {
+    start_time: '09:00:00',
+    end_time: '13:00:00',
+    location: LOCATION,
+  })
+  cleanups.push(cleanup)
+  const person = { name: 'Paula Limite', phone: uniquePhone(), email: 'paula.limite@example.com' }
+
+  for (const start of ['09:00:00', '10:00:00', '11:00:00']) {
+    const b = await bookViaApi(api, {
+      specialtyId: spec.id,
+      date,
+      start,
+      type: LOCATION,
+      client_phone: person.phone,
+    })
+    created.push(b.id)
+  }
+
+  await openWizard(page)
+  await walkToReview(page, { date, time: '12:00', person, specialtyName: spec.name })
+  const responsePromise = waitBooking(page)
+  await page.getByRole('button', { name: 'Confirmar agendamento' }).click()
+  const response = await responsePromise
+  expect(response.status()).toBe(429)
+
+  const alert = page.locator('.bk-error[role="alert"]')
+  await expect(alert).toContainText('Limite de agendamentos pendentes atingido')
+  // A paciente continua na revisão e nada foi criado além das 3 consultas.
+  await expect(currentStep(page)).toContainText('Confirmação')
+  await expect(page.getByRole('heading', { name: /Consulta confirmada/ })).toHaveCount(0)
+  const list = await listAppointments(admin.ctx, { date_from: date, date_to: date })
+  expect(list).toHaveLength(3)
+})
+
+test('lista de espera: entrar gera 201 e repetir o mesmo e-mail devolve 200 sem duplicar', async ({
+  page,
+}) => {
+  const email = `espera.${Date.now()}@example.com`
+  cleanups.push(async () => {
+    const entries = await admin.ctx.get('/api/admin/waitlist')
+    for (const e of await entries.json()) {
+      if (e.client_email === email) await admin.ctx.delete(`/api/admin/waitlist/${e.id}`)
+    }
+  })
+
+  const join = async () => {
+    await openWizard(page)
+    await page.getByRole('button', { name: /Entre na lista de espera/ }).click()
+    const form = page.locator('.bk-waitlist__form')
+    await expect(form.getByText(RETENTION_NOTICE)).toBeVisible()
+    await form.getByLabel('Especialidade').selectOption({ label: spec.name })
+    await form.getByLabel('Nome completo').fill('Lívia Espera')
+    await form.getByLabel('E-mail').fill(email)
+    const responsePromise = page.waitForResponse(
+      (r) => r.url().endsWith('/api/waitlist') && r.request().method() === 'POST',
+    )
+    await form.getByRole('button', { name: 'Entrar na lista' }).click()
+    const response = await responsePromise
+    await expect(page.locator('.bk-waitlist__done')).toContainText(email)
+    return response
+  }
+
+  expect((await join()).status()).toBe(201)
+  expect((await join()).status()).toBe(200)
+
+  const entries = await (await admin.ctx.get('/api/admin/waitlist')).json()
+  expect(entries.filter((e) => e.client_email === email)).toHaveLength(1)
+})
+
+test('sem horários: estado vazio explícito e nenhum dia habilitado', async ({ page }) => {
+  await openWizard(page)
+  await expect(page.getByText('Nenhum nas próximas semanas')).toBeVisible()
+  await expect(page.getByRole('button', { name: /com horários disponíveis/ })).toHaveCount(0)
+  await expect(slotRadios(page)).toHaveCount(0)
+  await expect(page.locator('.bk-error[role="alert"]')).toHaveCount(0)
+})
+
+test('falha de rede em /api/slots: aviso em role=alert e a página não quebra', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (e) => pageErrors.push(e))
+  await page.route('**/api/slots**', (route) => route.abort())
+
+  await openWizard(page)
+  await expect(page.locator('.bk-error[role="alert"]')).toContainText(
+    'Não foi possível carregar a agenda',
+  )
+  await expect(page.getByRole('list', { name: 'Etapas do agendamento' })).toBeVisible()
+  expect(pageErrors).toEqual([])
+})
+
+test('falha em /api/specialties: a seção de agendamento some sem derrubar a LP', async ({
+  page,
+}) => {
+  const pageErrors = []
+  page.on('pageerror', (e) => pageErrors.push(e))
+  await page.route('**/api/specialties**', (route) => route.abort())
+
+  await page.goto('/')
+  // As especialidades só carregam quando a seção se aproxima da viewport.
+  await page.locator('#agendamento').scrollIntoViewIfNeeded()
+  await expect(page.locator('#agendamento')).toHaveCount(0)
+  await expect(page.locator('body')).toBeVisible()
+  expect(pageErrors).toEqual([])
+})
+
+test('aviso LGPD (RETENTION_NOTICE) aparece nos dados pessoais', async ({ page }) => {
+  const date = futureDate(16)
+  const { cleanup } = await openDay(admin.ctx, date, { location: LOCATION })
+  cleanups.push(cleanup)
+
+  await openWizard(page)
+  await pickDate(page, date)
+  await pickSlot(page, '09:00')
+  await next(page)
+  await expect(currentStep(page)).toContainText('Dados pessoais')
+  await expect(page.locator('.bk-privacy')).toHaveText(RETENTION_NOTICE)
+  await expect(page.locator('.bk-privacy')).toContainText('contato@mulherviva.org')
 })
