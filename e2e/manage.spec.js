@@ -10,6 +10,7 @@ import {
   listAppointments,
   clearAvailability,
   resetSettings,
+  setSettings,
 } from './helpers/api.js'
 
 const MONTHS_LONG = [
@@ -174,6 +175,109 @@ test.describe('autogestão pelo link', () => {
       expect(adminView.date).toBe(newDate)
       expect(hhmm(adminView.start_time)).toBe(newStart)
       expect(await findAppointment(admin.ctx, appt.id, oldDate)).toBeUndefined()
+    } finally {
+      if (appt) await admin.ctx.patch(`/api/admin/appointments/${appt.id}`, { data: { status: 'cancelled' } })
+      await cleanup()
+    }
+  })
+
+  test('janela de cancelamento: dentro do prazo, can_modify=false, botões ocultos e 422 no backend', async ({
+    page,
+  }) => {
+    const date = futureDate(2)
+    const { cleanup } = await openDay(admin.ctx, date, { location: 'online' })
+    let appt
+    try {
+      const spec = await specialtyBySlug(api)
+      const slot = (await getSlots(api, spec.id, date))[0]
+      appt = await bookViaApi(api, { specialtyId: spec.id, date, start: slot.start, type: 'online' })
+
+      // Controle positivo: com a janela padrão (12h) a consulta ainda é alterável.
+      expect((await (await api.get(`/api/bookings/manage/${appt.token}`)).json()).can_modify).toBe(true)
+
+      // 96h de antecedência exigida: a consulta em ~2 dias cai dentro da janela.
+      await setSettings(admin.ctx, { cancellation_window_hours: 96 })
+      const managed = await (await api.get(`/api/bookings/manage/${appt.token}`)).json()
+      expect(managed.can_modify).toBe(false)
+      expect(managed.cancellation_window_hours).toBe(96)
+
+      await page.goto(`/?manage=${appt.token}`)
+      const card = page.locator('.manage-card')
+      await expect(card.getByRole('heading', { name: spec.name })).toBeVisible()
+      await expect(card.getByText(/não pode mais ser alterado online \(prazo de 96h/)).toBeVisible()
+      await expect(card.getByRole('button', { name: 'Reagendar' })).toHaveCount(0)
+      await expect(card.getByRole('button', { name: 'Cancelar consulta' })).toHaveCount(0)
+
+      // O backend recusa mesmo sem passar pela UI, e nada muda.
+      const cancel = await api.post(`/api/bookings/manage/${appt.token}/cancel`)
+      expect(cancel.status()).toBe(422)
+      const resched = await api.post(`/api/bookings/manage/${appt.token}/reschedule`, {
+        data: { date, start: (await getSlots(api, spec.id, date))[1].start },
+      })
+      expect(resched.status()).toBe(422)
+      const after = await findAppointment(admin.ctx, appt.id, date)
+      expect(after.status).not.toBe('cancelled')
+      expect(hhmm(after.start_time)).toBe(hhmm(slot.start))
+    } finally {
+      if (appt) await admin.ctx.patch(`/api/admin/appointments/${appt.id}`, { data: { status: 'cancelled' } })
+      await cleanup()
+    }
+  })
+
+  test('token inválido: "não encontrado" na UI, 404 na API e sem vazar dados', async ({ page }) => {
+    const bogus = 'token-que-nao-existe-e2e'
+    const res = await api.get(`/api/bookings/manage/${bogus}`)
+    expect(res.status()).toBe(404)
+    expect(await res.text()).not.toMatch(/client_|email|@/)
+    expect((await api.post(`/api/bookings/manage/${bogus}/cancel`)).status()).toBe(404)
+
+    await page.goto(`/?manage=${bogus}`)
+    const card = page.locator('.manage-card')
+    await expect(card.getByRole('heading', { name: 'Ops!' })).toBeVisible()
+    await expect(card.getByText('Agendamento não encontrado.')).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Reagendar' })).toHaveCount(0)
+    await expect(card.getByRole('button', { name: 'Cancelar consulta' })).toHaveCount(0)
+  })
+
+  test('recuperar link: mesma mensagem para e-mail existente e inexistente', async ({ page }) => {
+    const date = futureDate(4)
+    const { cleanup } = await openDay(admin.ctx, date, { location: 'online' })
+    let appt
+    try {
+      const spec = await specialtyBySlug(api)
+      const slot = (await getSlots(api, spec.id, date))[0]
+      const stamp = Date.now()
+      const known = `recover.${stamp}@example.com`
+      const unknown = `naoexiste.${stamp}@example.com`
+      appt = await bookViaApi(api, {
+        specialtyId: spec.id,
+        date,
+        start: slot.start,
+        type: 'online',
+        client_email: known,
+      })
+
+      // API: corpo idêntico nos dois casos.
+      const a = await api.post('/api/bookings/recover', { data: { email: known } })
+      const b = await api.post('/api/bookings/recover', { data: { email: unknown } })
+      expect(a.status()).toBe(200)
+      expect(b.status()).toBe(200)
+      expect(await a.json()).toEqual(await b.json())
+
+      // UI: o paciente vê a mesma confirmação nos dois casos.
+      const messages = []
+      for (const email of [known, unknown]) {
+        await page.goto('/')
+        await page.locator('#agendamento').scrollIntoViewIfNeeded()
+        await page.getByRole('button', { name: /Quero reagendar/ }).click()
+        await page.locator('#rc-email').fill(email)
+        await page.getByRole('button', { name: 'Enviar link' }).click()
+        const done = page.locator('.bk-recover__done')
+        await expect(done).toBeVisible()
+        messages.push((await done.textContent()).trim())
+      }
+      expect(messages[0]).toBe(messages[1])
+      expect(messages[0]).toContain('Se houver uma consulta futura com esse e-mail')
     } finally {
       if (appt) await admin.ctx.patch(`/api/admin/appointments/${appt.id}`, { data: { status: 'cancelled' } })
       await cleanup()
