@@ -158,24 +158,6 @@ def _appt_lines(appt: dict) -> list[str]:
     ]
 
 
-def notify_booking_received(appt: dict) -> None:
-    """Solicitação registrada, aguardando confirmação da equipe."""
-    settings = get_settings()
-    body = "\n".join([
-        f"Olá, {appt['client_name']}!",
-        "",
-        "Recebemos sua solicitação de agendamento. Nossa equipe entrará em "
-        "contato em breve para confirmar a consulta.",
-        "",
-        *_appt_lines(appt),
-        "",
-        "Se precisar alterar algo, basta responder este e-mail.",
-        "",
-        settings.clinic_name,
-    ])
-    _send_async(appt.get("client_email"), "Recebemos sua solicitação de consulta", body)
-
-
 def _manage_lines(appt: dict) -> list[str]:
     url = manage_url(appt.get("token"))
     if not url:

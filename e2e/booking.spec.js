@@ -170,7 +170,7 @@ test.afterEach(async () => {
   }
 })
 
-test('agendamento completo pelo wizard: passos 1 a 4, 201, confirmação e consulta pendente no admin', async ({
+test('agendamento completo pelo wizard: passos 1 a 4, 201, confirmação e consulta confirmada no admin', async ({
   page,
 }) => {
   const date = futureDate(4)
@@ -213,7 +213,7 @@ test('agendamento completo pelo wizard: passos 1 a 4, 201, confirmação e consu
   expect(response.status()).toBe(201)
   const booking = await response.json()
   created.push(booking.id)
-  expect(booking.status).toBe('pending')
+  expect(booking.status).toBe('confirmed')
 
   // Tela de confirmação.
   await expect(page.getByRole('heading', { name: /Consulta confirmada, Maria\./ })).toBeVisible()
@@ -221,13 +221,13 @@ test('agendamento completo pelo wizard: passos 1 a 4, 201, confirmação e consu
   await expect(page.getByRole('button', { name: 'Fazer novo agendamento' })).toBeVisible()
   await expect(page.locator('.bk-error[role="alert"]')).toHaveCount(0)
 
-  // A consulta existe no admin, pendente, com os dados do wizard.
+  // A consulta existe no admin, confirmada, com os dados do wizard.
   const list = await listAppointments(admin.ctx, { date_from: date, date_to: date })
   const mine = list.filter((a) => a.client_phone === person.phone)
   expect(mine).toHaveLength(1)
   expect(mine[0]).toMatchObject({
     id: booking.id,
-    status: 'pending',
+    status: 'confirmed',
     specialty_id: spec.id,
     date,
     start_time: '10:00:00',
@@ -589,11 +589,10 @@ test('validação do formulário: obrigatórios, e-mail inválido e Voltar prese
   )
 })
 
-test('auto_confirm_bookings: a consulta nasce confirmada', async ({ page }) => {
+test('a consulta marcada na LP já nasce confirmada', async ({ page }) => {
   const date = futureDate(14)
   const { cleanup } = await openDay(admin.ctx, date, { location: LOCATION })
   cleanups.push(cleanup)
-  await setSettings(admin.ctx, { auto_confirm_bookings: true })
   const person = { name: 'Clara Auto', phone: uniquePhone(), email: 'clara.auto@example.com' }
 
   await openWizard(page)
@@ -636,7 +635,7 @@ test('antecedência máxima: dias além de max_booking_advance_days não têm sl
   expect((await getSlots(api, spec.id, far)).length).toBe(3)
 })
 
-test('limite de 3 pendentes por telefone: o 4º pedido recebe 429 e a UI mostra a mensagem', async ({
+test('limite de 3 reservas por telefone/dia: o 4º pedido recebe 429 e a UI mostra a mensagem', async ({
   page,
 }) => {
   const date = futureDate(15)
@@ -667,7 +666,7 @@ test('limite de 3 pendentes por telefone: o 4º pedido recebe 429 e a UI mostra 
   expect(response.status()).toBe(429)
 
   const alert = page.locator('.bk-error[role="alert"]')
-  await expect(alert).toContainText('Limite de agendamentos pendentes atingido')
+  await expect(alert).toContainText('Limite de agendamentos atingido')
   // A paciente continua na revisão e nada foi criado além das 3 consultas.
   await expect(currentStep(page)).toContainText('Confirmação')
   await expect(page.getByRole('heading', { name: /Consulta confirmada/ })).toHaveCount(0)

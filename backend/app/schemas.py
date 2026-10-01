@@ -272,14 +272,12 @@ class WaitlistOut(BaseModel):
 # ---- settings ----
 
 class SettingsOut(BaseModel):
-    auto_confirm_bookings: bool
     buffer_minutes: int
     cancellation_window_hours: int
     max_booking_advance_days: int
 
 
 class SettingsUpdate(BaseModel):
-    auto_confirm_bookings: bool | None = None
     buffer_minutes: int | None = Field(default=None, ge=0, le=240)
     cancellation_window_hours: int | None = Field(default=None, ge=0, le=336)
     max_booking_advance_days: int | None = Field(default=None, ge=1, le=365)

@@ -23,7 +23,7 @@ export function backendWeekday(dateStr) {
 }
 
 let phoneSeq = 0
-/** Telefone único por reserva (o 4º pendente do mesmo telefone/dia dá 429). */
+/** Telefone único por reserva (a 4ª reserva do mesmo telefone/dia dá 429). */
 export function uniquePhone() {
   phoneSeq += 1
   const tail = `${Date.now()}${phoneSeq}`.slice(-9)
@@ -207,7 +207,6 @@ export async function setSettings(admin, patch) {
 
 export async function resetSettings(admin) {
   return setSettings(admin, {
-    auto_confirm_bookings: false,
     buffer_minutes: 0,
     cancellation_window_hours: 12,
     max_booking_advance_days: 60,

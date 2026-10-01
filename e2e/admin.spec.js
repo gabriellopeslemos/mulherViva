@@ -178,11 +178,15 @@ test('21. confirmar reserva pendente pela UI: status confirmed, contador cai e t
     const slots = await getSlots(api, spec.id, date)
     expect(slots.length).toBeGreaterThan(0)
     const nome = `Confirmar E2E ${Date.now()}`
-    const appt = await bookViaApi(api, {
+    // Reservas da LP já nascem confirmadas; "pendente" só existe quando o
+    // admin cria/marca assim (ou em registros antigos).
+    const appt = await createAdminAppointment(admin.ctx, {
       specialtyId: spec.id,
       date,
-      start: slots[0].start,
+      start_time: slots[0].start,
+      end_time: slots[0].end,
       client_name: nome,
+      status: 'pending',
     })
     apptId = appt.id
     expect(appt.status).toBe('pending')
@@ -781,9 +785,8 @@ test('27. configurações (via API, sem UI): persistem no GET, validam limites e
     expect((await s.api.get('/api/admin/settings')).status()).toBe(401)
     expect((await s.api.patch('/api/admin/settings', { data: { buffer_minutes: 5 } })).status()).toBe(401)
 
-    // Persistência dos quatro campos.
+    // Persistência dos três campos.
     const patch = {
-      auto_confirm_bookings: true,
       buffer_minutes: 30,
       cancellation_window_hours: 48,
       max_booking_advance_days: 20,
@@ -803,7 +806,7 @@ test('27. configurações (via API, sem UI): persistem no GET, validam limites e
     }
     expect(await (await s.admin.ctx.get('/api/admin/settings')).json()).toEqual(patch)
 
-    // Efeito: auto_confirm ligado -> a reserva nasce confirmed.
+    // Toda reserva pública nasce confirmed.
     const livres = await getSlots(s.api, s.spec.id, date)
     expect(livres.map((x) => hhmm(x.start))).toEqual(['09:00', '10:00', '11:00'])
     const a1 = await bookViaApi(s.api, { specialtyId: s.spec.id, date, start: livres[1].start })
@@ -817,11 +820,9 @@ test('27. configurações (via API, sem UI): persistem no GET, validam limites e
     const semBuffer = await getSlots(s.api, s.spec.id, date)
     expect(semBuffer.map((x) => hhmm(x.start))).toEqual(['09:00', '11:00'])
 
-    // Efeito: auto_confirm desligado -> a reserva nasce pending.
-    await setSettings(s.admin.ctx, { auto_confirm_bookings: false })
     const a2 = await bookViaApi(s.api, { specialtyId: s.spec.id, date, start: semBuffer[0].start })
     apptIds.push(a2.id)
-    expect(a2.status).toBe('pending')
+    expect(a2.status).toBe('confirmed')
 
     // Efeito: antecedência máxima curta remove o dia dos slots.
     await setSettings(s.admin.ctx, { max_booking_advance_days: 5 })

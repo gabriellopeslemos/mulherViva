@@ -50,7 +50,7 @@ from ..schemas import (
 from ..services import email as email_service
 from ..services import google_calendar, notifications, waitlist
 from ..services.instagram import sync_instagram
-from ..services.settings import get_bool_setting, get_int_setting, set_setting
+from ..services.settings import get_int_setting, set_setting
 from ..services.slots import (
     find_orphaned_appointments,
     find_rule_conflicts,
@@ -667,7 +667,6 @@ async def upload_image(file: UploadFile = File(...)):
 def _settings_out(db: Session) -> SettingsOut:
     defaults = get_settings()
     return SettingsOut(
-        auto_confirm_bookings=get_bool_setting(db, "auto_confirm_bookings", False),
         buffer_minutes=get_int_setting(db, "buffer_minutes", defaults.buffer_minutes),
         cancellation_window_hours=get_int_setting(
             db, "cancellation_window_hours", defaults.cancellation_window_hours
@@ -685,12 +684,6 @@ def get_app_settings(db: Session = Depends(get_db)):
 
 @router.patch("/settings", response_model=SettingsOut)
 def update_app_settings(body: SettingsUpdate, db: Session = Depends(get_db)):
-    if body.auto_confirm_bookings is not None:
-        set_setting(
-            db,
-            "auto_confirm_bookings",
-            "true" if body.auto_confirm_bookings else "false",
-        )
     if body.buffer_minutes is not None:
         set_setting(db, "buffer_minutes", str(body.buffer_minutes))
     if body.cancellation_window_hours is not None:

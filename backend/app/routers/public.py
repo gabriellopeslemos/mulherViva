@@ -28,12 +28,12 @@ from ..schemas import (
     WaitlistOut,
 )
 from ..services import google_calendar, notifications, waitlist
-from ..services.settings import get_bool_setting, get_int_setting
+from ..services.settings import get_int_setting
 from ..services.slots import get_available_slots, has_overlap
 
 router = APIRouter(prefix="/api", tags=["public"])
 
-MAX_PENDING_PER_CONTACT_PER_DAY = 3
+MAX_BOOKINGS_PER_CONTACT_PER_DAY = 3
 
 # "Quero reagendar": how many link re-sends one e-mail address may trigger per
 # hour. In-process only (resets on restart), which is enough to stop a form
@@ -127,17 +127,18 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
     if specialty is None or not specialty.active:
         raise HTTPException(status_code=404, detail="Especialidade nao encontrada")
 
-    pending_today = db.scalar(
+    # Anti-abuso: quantas consultas ativas este telefone já marcou hoje.
+    booked_today = db.scalar(
         select(func.count(Appointment.id)).where(
             Appointment.client_contact == body.client_phone,
-            Appointment.status == "pending",
+            Appointment.status.in_(("pending", "confirmed")),
             func.date(Appointment.created_at) == datetime.utcnow().date(),
         )
     )
-    if pending_today >= MAX_PENDING_PER_CONTACT_PER_DAY:
+    if booked_today >= MAX_BOOKINGS_PER_CONTACT_PER_DAY:
         raise HTTPException(
             status_code=429,
-            detail="Limite de agendamentos pendentes atingido para este contato",
+            detail="Limite de agendamentos atingido para este contato",
         )
 
     day_slots = get_available_slots(db, specialty, body.date, body.date).get(
@@ -159,7 +160,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
             status_code=status.HTTP_409_CONFLICT, detail="Horario indisponivel"
         )
 
-    auto_confirm = get_bool_setting(db, "auto_confirm_bookings", False)
+    # Marcou, está confirmada: não há etapa de aprovação pela equipe.
     appointment = Appointment(
         specialty_id=specialty.id,
         date=body.date,
@@ -170,7 +171,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
         client_email=body.client_email,
         client_phone=body.client_phone,
         type=body.type,
-        status="confirmed" if auto_confirm else "pending",
+        status="confirmed",
         notes=body.notes,
         reason=body.reason,
         is_first_visit=body.is_first_visit,
@@ -183,10 +184,7 @@ def create_booking(body: BookingIn, db: Session = Depends(get_db)):
     google_calendar.schedule_sync(appointment.id)
 
     snapshot = _appt_snapshot(appointment, specialty.name)
-    if auto_confirm:
-        notifications.notify_booking_confirmed(snapshot)
-    else:
-        notifications.notify_booking_received(snapshot)
+    notifications.notify_booking_confirmed(snapshot)
     notifications.notify_internal_new_booking(snapshot)
 
     return appointment
