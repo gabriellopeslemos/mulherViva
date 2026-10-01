@@ -93,66 +93,87 @@ _SERIF = "Lora, 'Palatino Linotype', Palatino, Georgia, serif"
 _SANS = "Mulish, 'Segoe UI', Helvetica, Arial, sans-serif"
 
 
-def _eyebrow(label: str) -> str:
+def _ticket_label(label: str) -> str:
     return (
-        f'<span style="font-family: {_SANS}; font-size: 11px; font-weight: 800; '
-        f'letter-spacing: 2px; text-transform: uppercase; color: {_C_ROSE};">{label}</span>'
+        f'<p style="margin: 0; font-family: {_SANS}; font-size: 13px; line-height: 1.4; '
+        f'color: {_C_TEXT_MUTED};">{label}</p>'
     )
 
 
-def _email_button(label: str, url: str, primary: bool) -> str:
-    """Bulletproof button: padded link inside a colored cell (works in Outlook)."""
-    bg = _C_ACCENT if primary else _C_SURFACE
-    fg = "#ffffff" if primary else _C_ACCENT
-    border = _C_ACCENT if primary else _C_PINK
-    return f"""<table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0" style="display: inline-table; margin: 0 8px 10px 0;">
-                      <tr>
-                        <td bgcolor="{bg}" style="background-color: {bg}; border: 1px solid {border}; border-radius: 999px;">
-                          <a href="{html.escape(url)}" target="_blank" style="display: inline-block; padding: 14px 28px; font-family: {_SANS}; font-size: 14px; font-weight: 700; line-height: 1; color: {fg}; text-decoration: none; border-radius: 999px;">{html.escape(label)}</a>
-                        </td>
-                      </tr>
-                    </table>"""
-
-
-def _location_block(modality: str, modality_label: str, clinic_address: str) -> str:
-    title_style = (
-        f"margin: 8px 0 0; font-family: {_SERIF}; font-size: 19px; font-weight: 600; "
-        f"line-height: 1.35; color: {_C_TEXT_STRONG};"
-    )
-    body_style = f"margin: 4px 0 0; font-family: {_SANS}; font-size: 14px; line-height: 1.6; color: {_C_TEXT_SOFT};"
-    address = clinic_address.strip()
-
-    if modality == "online":
-        body = (
-            f'<p style="{title_style}">{modality_label} &middot; videoconferência</p>'
-            f'<p style="{body_style}">Reserve um ambiente tranquilo, com boa conexão, '
-            "alguns minutos antes do horário.</p>"
-        )
-    elif address:
-        body = (
-            f'<p style="{title_style}">{modality_label}</p>'
-            f'<p style="{body_style}">{html.escape(address)}</p>'
-        )
-        maps_url = "https://www.google.com/maps/search/?api=1&query=" + quote(address)
-        body += (
-            f'<p style="margin: 12px 0 0;"><a href="{html.escape(maps_url)}" target="_blank" '
-            f'style="font-family: {_SANS}; font-size: 13px; font-weight: 700; color: {_C_ROSE}; '
-            f'text-decoration: none; border-bottom: 1px solid {_C_PINK};">Ver no Google Maps &rarr;</a></p>'
-        )
-    else:
-        body = f'<p style="{title_style}">{modality_label}</p>'
-
+def _ticket_divider() -> str:
     return f"""
                 <tr>
-                  <td class="px" style="padding: 0 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid {_C_LINE};">
+                  <td class="tk-px" style="padding: 0 32px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top: 1px solid {_C_LINE}; font-size: 0; line-height: 0;">&nbsp;</td></tr></table>
+                  </td>
+                </tr>"""
+
+
+def _ticket_button(label: str, url: str, primary: bool) -> str:
+    """Bulletproof full-width button: padded link inside a colored cell (works in Outlook)."""
+    bg = _C_PLUM if primary else _C_SURFACE
+    fg = "#ffffff" if primary else _C_ACCENT
+    border = _C_PLUM if primary else _C_PINK
+    return f"""<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" bgcolor="{bg}" style="background-color: {bg}; border: 1px solid {border}; border-radius: 14px;">
+                                <a href="{html.escape(url)}" target="_blank" style="display: block; padding: 15px 12px; font-family: {_SANS}; font-size: 14px; font-weight: 700; line-height: 1; text-align: center; color: {fg}; text-decoration: none; border-radius: 14px;">{html.escape(label)}</a>
+                              </td>
+                            </tr>
+                          </table>"""
+
+
+def _ticket_perforation() -> str:
+    """Dashed tear line between the ticket's tinted header and its body, with
+    half-circle notches on both edges (like the booking ticket on the site)."""
+    notch = (
+        f"width: 12px; height: 24px; background-color: {_C_BG}; "
+        f"border: 1px solid {_C_LINE}; font-size: 0; line-height: 0;"
+    )
+    return f"""
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td valign="top" style="padding: 24px 0 0;">
-                          {_eyebrow("Local")}
-                          {body}
+                        <td width="12" bgcolor="{_C_BG}" style="{notch} border-left: none; border-radius: 0 12px 12px 0;">&nbsp;</td>
+                        <td>
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr><td height="12" bgcolor="{_C_SURFACE_SOFT}" style="height: 12px; background-color: {_C_SURFACE_SOFT}; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                            <tr><td height="12" bgcolor="{_C_SURFACE}" style="height: 12px; background-color: {_C_SURFACE}; border-top: 2px dashed {_C_PINK}; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                          </table>
                         </td>
+                        <td width="12" bgcolor="{_C_BG}" style="{notch} border-right: none; border-radius: 12px 0 0 12px;">&nbsp;</td>
                       </tr>
                     </table>
+                  </td>
+                </tr>"""
+
+
+def _ticket_map(clinic_address: str, map_image_url: str) -> str:
+    """Static map (clickable, opens Google Maps) + address, closing the ticket."""
+    address = clinic_address.strip()
+    maps_url = html.escape("https://www.google.com/maps/search/?api=1&query=" + quote(address))
+    place, _, rest = address.partition(",")
+    if map_image_url:
+        map_img = f"""
+                <tr>
+                  <td style="padding-top: 4px; font-size: 0; line-height: 0;">
+                    <a href="{maps_url}" target="_blank" style="display: block; text-decoration: none;"><img src="{html.escape(map_image_url)}" width="600" alt="Mapa: {html.escape(address)}" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; border-top: 1px solid {_C_LINE}; border-bottom: 1px solid {_C_LINE};" /></a>
+                  </td>
+                </tr>"""
+    else:
+        map_img = _ticket_divider()
+    rest_html = ""
+    if rest.strip():
+        rest_html = (
+            f'<p style="margin: 4px 0 0; font-family: {_SANS}; font-size: 14px; line-height: 1.6; '
+            f'color: {_C_TEXT_SOFT};">{html.escape(rest.strip())}</p>'
+        )
+    return f"""{map_img}
+                <tr>
+                  <td class="tk-px" align="center" style="padding: 20px 32px 26px; text-align: center;">
+                    <a href="{maps_url}" target="_blank" style="font-family: {_SERIF}; font-size: 18px; font-weight: 600; line-height: 1.35; color: {_C_TEXT_STRONG}; text-decoration: none;">{html.escape(place.strip())}</a>
+                    {rest_html}
                   </td>
                 </tr>"""
 
@@ -226,44 +247,67 @@ def booking_confirmation_html(
     logo_url: str = "",
     site_url: str = "",
     whatsapp_number: str = "",
+    map_image_url: str = "",
 ) -> str:
     first_name = html.escape(client_name.strip().split()[0] if client_name.strip() else "")
     specialty_esc = html.escape(specialty_name)
+    is_online = modality == "online"
     modality_label = MODALITY_LABELS.get(modality, html.escape(modality))
+    if is_online:
+        modality_label = f"{modality_label} &middot; videoconferência"
     date_str = format_date_pt(day)
-    time_str = f"{format_time_pt(start)} &ndash; {format_time_pt(end)}"
-    weekday_short = WEEKDAYS_PT[day.weekday()][:3].upper()
+    weekday = WEEKDAYS_PT[day.weekday()]
+    day_line = f"{weekday.capitalize()}, {day.day} de {MONTHS_PT[day.month - 1]}"
+    weekday_short = weekday[:3].upper()
     month_short = MONTHS_PT[day.month - 1][:3].upper()
     preheader = f"{date_str.capitalize()}, às {format_time_pt(start)} &middot; {specialty_esc}"
+    title_name = (
+        f', <em style="font-style: italic; color: {_C_ACCENT};">{first_name}</em>' if first_name else ""
+    )
 
-    logo_html = ""
-    if logo_url:
-        logo_html = f"""<td valign="middle" style="padding-right: 12px;">
-                    <img src="{html.escape(logo_url)}" width="42" height="42" alt="" style="display: block; width: 42px; height: 42px; border: 0; border-radius: 50%;" />
-                  </td>
-                  """
-
-    buttons = ""
-    if calendar_link:
-        buttons += _email_button("Adicionar à agenda", calendar_link, primary=True)
-    if manage_link:
-        buttons += _email_button("Gerenciar consulta", manage_link, primary=not calendar_link)
-    buttons_row = ""
-    if buttons:
-        buttons_row = f"""
+    # Online: um lembrete prático no lugar do endereço/mapa.
+    online_section = ""
+    if is_online:
+        online_section = f"""{_ticket_divider()}
                 <tr>
-                  <td class="px" style="padding: 30px 40px 0;">
-                    {buttons}
+                  <td class="tk-px" style="padding: 20px 32px;">
+                    {_ticket_label("Online, de onde você estiver")}
+                    <p style="margin: 6px 0 0; font-family: {_SANS}; font-size: 14px; line-height: 1.6; color: {_C_TEXT_SOFT};">Reserve um ambiente tranquilo, com boa conexão, alguns minutos antes do horário.</p>
                   </td>
                 </tr>"""
 
+    buttons = []
+    if calendar_link:
+        buttons.append(_ticket_button("Adicionar à agenda", calendar_link, primary=True))
     if manage_link:
-        change_note = (
-            "Precisa remarcar ou cancelar? Use o botão <strong>Gerenciar consulta</strong> "
-            "&mdash; assim o horário fica livre para outra paciente."
-        )
-    else:
-        change_note = "Precisa remarcar ou cancelar? Fale com a nossa equipe o quanto antes."
+        buttons.append(_ticket_button("Gerenciar consulta", manage_link, primary=not calendar_link))
+    buttons_section = ""
+    if buttons:
+        if len(buttons) == 2:
+            cells = f"""<td class="tk-btn" width="50%" valign="top" style="width: 50%; padding-right: 6px;">
+                          {buttons[0]}
+                        </td>
+                        <td class="tk-btn" width="50%" valign="top" style="width: 50%; padding-left: 6px;">
+                          {buttons[1]}
+                        </td>"""
+        else:
+            cells = f"""<td valign="top">
+                          {buttons[0]}
+                        </td>"""
+        buttons_section = f"""{_ticket_divider()}
+                <tr>
+                  <td class="tk-px" style="padding: 22px 32px 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        {cells}
+                      </tr>
+                    </table>
+                  </td>
+                </tr>"""
+
+    map_section = ""
+    if not is_online and clinic_address.strip():
+        map_section = _ticket_map(clinic_address, map_image_url)
 
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -276,14 +320,12 @@ def booking_confirmation_html(
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&amp;family=Mulish:wght@400;600;700;800&amp;display=swap" rel="stylesheet" />
   <style>
     @media only screen and (max-width: 520px) {{
-      .px {{ padding-left: 22px !important; padding-right: 22px !important; }}
-      .hero {{ padding: 32px 22px 30px !important; }}
-      .hero-title {{ font-size: 28px !important; }}
-      .stack {{ display: block !important; width: 100% !important; }}
-      .date-tile {{ padding-bottom: 20px !important; }}
-      .ticket-info {{ padding-left: 0 !important; }}
-      .btn {{ display: table !important; width: 100% !important; margin-right: 0 !important; }}
-      .btn a {{ display: block !important; text-align: center !important; }}
+      .intro-title {{ font-size: 25px !important; }}
+      .tk-top {{ padding: 22px 18px 20px !important; }}
+      .tk-px {{ padding-left: 20px !important; padding-right: 20px !important; }}
+      .tk-info {{ padding-left: 16px !important; }}
+      .tk-time {{ font-size: 28px !important; }}
+      .tk-btn {{ display: block !important; width: 100% !important; padding: 0 0 10px !important; }}
       .px-foot {{ padding-left: 22px !important; padding-right: 22px !important; }}
     }}
   </style>
@@ -295,102 +337,78 @@ def booking_confirmation_html(
       <td align="center" style="padding: 36px 12px 44px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%;">
 
-          <!-- Marca -->
+          <!-- Confirmacao -->
           <tr>
-            <td align="center" style="padding: 0 8px 26px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <td align="center" style="padding: 0 16px 28px; text-align: center;">
+              <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
                 <tr>
-                  {logo_html}<td valign="middle">
-                    <span style="font-family: {_SERIF}; font-size: 22px; font-weight: 700; line-height: 1.1; color: {_C_PLUM};">Mulher Viva</span><br />
-                    <span style="font-family: {_SANS}; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: {_C_TEXT_MUTED};">Medicina Integrativa da Saúde Feminina</span>
-                  </td>
+                  <td align="center" valign="middle" width="56" height="56" bgcolor="{_C_ACCENT}" style="width: 56px; height: 56px; border-radius: 50%; background-color: {_C_ACCENT}; background-image: linear-gradient(150deg, {_C_ACCENT} 0%, {_C_PLUM} 100%); box-shadow: 0 12px 28px rgba(94, 47, 82, 0.28); font-family: {_SANS}; font-size: 24px; font-weight: 800; line-height: 56px; color: #ffffff;">&#10003;</td>
                 </tr>
               </table>
+              <h1 class="intro-title" style="margin: 20px 0 0; font-family: {_SERIF}; font-size: 30px; font-weight: 500; line-height: 1.2; color: {_C_TEXT_STRONG};">Consulta confirmada{title_name}.</h1>
+              <p style="margin: 10px 0 0; font-family: {_SANS}; font-size: 15px; line-height: 1.6; color: {_C_TEXT_SOFT};">Será um prazer receber você.</p>
             </td>
           </tr>
 
-          <!-- Card principal -->
+          <!-- Ticket -->
           <tr>
-            <td bgcolor="{_C_SURFACE}" style="background-color: {_C_SURFACE}; border: 1px solid {_C_LINE}; border-radius: 28px; box-shadow: 0 30px 80px rgba(94, 47, 82, 0.10);">
+            <td bgcolor="{_C_SURFACE}" style="background-color: {_C_SURFACE}; border: 1px solid {_C_LINE}; border-radius: 24px; box-shadow: 0 24px 60px rgba(94, 47, 82, 0.10);">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 
-                <!-- Faixa de destaque -->
+                <!-- Ticket: data, horario e modalidade -->
                 <tr>
-                  <td class="hero" bgcolor="{_C_PLUM}" style="padding: 40px 40px 36px; background-color: {_C_PLUM}; background-image: linear-gradient(150deg, {_C_ACCENT} 0%, {_C_PLUM} 55%, {_C_PLUM_DEEP} 100%); border-radius: 27px 27px 0 0;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="padding: 7px 14px; border-radius: 999px; background-color: rgba(243, 203, 211, 0.14); border: 1px solid rgba(243, 203, 211, 0.38);">
-                          <span style="font-family: {_SANS}; font-size: 11px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; color: {_C_BLUSH};">&#10003;&nbsp; Agendamento confirmado</span>
-                        </td>
-                      </tr>
-                    </table>
-                    <h1 class="hero-title" style="margin: 22px 0 0; font-family: {_SERIF}; font-size: 34px; font-weight: 600; line-height: 1.15; color: #ffffff;">Olá, {first_name}!</h1>
-                    <p style="margin: 12px 0 0; font-family: {_SANS}; font-size: 16px; line-height: 1.6; color: {_C_BLUSH};">
-                      Sua consulta está confirmada. Será um prazer receber você &mdash; abaixo estão todos os detalhes.
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Ticket: data, horario e especialidade -->
-                <tr>
-                  <td class="px" style="padding: 32px 40px 28px;">
+                  <td class="tk-top" bgcolor="{_C_SURFACE_SOFT}" style="padding: 28px 32px 22px; background-color: {_C_SURFACE_SOFT}; background-image: linear-gradient(160deg, {_C_SURFACE_SOFT} 0%, {_C_BG} 55%, {_C_SURFACE_SOFT} 100%); border-radius: 23px 23px 0 0;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td class="stack date-tile" width="112" valign="top" style="width: 112px;">
-                          <table role="presentation" width="112" cellpadding="0" cellspacing="0" border="0" bgcolor="{_C_SURFACE_SOFT}" style="width: 112px; background-color: {_C_SURFACE_SOFT}; border: 1px solid {_C_LINE}; border-radius: 20px;">
+                        <td width="84" valign="middle" style="width: 84px;">
+                          <table role="presentation" width="84" cellpadding="0" cellspacing="0" border="0" bgcolor="{_C_PLUM}" style="width: 84px; background-color: {_C_PLUM}; background-image: linear-gradient(160deg, {_C_ACCENT} 0%, {_C_PLUM} 100%); border-radius: 16px; box-shadow: 0 10px 24px rgba(94, 47, 82, 0.25);">
                             <tr>
-                              <td align="center" style="padding: 14px 8px 2px;">
-                                <span style="font-family: {_SANS}; font-size: 11px; font-weight: 800; letter-spacing: 2px; color: {_C_ROSE};">{weekday_short}</span>
+                              <td align="center" style="padding: 12px 6px 0;">
+                                <span style="font-family: {_SANS}; font-size: 11px; font-weight: 800; letter-spacing: 1.6px; color: {_C_BLUSH};">{month_short}</span>
                               </td>
                             </tr>
                             <tr>
-                              <td align="center" style="padding: 0 8px;">
-                                <span style="font-family: {_SERIF}; font-size: 46px; font-weight: 600; line-height: 1.05; color: {_C_ACCENT};">{day.day}</span>
+                              <td align="center" style="padding: 0 6px;">
+                                <span style="font-family: {_SERIF}; font-size: 36px; font-weight: 500; line-height: 1.15; color: #ffffff;">{day.day}</span>
                               </td>
                             </tr>
                             <tr>
-                              <td align="center" style="padding: 4px 8px 14px;">
-                                <span style="font-family: {_SANS}; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: {_C_TEXT_MUTED};">{month_short} {day.year}</span>
+                              <td align="center" style="padding: 0 6px 12px;">
+                                <span style="font-family: {_SANS}; font-size: 11px; font-weight: 800; letter-spacing: 1.6px; color: {_C_BLUSH};">{weekday_short}</span>
                               </td>
                             </tr>
                           </table>
                         </td>
-                        <td class="stack ticket-info" valign="middle" style="padding-left: 24px;">
-                          {_eyebrow("Data e horário")}
-                          <p style="margin: 8px 0 0; font-family: {_SERIF}; font-size: 26px; font-weight: 600; line-height: 1.2; color: {_C_TEXT_STRONG};">{time_str}</p>
-                          <p style="margin: 6px 0 0; font-family: {_SANS}; font-size: 15px; line-height: 1.5; color: {_C_TEXT_SOFT};">{date_str}</p>
-                          <p style="margin: 16px 0 0; font-family: {_SANS}; font-size: 14px; line-height: 1.5; color: {_C_TEXT_SOFT};">
-                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: {_C_PINK}; vertical-align: middle; margin-right: 8px;"></span><strong style="font-weight: 700; color: {_C_TEXT_STRONG};">{specialty_esc}</strong>
-                          </p>
+                        <td class="tk-info" valign="middle" style="padding-left: 22px;">
+                          <p style="margin: 0; font-family: {_SANS}; font-size: 14px; line-height: 1.4; color: {_C_TEXT_SOFT};">{day_line}</p>
+                          <p style="margin: 4px 0 0; font-family: {_SERIF}; line-height: 1.15; color: {_C_TEXT_STRONG};"><span class="tk-time" style="font-size: 34px; font-weight: 600;">{format_time_pt(start)}</span><span style="font-size: 18px; font-weight: 500; color: {_C_TEXT_SOFT};"> às {format_time_pt(end)}</span></p>
+                          <p style="margin: 8px 0 0; font-family: {_SANS}; font-size: 14px; font-weight: 700; line-height: 1.4; color: {_C_ACCENT};"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: {_C_PINK}; vertical-align: middle; margin-right: 8px;"></span>{modality_label}</p>
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
-{_location_block(modality, modality_label, clinic_address)}
-{buttons_row}
+{_ticket_perforation()}
 
-                <!-- Remarcar / cancelar -->
+                <!-- Especialidade -->
                 <tr>
-                  <td class="px" style="padding: 24px 40px 0;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{_C_BG}" style="background-color: {_C_BG}; border-radius: 14px;">
-                      <tr>
-                        <td style="padding: 16px 20px; border-left: 3px solid {_C_PINK}; border-radius: 14px;">
-                          <p style="margin: 0; font-family: {_SANS}; font-size: 14px; line-height: 1.6; color: {_C_TEXT_SOFT};">{change_note}</p>
-                        </td>
-                      </tr>
-                    </table>
+                  <td class="tk-px" style="padding: 14px 32px 20px;">
+                    {_ticket_label("Você vai ser atendida em")}
+                    <p style="margin: 4px 0 0; font-family: {_SERIF}; font-size: 22px; font-weight: 500; line-height: 1.3; color: {_C_TEXT_STRONG};">{specialty_esc}</p>
                   </td>
                 </tr>
-
-                <!-- Assinatura -->
-                <tr>
-                  <td class="px" style="padding: 32px 40px 38px;">
-                    <p style="margin: 0; font-family: {_SERIF}; font-size: 17px; font-style: italic; line-height: 1.5; color: {_C_ACCENT};">Com carinho,</p>
-                    <p style="margin: 2px 0 0; font-family: {_SERIF}; font-size: 17px; font-weight: 600; line-height: 1.5; color: {_C_PLUM};">Equipe Mulher Viva</p>
-                  </td>
-                </tr>
+{online_section}
+{buttons_section}
+{map_section}
               </table>
+            </td>
+          </tr>
+
+          <!-- Assinatura -->
+          <tr>
+            <td align="center" style="padding: 30px 16px 0; text-align: center;">
+              <p style="margin: 0; font-family: {_SERIF}; font-size: 16px; font-style: italic; line-height: 1.5; color: {_C_ACCENT};">Com carinho,</p>
+              <p style="margin: 2px 0 0; font-family: {_SERIF}; font-size: 16px; font-weight: 600; line-height: 1.5; color: {_C_PLUM};">Equipe Mulher Viva</p>
             </td>
           </tr>
 
@@ -639,6 +657,8 @@ def send_booking_confirmation(
         logo_url=f"{settings.public_base_url.rstrip('/')}/logo-mark.png",
         site_url=settings.public_base_url,
         whatsapp_number=settings.clinic_whatsapp,
+        map_image_url=settings.clinic_map_image_url
+        or f"{settings.public_base_url.rstrip('/')}/email-map.png",
     )
     return _send_resend(
         to_email, subject, body_html, ics=ics, log_label="email de confirmacao"

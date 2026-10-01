@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     api_base_url: str = "http://localhost:8000"
     clinic_name: str = "Mulher Viva — Dra. Luciana Lopes"
     clinic_address: str = "Centro Médico Lúcio Costa, SGAS 610, Bloco 2, Sala 250"
+    # Mapa estático do e-mail de confirmação (presencial). Vazio = PUBLIC_BASE_URL/email-map.png,
+    # gerado por scripts/generate_email_map.py.
+    clinic_map_image_url: str = ""
     # WhatsApp da clínica (DDI+DDD+número, só dígitos) para o link no rodapé dos e-mails.
     clinic_whatsapp: str = ""
     # Who gets notified when a new booking request comes in. Falls back to

@@ -43,9 +43,10 @@ def test_html_contains_booking_details():
         end=time(15, 0),
         modality="online",
     )
-    assert "Olá, Maria!" in html_out
-    assert "quinta-feira, 11 de junho de 2026" in html_out
-    assert "14:00 &ndash; 15:00" in html_out
+    assert ">Maria</em>." in html_out
+    assert "Quinta-feira, 11 de junho" in html_out
+    assert ">14:00</span>" in html_out
+    assert " às 15:00" in html_out
     assert "Ginecologia" in html_out
     assert "Online" in html_out
     assert "Mulher Viva" in html_out
@@ -60,9 +61,44 @@ def test_html_presencial_includes_address_when_configured():
         end=time(10, 0),
         modality="presencial",
         clinic_address="Rua das Flores, 123 - Centro",
+        map_image_url="https://mulherviva.com.br/email-map.png",
     )
     assert "Presencial" in html_out
-    assert "Rua das Flores, 123 - Centro" in html_out
+    assert ">Rua das Flores</a>" in html_out
+    assert "123 - Centro" in html_out
+    assert 'src="https://mulherviva.com.br/email-map.png"' in html_out
+    assert "google.com/maps/search" in html_out
+
+
+def test_html_presencial_without_map_still_shows_address():
+    html_out = booking_confirmation_html(
+        client_name="Maria",
+        specialty_name="Nutrição",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="presencial",
+        clinic_address="Rua das Flores, 123 - Centro",
+    )
+    assert ">Rua das Flores</a>" in html_out
+    assert "<img src=\"https://" not in html_out
+
+
+def test_html_buttons_share_a_row_inside_ticket():
+    html_out = booking_confirmation_html(
+        client_name="Maria",
+        specialty_name="Nutrição",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+        manage_link="https://mulherviva.com.br/?manage=abc",
+        calendar_link="https://calendar.google.com/x",
+    )
+    assert html_out.count('class="tk-btn" width="50%"') == 2
+    assert "Adicionar à agenda" in html_out
+    assert "Gerenciar consulta" in html_out
+    assert "Precisa remarcar" not in html_out
 
 
 def test_html_online_omits_address():
@@ -101,6 +137,7 @@ def _settings(api_key=""):
         clinic_address="",
         public_base_url="https://mulherviva.com.br",
         clinic_whatsapp="",
+        clinic_map_image_url="",
     )
 
 

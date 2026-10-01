@@ -9,14 +9,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&amp;family=Mulish:wght@400;600;700;800&amp;display=swap" rel="stylesheet" />
   <style>
     @media only screen and (max-width: 520px) {
-      .px { padding-left: 22px !important; padding-right: 22px !important; }
-      .hero { padding: 32px 22px 30px !important; }
-      .hero-title { font-size: 28px !important; }
-      .stack { display: block !important; width: 100% !important; }
-      .date-tile { padding-bottom: 20px !important; }
-      .ticket-info { padding-left: 0 !important; }
-      .btn { display: table !important; width: 100% !important; margin-right: 0 !important; }
-      .btn a { display: block !important; text-align: center !important; }
+      .intro-title { font-size: 25px !important; }
+      .tk-top { padding: 22px 18px 20px !important; }
+      .tk-px { padding-left: 20px !important; padding-right: 20px !important; }
+      .tk-info { padding-left: 16px !important; }
+      .tk-time { font-size: 28px !important; }
+      .tk-btn { display: block !important; width: 100% !important; padding: 0 0 10px !important; }
       .px-foot { padding-left: 22px !important; padding-right: 22px !important; }
     }
   </style>
@@ -28,134 +26,137 @@
       <td align="center" style="padding: 36px 12px 44px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%;">
 
-          <!-- Marca -->
+
+          <!-- Confirmacao -->
           <tr>
-            <td align="center" style="padding: 0 8px 26px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <td align="center" style="padding: 0 16px 28px; text-align: center;">
+              <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
                 <tr>
-                  <td valign="middle" style="padding-right: 12px;">
-                    <img src="../public/logo-mark.png" width="42" height="42" alt="" style="display: block; width: 42px; height: 42px; border: 0; border-radius: 50%;" />
+                  <td align="center" valign="middle" width="56" height="56" bgcolor="#7a3e6a" style="width: 56px; height: 56px; border-radius: 50%; background-color: #7a3e6a; background-image: linear-gradient(150deg, #7a3e6a 0%, #5e2f52 100%); box-shadow: 0 12px 28px rgba(94, 47, 82, 0.28); font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 800; line-height: 56px; color: #ffffff;">&#10003;</td>
+                </tr>
+              </table>
+              <h1 class="intro-title" style="margin: 20px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 30px; font-weight: 500; line-height: 1.2; color: #3d1f35;">Consulta confirmada, <em style="font-style: italic; color: #7a3e6a;">Maria</em>.</h1>
+              <p style="margin: 10px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #764e6c;">Será um prazer receber você. </p>
+            </td>
+          </tr>
+
+          <!-- Ticket -->
+          <tr>
+            <td bgcolor="#fffdfd" style="background-color: #fffdfd; border: 1px solid #f6dbe5; border-radius: 24px; box-shadow: 0 24px 60px rgba(94, 47, 82, 0.10);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                <!-- Ticket: data, horario e modalidade -->
+                <tr>
+                  <td class="tk-top" bgcolor="#fbeff2" style="padding: 28px 32px 22px; background-color: #fbeff2; background-image: linear-gradient(160deg, #fbeff2 0%, #fdf6f7 55%, #fbeff2 100%); border-radius: 23px 23px 0 0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="84" valign="middle" style="width: 84px;">
+                          <table role="presentation" width="84" cellpadding="0" cellspacing="0" border="0" bgcolor="#5e2f52" style="width: 84px; background-color: #5e2f52; background-image: linear-gradient(160deg, #7a3e6a 0%, #5e2f52 100%); border-radius: 16px; box-shadow: 0 10px 24px rgba(94, 47, 82, 0.25);">
+                            <tr>
+                              <td align="center" style="padding: 12px 6px 0;">
+                                <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 1.6px; color: #f3cbd3;">JUN</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding: 0 6px;">
+                                <span style="font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 36px; font-weight: 500; line-height: 1.15; color: #ffffff;">18</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding: 0 6px 12px;">
+                                <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 1.6px; color: #f3cbd3;">QUI</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <td class="tk-info" valign="middle" style="padding-left: 22px;">
+                          <p style="margin: 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.4; color: #764e6c;">Quinta-feira, 18 de junho</p>
+                          <p style="margin: 4px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; line-height: 1.15; color: #3d1f35;"><span class="tk-time" style="font-size: 34px; font-weight: 600;">14:00</span><span style="font-size: 18px; font-weight: 500; color: #764e6c;"> às 15:00</span></p>
+                          <p style="margin: 8px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.4; color: #7a3e6a;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #e498b4; vertical-align: middle; margin-right: 8px;"></span>Presencial</p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
-                  <td valign="middle">
-                    <span style="font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 22px; font-weight: 700; line-height: 1.1; color: #5e2f52;">Mulher Viva</span><br />
-                    <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: #8b6982;">Medicina Integrativa da Saúde Feminina</span>
+                </tr>
+
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="12" bgcolor="#fdf6f7" style="width: 12px; height: 24px; background-color: #fdf6f7; border: 1px solid #f6dbe5; font-size: 0; line-height: 0; border-left: none; border-radius: 0 12px 12px 0;">&nbsp;</td>
+                        <td>
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr><td height="12" bgcolor="#fbeff2" style="height: 12px; background-color: #fbeff2; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                            <tr><td height="12" bgcolor="#fffdfd" style="height: 12px; background-color: #fffdfd; border-top: 2px dashed #e498b4; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                          </table>
+                        </td>
+                        <td width="12" bgcolor="#fdf6f7" style="width: 12px; height: 24px; background-color: #fdf6f7; border: 1px solid #f6dbe5; font-size: 0; line-height: 0; border-right: none; border-radius: 12px 0 0 12px;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Especialidade -->
+                <tr>
+                  <td class="tk-px" style="padding: 14px 32px 20px;">
+                    <p style="margin: 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.4; color: #8b6982;">Você vai ser atendida em</p>
+                    <p style="margin: 4px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 22px; font-weight: 500; line-height: 1.3; color: #3d1f35;">Ginecologia e Obstetrícia</p>
+                  </td>
+                </tr>
+
+
+                <tr>
+                  <td class="tk-px" style="padding: 0 32px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top: 1px solid #f6dbe5; font-size: 0; line-height: 0;">&nbsp;</td></tr></table>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="tk-px" style="padding: 22px 32px 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td class="tk-btn" width="50%" valign="top" style="width: 50%; padding-right: 6px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" bgcolor="#5e2f52" style="background-color: #5e2f52; border: 1px solid #5e2f52; border-radius: 14px;">
+                                <a href="https://calendar.google.com/calendar/render?action=TEMPLATE" target="_blank" style="display: block; padding: 15px 12px; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1; text-align: center; color: #ffffff; text-decoration: none; border-radius: 14px;">Adicionar à agenda</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <td class="tk-btn" width="50%" valign="top" style="width: 50%; padding-left: 6px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" bgcolor="#fffdfd" style="background-color: #fffdfd; border: 1px solid #e498b4; border-radius: 14px;">
+                                <a href="http://localhost:5173/?manage=exemplo" target="_blank" style="display: block; padding: 15px 12px; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1; text-align: center; color: #7a3e6a; text-decoration: none; border-radius: 14px;">Gerenciar consulta</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding-top: 4px; font-size: 0; line-height: 0;">
+                    <a href="https://www.google.com/maps/search/?api=1&amp;query=Centro%20M%C3%A9dico%20L%C3%BAcio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250" target="_blank" style="display: block; text-decoration: none;"><img src="../public/email-map.png" width="600" alt="Mapa: Centro Médico Lúcio Costa, SGAS 610, Bloco 2, Sala 250" style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; border-top: 1px solid #f6dbe5; border-bottom: 1px solid #f6dbe5;" /></a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="tk-px" align="center" style="padding: 20px 32px 26px; text-align: center;">
+                    <a href="https://www.google.com/maps/search/?api=1&amp;query=Centro%20M%C3%A9dico%20L%C3%BAcio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250" target="_blank" style="font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 18px; font-weight: 600; line-height: 1.35; color: #3d1f35; text-decoration: none;">Centro Médico Lúcio Costa</a>
+                    <p style="margin: 4px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #764e6c;">SGAS 610, Bloco 2, Sala 250</p>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Card principal -->
+          <!-- Assinatura -->
           <tr>
-            <td bgcolor="#fffdfd" style="background-color: #fffdfd; border: 1px solid #f6dbe5; border-radius: 28px; box-shadow: 0 30px 80px rgba(94, 47, 82, 0.10);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-
-                <!-- Faixa de destaque -->
-                <tr>
-                  <td class="hero" bgcolor="#5e2f52" style="padding: 40px 40px 36px; background-color: #5e2f52; background-image: linear-gradient(150deg, #7a3e6a 0%, #5e2f52 55%, #502846 100%); border-radius: 27px 27px 0 0;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="padding: 7px 14px; border-radius: 999px; background-color: rgba(243, 203, 211, 0.14); border: 1px solid rgba(243, 203, 211, 0.38);">
-                          <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; color: #f3cbd3;">&#10003;&nbsp; Agendamento confirmado</span>
-                        </td>
-                      </tr>
-                    </table>
-                    <h1 class="hero-title" style="margin: 22px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 34px; font-weight: 600; line-height: 1.15; color: #ffffff;">Olá, Maria!</h1>
-                    <p style="margin: 12px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #f3cbd3;">
-                      Sua consulta está confirmada. Será um prazer receber você &mdash; abaixo estão todos os detalhes.
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Ticket: data, horario e especialidade -->
-                <tr>
-                  <td class="px" style="padding: 32px 40px 28px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td class="stack date-tile" width="112" valign="top" style="width: 112px;">
-                          <table role="presentation" width="112" cellpadding="0" cellspacing="0" border="0" bgcolor="#fbeff2" style="width: 112px; background-color: #fbeff2; border: 1px solid #f6dbe5; border-radius: 20px;">
-                            <tr>
-                              <td align="center" style="padding: 14px 8px 2px;">
-                                <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #9a4067;">QUI</span>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td align="center" style="padding: 0 8px;">
-                                <span style="font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 46px; font-weight: 600; line-height: 1.05; color: #7a3e6a;">18</span>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td align="center" style="padding: 4px 8px 14px;">
-                                <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #8b6982;">JUN 2026</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        <td class="stack ticket-info" valign="middle" style="padding-left: 24px;">
-                          <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #9a4067;">Data e horário</span>
-                          <p style="margin: 8px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 26px; font-weight: 600; line-height: 1.2; color: #3d1f35;">14:00 &ndash; 15:00</p>
-                          <p style="margin: 6px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.5; color: #764e6c;">quinta-feira, 18 de junho de 2026</p>
-                          <p style="margin: 16px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #764e6c;">
-                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #e498b4; vertical-align: middle; margin-right: 8px;"></span><strong style="font-weight: 700; color: #3d1f35;">Ginecologia e Obstetrícia</strong>
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td class="px" style="padding: 0 40px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f6dbe5;">
-                      <tr>
-                        <td valign="top" style="padding: 24px 0 0;">
-                          <span style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #9a4067;">Local</span>
-                          <p style="margin: 8px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 19px; font-weight: 600; line-height: 1.35; color: #3d1f35;">Presencial</p><p style="margin: 4px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #764e6c;">Centro Médico Lúcio Costa, SGAS 610, Bloco 2, Sala 250</p><p style="margin: 12px 0 0;"><a href="https://www.google.com/maps/search/?api=1&amp;query=Centro%20M%C3%A9dico%20L%C3%BAcio%20Costa%2C%20SGAS%20610%2C%20Bloco%202%2C%20Sala%20250" target="_blank" style="font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 700; color: #9a4067; text-decoration: none; border-bottom: 1px solid #e498b4;">Ver no Google Maps &rarr;</a></p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td class="px" style="padding: 30px 40px 0;">
-                    <table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0" style="display: inline-table; margin: 0 8px 10px 0;">
-                      <tr>
-                        <td bgcolor="#7a3e6a" style="background-color: #7a3e6a; border: 1px solid #7a3e6a; border-radius: 999px;">
-                          <a href="https://calendar.google.com/calendar/render?action=TEMPLATE" target="_blank" style="display: inline-block; padding: 14px 28px; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1; color: #ffffff; text-decoration: none; border-radius: 999px;">Adicionar à agenda</a>
-                        </td>
-                      </tr>
-                    </table><table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0" style="display: inline-table; margin: 0 8px 10px 0;">
-                      <tr>
-                        <td bgcolor="#fffdfd" style="background-color: #fffdfd; border: 1px solid #e498b4; border-radius: 999px;">
-                          <a href="http://localhost:5173/?manage=exemplo" target="_blank" style="display: inline-block; padding: 14px 28px; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1; color: #7a3e6a; text-decoration: none; border-radius: 999px;">Gerenciar consulta</a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Remarcar / cancelar -->
-                <tr>
-                  <td class="px" style="padding: 24px 40px 0;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fdf6f7" style="background-color: #fdf6f7; border-radius: 14px;">
-                      <tr>
-                        <td style="padding: 16px 20px; border-left: 3px solid #e498b4; border-radius: 14px;">
-                          <p style="margin: 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #764e6c;">Precisa remarcar ou cancelar? Use o botão <strong>Gerenciar consulta</strong> &mdash; assim o horário fica livre para outra paciente.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Assinatura -->
-                <tr>
-                  <td class="px" style="padding: 32px 40px 38px;">
-                    <p style="margin: 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 17px; font-style: italic; line-height: 1.5; color: #7a3e6a;">Com carinho,</p>
-                    <p style="margin: 2px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 17px; font-weight: 600; line-height: 1.5; color: #5e2f52;">Dra. Luciana da Silva Lopes</p>
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="padding: 30px 16px 0; text-align: center;">
+              <p style="margin: 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 16px; font-style: italic; line-height: 1.5; color: #7a3e6a;">Com carinho,</p>
+              <p style="margin: 2px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 16px; font-weight: 600; line-height: 1.5; color: #5e2f52;">Equipe Mulher Viva</p>
             </td>
           </tr>
 
@@ -178,7 +179,7 @@
                     <p style="margin: 14px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.65; color: #8b6982;">
                       Mensagem automática sobre o seu agendamento. Por favor, não responda este e-mail.
                     </p>
-                    <p style="margin: 14px 0 0; line-height: 1;"><a href="https://mulherviva.com.br" target="_blank" style="display: inline-block; margin: 0 18px 6px 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #3d1f35; text-decoration: none; white-space: nowrap;">mulherviva.com.br</a><a href="https://wa.me/5561999990000?text=Ol%C3%A1%21%20Tenho%20uma%20consulta%20agendada%20e%20gostaria%20de%20falar%20com%20a%20equipe." target="_blank" style="display: inline-block; margin: 0 18px 6px 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #3d1f35; text-decoration: none; white-space: nowrap;">WhatsApp</a></p>
+                    <p style="margin: 14px 0 0; line-height: 1;"><a href="https://mulherviva.org" target="_blank" style="display: inline-block; margin: 0 18px 6px 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #3d1f35; text-decoration: none; white-space: nowrap;">mulherviva.com.br</a><a href="https://wa.me/5561999990000?text=Ol%C3%A1%21%20Tenho%20uma%20consulta%20agendada%20e%20gostaria%20de%20falar%20com%20a%20equipe." target="_blank" style="display: inline-block; margin: 0 18px 6px 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 700; color: #3d1f35; text-decoration: none; white-space: nowrap;">WhatsApp</a></p>
                   </td>
                 </tr>
               </table>
