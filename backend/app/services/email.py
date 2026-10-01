@@ -186,6 +186,69 @@ def _ticket_map(clinic_address: str, map_image_url: str) -> str:
                 </tr>"""
 
 
+PAYMENT_PIX_KEY = "61578176000110"
+PAYMENT_PHONE_LABEL = "21 98865-2027"
+PAYMENT_PROOF_MESSAGE = "Olá! Segue o comprovante de pagamento da minha consulta."
+
+
+def _payment_row(icon: str, label: str, value_html: str, last: bool = False) -> str:
+    border = "" if last else f" border-bottom: 1px solid {_C_LINE};"
+    return f"""<tr>
+                          <td width="40" valign="middle" style="width: 40px; padding: 14px 0;{border}">
+                            <table role="presentation" width="32" cellpadding="0" cellspacing="0" border="0"><tr>
+                              <td align="center" valign="middle" width="32" height="32" bgcolor="{_C_SURFACE}" style="width: 32px; height: 32px; border-radius: 10px; background-color: {_C_SURFACE}; border: 1px solid {_C_LINE}; font-family: {_SANS}; font-size: 11px; font-weight: 800; line-height: 32px; letter-spacing: 0.4px; color: {_C_ACCENT};">{icon}</td>
+                            </tr></table>
+                          </td>
+                          <td valign="middle" style="padding: 14px 0 14px 12px;{border}">
+                            <p style="margin: 0; font-family: {_SANS}; font-size: 11px; font-weight: 800; line-height: 1.4; letter-spacing: 1.2px; text-transform: uppercase; color: {_C_TEXT_MUTED};">{label}</p>
+                            <p style="margin: 2px 0 0; font-family: {_SERIF}; font-size: 19px; font-weight: 600; line-height: 1.3; color: {_C_TEXT_STRONG};">{value_html}</p>
+                          </td>
+                        </tr>"""
+
+
+def _ticket_payment(whatsapp_number: str = "") -> str:
+    """Payment instructions: Pix key + where to send the proof, in a soft inset card."""
+    phone_html = PAYMENT_PHONE_LABEL
+    wa_digits = "".join(ch for ch in whatsapp_number if ch.isdigit())
+    if wa_digits:
+        wa_url = f"https://wa.me/{wa_digits}?text={quote(PAYMENT_PROOF_MESSAGE)}"
+        phone_html = (
+            f'<a href="{html.escape(wa_url)}" target="_blank" style="color: {_C_TEXT_STRONG}; '
+            f'text-decoration: none;">{PAYMENT_PHONE_LABEL}</a>'
+        )
+    return f"""
+                <!-- Pagamento -->
+                <tr>
+                  <td class="tk-px" style="padding: 0 32px 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{_C_SURFACE_SOFT}" style="background-color: {_C_SURFACE_SOFT}; border: 1px solid {_C_LINE}; border-radius: 18px;">
+                      <tr>
+                        <td style="padding: 18px 20px 4px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td valign="middle">
+                                <p style="margin: 0; font-family: {_SERIF}; font-size: 18px; font-weight: 600; line-height: 1.3; color: {_C_TEXT_STRONG};">Pagamento</p>
+                              </td>
+                              <td align="right" valign="middle" style="text-align: right; white-space: nowrap;">
+                                <span style="display: inline-block; padding: 5px 10px; border-radius: 999px; background-color: {_C_BLUSH}; font-family: {_SANS}; font-size: 11px; font-weight: 800; line-height: 1.2; letter-spacing: 0.4px; color: {_C_PLUM};">Na véspera da consulta</span>
+                              </td>
+                            </tr>
+                          </table>
+                          <p style="margin: 8px 0 0; font-family: {_SANS}; font-size: 14px; line-height: 1.55; color: {_C_TEXT_SOFT};">Faça o Pix e envie o comprovante para a Equipe Mulher Viva.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 20px 6px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        {_payment_row("PIX", "Chave Pix &middot; CNPJ", f'<span style="letter-spacing: 0.6px;">{PAYMENT_PIX_KEY}</span>')}
+                        {_payment_row("&#9742;", "Comprovante via WhatsApp", phone_html, last=True)}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>"""
+
+
 WHATSAPP_MESSAGE = "Olá! Tenho uma consulta agendada e gostaria de falar com a equipe."
 
 
@@ -410,6 +473,8 @@ def booking_confirmation_html(
                     <p style="margin: 4px 0 0; font-family: {_SERIF}; font-size: 22px; font-weight: 500; line-height: 1.3; color: {_C_TEXT_STRONG};">{specialty_esc}</p>
                   </td>
                 </tr>
+
+{_ticket_payment(whatsapp_number)}
 {buttons_section}
 {map_section}
               </table>
