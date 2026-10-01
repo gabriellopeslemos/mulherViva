@@ -270,6 +270,8 @@ def _send_internal_new_booking(appt: dict) -> None:
 
 def notify_internal_new_booking(appt: dict) -> None:
     """Alerts the clinic staff (CLINIC_NOTIFICATION_EMAILS) of a new booking request."""
+    if not get_settings().staff_booking_emails_enabled:
+        return
     threading.Thread(target=_send_internal_new_booking, args=(appt,), daemon=True).start()
 
 

@@ -2,6 +2,7 @@ import base64
 import html
 import logging
 from datetime import date, time
+from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -11,6 +12,13 @@ from ..config import get_settings
 logger = logging.getLogger(__name__)
 
 RESEND_API_URL = "https://api.resend.com/emails"
+
+# Imagens enviadas como anexo inline (cid:) para aparecerem em qualquer
+# ambiente, sem depender de onde o site está hospedado.
+EMAIL_ASSETS_DIR = Path(__file__).resolve().parents[1] / "email_assets"
+LOGO_CID = "logo-mark"
+MAP_CID = "clinic-map"
+_INLINE_ASSETS = {LOGO_CID: "logo-mark.png", MAP_CID: "email-map.jpg"}
 
 WEEKDAYS_PT = [
     "segunda-feira",
@@ -266,17 +274,6 @@ def booking_confirmation_html(
         f', <em style="font-style: italic; color: {_C_ACCENT};">{first_name}</em>' if first_name else ""
     )
 
-    # Online: um lembrete prático no lugar do endereço/mapa.
-    online_section = ""
-    if is_online:
-        online_section = f"""{_ticket_divider()}
-                <tr>
-                  <td class="tk-px" style="padding: 20px 32px;">
-                    {_ticket_label("Online, de onde você estiver")}
-                    <p style="margin: 6px 0 0; font-family: {_SANS}; font-size: 14px; line-height: 1.6; color: {_C_TEXT_SOFT};">Reserve um ambiente tranquilo, com boa conexão, alguns minutos antes do horário.</p>
-                  </td>
-                </tr>"""
-
     buttons = []
     if calendar_link:
         buttons.append(_ticket_button("Adicionar à agenda", calendar_link, primary=True))
@@ -413,7 +410,6 @@ def booking_confirmation_html(
                     <p style="margin: 4px 0 0; font-family: {_SERIF}; font-size: 22px; font-weight: 500; line-height: 1.3; color: {_C_TEXT_STRONG};">{specialty_esc}</p>
                   </td>
                 </tr>
-{online_section}
 {buttons_section}
 {map_section}
               </table>
@@ -612,6 +608,7 @@ def _send_resend(
     body_html: str,
     ics: str | None = None,
     log_label: str = "email",
+    inline_cids: tuple[str, ...] = (),
 ) -> bool:
     settings = get_settings()
     if not settings.resend_api_key:
@@ -624,13 +621,25 @@ def _send_resend(
         "subject": subject,
         "html": body_html,
     }
+    attachments = []
     if ics:
-        payload["attachments"] = [
+        attachments.append(
             {
                 "filename": "consulta.ics",
                 "content": base64.b64encode(ics.encode("utf-8")).decode("ascii"),
             }
-        ]
+        )
+    for cid in inline_cids:
+        filename = _INLINE_ASSETS[cid]
+        attachments.append(
+            {
+                "filename": filename,
+                "content": base64.b64encode((EMAIL_ASSETS_DIR / filename).read_bytes()).decode("ascii"),
+                "content_id": cid,
+            }
+        )
+    if attachments:
+        payload["attachments"] = attachments
 
     try:
         resp = httpx.post(
@@ -660,6 +669,12 @@ def send_booking_confirmation(
 ) -> bool:
     settings = get_settings()
     subject = f"Consulta confirmada — {format_date_pt(day)} às {format_time_pt(start)}"
+    inline_cids = [LOGO_CID]
+    map_image_url = settings.clinic_map_image_url
+    # O mapa só entra para consulta presencial com endereço (é o que o template mostra).
+    if not map_image_url and modality != "online" and settings.clinic_address.strip():
+        map_image_url = f"cid:{MAP_CID}"
+        inline_cids.append(MAP_CID)
     body_html = booking_confirmation_html(
         client_name=client_name,
         specialty_name=specialty_name,
@@ -670,15 +685,19 @@ def send_booking_confirmation(
         clinic_address=settings.clinic_address,
         manage_link=manage_link,
         calendar_link=calendar_link,
-        logo_url=f"{settings.public_base_url.rstrip('/')}/logo-mark.png",
-        site_url=settings.public_base_url,
+        logo_url=f"cid:{LOGO_CID}",
+        site_url=settings.site_url,
         whatsapp_number=settings.clinic_whatsapp,
-        map_image_url=settings.clinic_map_image_url
-        or f"{settings.public_base_url.rstrip('/')}/email-map.png",
+        map_image_url=map_image_url,
         price=settings.consultation_price,
     )
     return _send_resend(
-        to_email, subject, body_html, ics=ics, log_label="email de confirmacao"
+        to_email,
+        subject,
+        body_html,
+        ics=ics,
+        log_label="email de confirmacao",
+        inline_cids=tuple(inline_cids),
     )
 
 

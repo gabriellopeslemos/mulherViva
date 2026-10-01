@@ -154,6 +154,7 @@ def _settings(api_key=""):
         clinic_whatsapp="",
         clinic_map_image_url="",
         consultation_price="R$800",
+        site_url="https://mulherviva.org",
     )
 
 
@@ -588,3 +589,58 @@ def test_send_booking_links_without_api_key_returns_false(monkeypatch):
         )
         is False
     )
+
+
+def test_send_confirmation_embeds_logo_and_map_inline(monkeypatch):
+    settings = _settings(api_key="re_test")
+    settings.clinic_address = "Rua das Flores, 123 - Centro"
+    monkeypatch.setattr(email_service, "get_settings", lambda: settings)
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(email_service.httpx, "post", fake_post)
+    ok = send_booking_confirmation(
+        to_email="maria@example.com",
+        client_name="Maria",
+        specialty_name="Nutrição",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="presencial",
+    )
+    assert ok is True
+    body = captured["json"]
+    inline = {a["content_id"]: a for a in body["attachments"] if "content_id" in a}
+    assert set(inline) == {"logo-mark", "clinic-map"}
+    assert all(a["content"] for a in inline.values())
+    assert 'src="cid:logo-mark"' in body["html"]
+    assert 'src="cid:clinic-map"' in body["html"]
+    assert 'href="https://mulherviva.org"' in body["html"]
+    assert "localhost" not in body["html"]
+
+
+def test_send_confirmation_online_skips_map(monkeypatch):
+    settings = _settings(api_key="re_test")
+    settings.clinic_address = "Rua das Flores, 123 - Centro"
+    monkeypatch.setattr(email_service, "get_settings", lambda: settings)
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["json"] = json
+        return httpx.Response(200, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(email_service.httpx, "post", fake_post)
+    send_booking_confirmation(
+        to_email="maria@example.com",
+        client_name="Maria",
+        specialty_name="Nutrição",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+    )
+    cids = [a.get("content_id") for a in captured["json"]["attachments"]]
+    assert cids == ["logo-mark"]

@@ -37,17 +37,22 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "Mulher Viva <no-reply@mail.mulherviva.org>"
     public_base_url: str = "http://localhost:5173"
+    # Site institucional (link do rodapé dos e-mails). Diferente do PUBLIC_BASE_URL,
+    # que é onde o app roda (links de gerenciar consulta, blog...).
+    site_url: str = "https://mulherviva.org"
     # Used to resolve relative /uploads/... image URLs into absolute ones for e-mails.
     api_base_url: str = "http://localhost:8000"
     clinic_name: str = "Mulher Viva — Dra. Luciana Lopes"
     clinic_address: str = "Centro Médico Lúcio Costa, SGAS 610, Bloco 2, Sala 250"
-    # Mapa estático do e-mail de confirmação (presencial). Vazio = PUBLIC_BASE_URL/email-map.png,
-    # gerado por scripts/generate_email_map.py.
+    # Mapa do e-mail de confirmação (presencial). Vazio = app/email_assets/email-map.jpg,
+    # embutido no e-mail e gerado por scripts/generate_email_map.py.
     clinic_map_image_url: str = ""
     # Valor exibido no e-mail de confirmação, ao lado do horário. Vazio = omitido.
     consultation_price: str = "R$800"
     # WhatsApp da clínica (DDI+DDD+número, só dígitos) para o link no rodapé dos e-mails.
-    clinic_whatsapp: str = ""
+    clinic_whatsapp: str = "5521988652027"
+    # Aviso de "Novo agendamento" para a equipe. Desligado por enquanto.
+    staff_booking_emails_enabled: bool = False
     # Who gets notified when a new booking request comes in. Falls back to
     # ALLOWED_ADMIN_EMAILS when unset.
     clinic_notification_emails: str = ""

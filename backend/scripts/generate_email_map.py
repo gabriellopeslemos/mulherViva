@@ -6,7 +6,8 @@ novo sempre que CLINIC_ADDRESS mudar:
 
     python scripts/generate_email_map.py -15.82687 -47.90226
 
-Saída padrão: public/email-map.png (servido em PUBLIC_BASE_URL/email-map.png).
+Saída padrão: app/email_assets/email-map.jpg, embutida no e-mail como anexo inline
+(cid:), então não depende de onde o site está hospedado.
 """
 
 import argparse
@@ -20,7 +21,7 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 TILE_SIZE = 256
 PIN_COLOR = (94, 47, 82)  # --palette-1
-DEFAULT_OUT = Path(__file__).resolve().parents[2] / "public" / "email-map.png"
+DEFAULT_OUT = Path(__file__).resolve().parents[1] / "app" / "email_assets" / "email-map.jpg"
 
 
 def _world_px(lat: float, lon: float, zoom: int) -> tuple[float, float]:
@@ -72,7 +73,7 @@ def generate(lat: float, lon: float, out: Path, width: int, height: int, zoom: i
     draw.text((width - tw - 10, height - 27), label, fill=(90, 90, 90), font=font)
 
     out.parent.mkdir(parents=True, exist_ok=True)
-    canvas.save(out, optimize=True)
+    canvas.save(out, quality=80, optimize=True, progressive=True)
     print(f"Mapa salvo em {out}")
 
 
