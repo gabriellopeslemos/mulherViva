@@ -248,6 +248,7 @@ def booking_confirmation_html(
     site_url: str = "",
     whatsapp_number: str = "",
     map_image_url: str = "",
+    price: str = "",
 ) -> str:
     first_name = html.escape(client_name.strip().split()[0] if client_name.strip() else "")
     specialty_esc = html.escape(specialty_name)
@@ -305,6 +306,19 @@ def booking_confirmation_html(
                   </td>
                 </tr>"""
 
+    # Desktop: coluna à direita. Mobile: a coluna some e o valor desce para
+    # baixo da modalidade (sem espaço para três colunas).
+    price_cell = ""
+    price_inline = ""
+    if price.strip():
+        price_inline = f"""
+                          <p class="tk-price-inline" style="display: none; max-height: 0; overflow: hidden; mso-hide: all; margin: 10px 0 0; font-family: {_SANS}; font-size: 13px; line-height: 1.4; color: {_C_TEXT_MUTED};">Valor <span style="font-family: {_SERIF}; font-size: 18px; font-weight: 600; color: {_C_TEXT_STRONG};">{html.escape(price.strip())}</span></p>"""
+        price_cell = f"""
+                        <td class="tk-price" align="right" valign="middle" style="padding-left: 16px; text-align: right; white-space: nowrap;">
+                          <p style="margin: 0; font-family: {_SANS}; font-size: 13px; line-height: 1.4; color: {_C_TEXT_MUTED};">Valor</p>
+                          <p style="margin: 4px 0 0; font-family: {_SERIF}; font-size: 24px; font-weight: 600; line-height: 1.15; color: {_C_TEXT_STRONG};">{html.escape(price.strip())}</p>
+                        </td>"""
+
     map_section = ""
     if not is_online and clinic_address.strip():
         map_section = _ticket_map(clinic_address, map_image_url)
@@ -325,6 +339,8 @@ def booking_confirmation_html(
       .tk-px {{ padding-left: 20px !important; padding-right: 20px !important; }}
       .tk-info {{ padding-left: 16px !important; }}
       .tk-time {{ font-size: 28px !important; }}
+      .tk-price {{ display: none !important; }}
+      .tk-price-inline {{ display: block !important; max-height: none !important; overflow: visible !important; }}
       .tk-btn {{ display: block !important; width: 100% !important; padding: 0 0 10px !important; }}
       .px-foot {{ padding-left: 22px !important; padding-right: 22px !important; }}
     }}
@@ -382,8 +398,8 @@ def booking_confirmation_html(
                         <td class="tk-info" valign="middle" style="padding-left: 22px;">
                           <p style="margin: 0; font-family: {_SANS}; font-size: 14px; line-height: 1.4; color: {_C_TEXT_SOFT};">{day_line}</p>
                           <p style="margin: 4px 0 0; font-family: {_SERIF}; line-height: 1.15; color: {_C_TEXT_STRONG};"><span class="tk-time" style="font-size: 34px; font-weight: 600;">{format_time_pt(start)}</span><span style="font-size: 18px; font-weight: 500; color: {_C_TEXT_SOFT};"> às {format_time_pt(end)}</span></p>
-                          <p style="margin: 8px 0 0; font-family: {_SANS}; font-size: 14px; font-weight: 700; line-height: 1.4; color: {_C_ACCENT};"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: {_C_PINK}; vertical-align: middle; margin-right: 8px;"></span>{modality_label}</p>
-                        </td>
+                          <p style="margin: 8px 0 0; font-family: {_SANS}; font-size: 14px; font-weight: 700; line-height: 1.4; color: {_C_ACCENT};"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: {_C_PINK}; vertical-align: middle; margin-right: 8px;"></span>{modality_label}</p>{price_inline}
+                        </td>{price_cell}
                       </tr>
                     </table>
                   </td>
@@ -659,6 +675,7 @@ def send_booking_confirmation(
         whatsapp_number=settings.clinic_whatsapp,
         map_image_url=settings.clinic_map_image_url
         or f"{settings.public_base_url.rstrip('/')}/email-map.png",
+        price=settings.consultation_price,
     )
     return _send_resend(
         to_email, subject, body_html, ics=ics, log_label="email de confirmacao"

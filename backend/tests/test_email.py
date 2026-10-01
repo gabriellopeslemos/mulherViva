@@ -84,6 +84,21 @@ def test_html_presencial_without_map_still_shows_address():
     assert "<img src=\"https://" not in html_out
 
 
+def test_html_shows_price_when_configured():
+    kwargs = dict(
+        client_name="Maria",
+        specialty_name="Nutrição",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+    )
+    with_price = booking_confirmation_html(**kwargs, price="R$800")
+    assert 'class="tk-price"' in with_price
+    assert ">R$800</p>" in with_price
+    assert 'class="tk-price"' not in booking_confirmation_html(**kwargs)
+
+
 def test_html_buttons_share_a_row_inside_ticket():
     html_out = booking_confirmation_html(
         client_name="Maria",
@@ -138,6 +153,7 @@ def _settings(api_key=""):
         public_base_url="https://mulherviva.org",
         clinic_whatsapp="",
         clinic_map_image_url="",
+        consultation_price="R$800",
     )
 
 

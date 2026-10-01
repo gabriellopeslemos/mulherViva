@@ -14,6 +14,8 @@
       .tk-px { padding-left: 20px !important; padding-right: 20px !important; }
       .tk-info { padding-left: 16px !important; }
       .tk-time { font-size: 28px !important; }
+      .tk-price { display: none !important; }
+      .tk-price-inline { display: block !important; max-height: none !important; overflow: visible !important; }
       .tk-btn { display: block !important; width: 100% !important; padding: 0 0 10px !important; }
       .px-foot { padding-left: 22px !important; padding-right: 22px !important; }
     }
@@ -26,7 +28,6 @@
       <td align="center" style="padding: 36px 12px 44px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%;">
 
-
           <!-- Confirmacao -->
           <tr>
             <td align="center" style="padding: 0 16px 28px; text-align: center;">
@@ -36,7 +37,7 @@
                 </tr>
               </table>
               <h1 class="intro-title" style="margin: 20px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 30px; font-weight: 500; line-height: 1.2; color: #3d1f35;">Consulta confirmada, <em style="font-style: italic; color: #7a3e6a;">Maria</em>.</h1>
-              <p style="margin: 10px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #764e6c;">Será um prazer receber você. </p>
+              <p style="margin: 10px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #764e6c;">Será um prazer receber você.</p>
             </td>
           </tr>
 
@@ -73,6 +74,11 @@
                           <p style="margin: 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.4; color: #764e6c;">Quinta-feira, 18 de junho</p>
                           <p style="margin: 4px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; line-height: 1.15; color: #3d1f35;"><span class="tk-time" style="font-size: 34px; font-weight: 600;">14:00</span><span style="font-size: 18px; font-weight: 500; color: #764e6c;"> às 15:00</span></p>
                           <p style="margin: 8px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.4; color: #7a3e6a;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #e498b4; vertical-align: middle; margin-right: 8px;"></span>Presencial</p>
+                          <p class="tk-price-inline" style="display: none; max-height: 0; overflow: hidden; mso-hide: all; margin: 10px 0 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.4; color: #8b6982;">Valor <span style="font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 18px; font-weight: 600; color: #3d1f35;">R$800</span></p>
+                        </td>
+                        <td class="tk-price" align="right" valign="middle" style="padding-left: 16px; text-align: right; white-space: nowrap;">
+                          <p style="margin: 0; font-family: Mulish, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.4; color: #8b6982;">Valor</p>
+                          <p style="margin: 4px 0 0; font-family: Lora, 'Palatino Linotype', Palatino, Georgia, serif; font-size: 24px; font-weight: 600; line-height: 1.15; color: #3d1f35;">R$800</p>
                         </td>
                       </tr>
                     </table>

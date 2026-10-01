@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     # Mapa estático do e-mail de confirmação (presencial). Vazio = PUBLIC_BASE_URL/email-map.png,
     # gerado por scripts/generate_email_map.py.
     clinic_map_image_url: str = ""
+    # Valor exibido no e-mail de confirmação, ao lado do horário. Vazio = omitido.
+    consultation_price: str = "R$800"
     # WhatsApp da clínica (DDI+DDD+número, só dígitos) para o link no rodapé dos e-mails.
     clinic_whatsapp: str = ""
     # Who gets notified when a new booking request comes in. Falls back to
