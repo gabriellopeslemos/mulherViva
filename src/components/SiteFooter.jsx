@@ -40,7 +40,7 @@ function SiteFooter({ year }) {
 
           <div className="footer-info__col">
             <span className="footer-info__label">Contato</span>
-            <a href="tel:+5561999990000">+55 61 99999-0000</a>
+            <a href="tel:+5521988652027">+55 21 98865-2027</a>
             <a href="mailto:contato@mulherviva.org">contato@mulherviva.org</a>
             <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
               Instagram · {INSTAGRAM_HANDLE}

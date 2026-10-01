@@ -38,8 +38,7 @@ import {
   clinicPhotoImageTwo as clinicPhotoPlaceholderTwo,
 } from './lib/placeholderImages'
 
-// TODO: replace with real WhatsApp number
-const WHATSAPP_NUMBER = '5561999990000'
+const WHATSAPP_NUMBER = '5521988652027'
 const WHATSAPP_MESSAGE = 'Olá! Gostaria de agendar uma consulta.'
 const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
 
@@ -1316,7 +1315,6 @@ function Landing() {
           data-reveal
           style={{ '--delay': '400ms' }}
         >
-          {/* TODO: replace with real WhatsApp number */}
           <IconWhatsapp />
         </a>
       )}

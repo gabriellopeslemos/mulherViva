@@ -140,7 +140,6 @@ function HeroCta({ whatsappHref, IconWhatsapp }) {
               </svg>
             </span>
           </MagneticButton>
-          {/* TODO: replace with real WhatsApp number */}
           <MagneticButton
             className="hero-cta__btn hero-cta__btn--ghost"
             href={whatsappHref}
