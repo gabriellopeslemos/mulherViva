@@ -1753,6 +1753,41 @@ a.blog-card {
   animation: footerGlow 14s ease-in-out infinite alternate;
 }
 
+/* ---- first-load splash: purple stage with the spiral drawing itself ---- */
+
+/* Spiral size on the splash screen — change this to resize it. */
+:root {
+  --splash-spiral-size: clamp(216px, 45.6vmin, 408px);
+}
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--bg-alt);
+}
+
+.splash__spiral {
+  width: var(--splash-spiral-size);
+  height: auto;
+}
+
+.splash__spiral path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 18;
+}
+
+.splash__spiral-ghost {
+  stroke: color-mix(in srgb, var(--palette-5) 7%, transparent);
+}
+
+.splash__spiral-line {
+  stroke: color-mix(in srgb, var(--palette-4) 45%, transparent);
+}
+
 /* ---- alternative hero: dark stage with the drawn spiral (ex-footer CTA) ---- */
 
 /* The stage fills the viewport inside a thin gutter; the navbar (.nav-notch)

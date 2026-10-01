@@ -7,31 +7,9 @@ import {
   useSpring,
   useTransform,
 } from 'framer-motion'
+import { buildSpiralPath } from '../lib/spiral'
 
-// The logo mark is a spiral unwinding from the center with a loose tail —
-// rebuilt here as a stroke path so it can be "drawn" when the hero mounts.
-// Archimedean spiral (r grows linearly with the angle), slightly wider than
-// tall like the original mark.
-// `tail` extends the path past `turns` at the same pitch, so the loose end
-// sweeps under the spiral instead of stopping at the (off-screen) right edge.
-function buildSpiralPath({ turns = 3, tail = 0.15, cx = 200, cy = 200, maxR = 176, steps = 280 }) {
-  const bodyTheta = turns * Math.PI * 2
-  const maxTheta = (turns + tail) * Math.PI * 2
-  const points = []
-  for (let i = 0; i <= steps; i += 1) {
-    const theta = (i / steps) * maxTheta
-    const r = 8 + (theta / bodyTheta) * (maxR - 8)
-    // Start pointing right-down (like the inner end of the logo) and wind
-    // clockwise outward, so the loose tail also ends right-down.
-    const angle = theta + Math.PI * 0.35
-    points.push([cx + Math.cos(angle) * r * 1.06, cy + Math.sin(angle) * r])
-  }
-  return points
-    .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`)
-    .join(' ')
-}
-
-const spiralPath = buildSpiralPath({})
+const spiralPath = buildSpiralPath()
 
 const headlineWords = ['Seu', 'corpo', 'fala.', 'Vamos', 'ouvir', 'juntas?']
 

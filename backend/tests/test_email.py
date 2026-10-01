@@ -99,6 +99,8 @@ def _settings(api_key=""):
         resend_api_key=api_key,
         email_from="Mulher Viva <onboarding@resend.dev>",
         clinic_address="",
+        public_base_url="https://mulherviva.com.br",
+        clinic_whatsapp="",
     )
 
 
@@ -176,6 +178,34 @@ def test_confirmation_html_includes_optional_links():
     )
     assert "https://mulherviva.com.br/?manage=tok123" in html_out
     assert "https://calendar.google.com/calendar/render?action=TEMPLATE" in html_out
+
+
+def test_confirmation_footer_links_site_and_whatsapp():
+    html_out = booking_confirmation_html(
+        client_name="Maria",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+        site_url="https://mulherviva.com.br",
+        whatsapp_number="+55 (61) 99999-0000",
+    )
+    assert 'href="https://mulherviva.com.br"' in html_out
+    assert "https://wa.me/5561999990000?text=" in html_out
+    assert "não responda este e-mail" in html_out
+
+
+def test_confirmation_footer_omits_whatsapp_when_unset():
+    html_out = booking_confirmation_html(
+        client_name="Maria",
+        specialty_name="Ginecologia",
+        day=date(2026, 6, 11),
+        start=time(9, 0),
+        end=time(10, 0),
+        modality="online",
+    )
+    assert "wa.me" not in html_out
 
 
 def test_send_confirmation_attaches_ics(monkeypatch):

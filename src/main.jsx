@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
+import SplashGate from './components/SplashGate.jsx'
 
 // Hints the browser to fetch the hero (LCP) image immediately instead of
 // waiting for React to mount and set it as a CSS background-image. Injected
@@ -17,8 +18,10 @@ document.head.appendChild(heroPreload)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <SplashGate>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </SplashGate>
   </StrictMode>,
 )

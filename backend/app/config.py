@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     # Used to resolve relative /uploads/... image URLs into absolute ones for e-mails.
     api_base_url: str = "http://localhost:8000"
     clinic_name: str = "Mulher Viva — Dra. Luciana Lopes"
-    clinic_address: str = "Centro Médico Lúcio Costa"
+    clinic_address: str = "Centro Médico Lúcio Costa, SGAS 610, Bloco 2, Sala 250"
+    # WhatsApp da clínica (DDI+DDD+número, só dígitos) para o link no rodapé dos e-mails.
+    clinic_whatsapp: str = ""
     # Who gets notified when a new booking request comes in. Falls back to
     # ALLOWED_ADMIN_EMAILS when unset.
     clinic_notification_emails: str = ""
