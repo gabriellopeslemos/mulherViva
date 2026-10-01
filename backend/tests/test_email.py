@@ -61,12 +61,12 @@ def test_html_presencial_includes_address_when_configured():
         end=time(10, 0),
         modality="presencial",
         clinic_address="Rua das Flores, 123 - Centro",
-        map_image_url="https://mulherviva.com.br/email-map.png",
+        map_image_url="https://mulherviva.org/email-map.png",
     )
     assert "Presencial" in html_out
     assert ">Rua das Flores</a>" in html_out
     assert "123 - Centro" in html_out
-    assert 'src="https://mulherviva.com.br/email-map.png"' in html_out
+    assert 'src="https://mulherviva.org/email-map.png"' in html_out
     assert "google.com/maps/search" in html_out
 
 
@@ -92,7 +92,7 @@ def test_html_buttons_share_a_row_inside_ticket():
         start=time(9, 0),
         end=time(10, 0),
         modality="online",
-        manage_link="https://mulherviva.com.br/?manage=abc",
+        manage_link="https://mulherviva.org/?manage=abc",
         calendar_link="https://calendar.google.com/x",
     )
     assert html_out.count('class="tk-btn" width="50%"') == 2
@@ -135,7 +135,7 @@ def _settings(api_key=""):
         resend_api_key=api_key,
         email_from="Mulher Viva <onboarding@resend.dev>",
         clinic_address="",
-        public_base_url="https://mulherviva.com.br",
+        public_base_url="https://mulherviva.org",
         clinic_whatsapp="",
         clinic_map_image_url="",
     )
@@ -210,10 +210,10 @@ def test_confirmation_html_includes_optional_links():
         start=time(9, 0),
         end=time(10, 0),
         modality="online",
-        manage_link="https://mulherviva.com.br/?manage=tok123",
+        manage_link="https://mulherviva.org/?manage=tok123",
         calendar_link="https://calendar.google.com/calendar/render?action=TEMPLATE",
     )
-    assert "https://mulherviva.com.br/?manage=tok123" in html_out
+    assert "https://mulherviva.org/?manage=tok123" in html_out
     assert "https://calendar.google.com/calendar/render?action=TEMPLATE" in html_out
 
 
@@ -225,10 +225,10 @@ def test_confirmation_footer_links_site_and_whatsapp():
         start=time(9, 0),
         end=time(10, 0),
         modality="online",
-        site_url="https://mulherviva.com.br",
+        site_url="https://mulherviva.org",
         whatsapp_number="+55 (61) 99999-0000",
     )
-    assert 'href="https://mulherviva.com.br"' in html_out
+    assert 'href="https://mulherviva.org"' in html_out
     assert "https://wa.me/5561999990000?text=" in html_out
     assert "não responda este e-mail" in html_out
 
@@ -276,12 +276,12 @@ def test_reminder_html_contains_booking_details():
         start=time(14, 0),
         end=time(15, 0),
         modality="online",
-        manage_link="https://mulherviva.com.br/?manage=tok123",
+        manage_link="https://mulherviva.org/?manage=tok123",
     )
     assert "Olá, Maria!" in html_out
     assert "amanhã" in html_out
     assert "quinta-feira, 11 de junho de 2026" in html_out
-    assert "https://mulherviva.com.br/?manage=tok123" in html_out
+    assert "https://mulherviva.org/?manage=tok123" in html_out
 
 
 def test_send_reminder_returns_false_without_api_key(monkeypatch):
@@ -324,20 +324,20 @@ def test_marketing_html_contains_post_details():
     html_out = marketing_blog_post_html(
         title="Menopausa: mitos e verdades",
         excerpt="Descubra o que é fato e o que é mito.",
-        post_url="https://mulherviva.com.br/blog/12",
-        image_url="https://mulherviva.com.br/uploads/cover.webp",
+        post_url="https://mulherviva.org/blog/12",
+        image_url="https://mulherviva.org/uploads/cover.webp",
     )
     assert "Menopausa: mitos e verdades" in html_out
     assert "Descubra o que é fato e o que é mito." in html_out
-    assert "https://mulherviva.com.br/blog/12" in html_out
-    assert "https://mulherviva.com.br/uploads/cover.webp" in html_out
+    assert "https://mulherviva.org/blog/12" in html_out
+    assert "https://mulherviva.org/uploads/cover.webp" in html_out
 
 
 def test_marketing_html_omits_image_when_absent():
     html_out = marketing_blog_post_html(
         title="Título",
         excerpt="Resumo",
-        post_url="https://mulherviva.com.br/blog/12",
+        post_url="https://mulherviva.org/blog/12",
     )
     assert "<img" not in html_out
 
@@ -346,7 +346,7 @@ def test_marketing_html_escapes_user_input():
     html_out = marketing_blog_post_html(
         title="<script>alert(1)</script>",
         excerpt="Resumo",
-        post_url="https://mulherviva.com.br/blog/12",
+        post_url="https://mulherviva.org/blog/12",
     )
     assert "<script>" not in html_out
     assert "&lt;script&gt;" in html_out
@@ -358,7 +358,7 @@ def test_send_marketing_blog_post_returns_false_without_api_key(monkeypatch):
         to_email="x@y.com",
         title="Título",
         excerpt="Resumo",
-        post_url="https://mulherviva.com.br/blog/12",
+        post_url="https://mulherviva.org/blog/12",
     )
     assert ok is False
 
@@ -376,7 +376,7 @@ def test_send_marketing_blog_post_posts_to_resend(monkeypatch):
         to_email="paciente@email.com",
         title="Menopausa: mitos e verdades",
         excerpt="Resumo do post.",
-        post_url="https://mulherviva.com.br/blog/12",
+        post_url="https://mulherviva.org/blog/12",
         subject="Novo post no blog!",
     )
     assert ok is True
@@ -398,7 +398,7 @@ def test_send_marketing_blog_post_defaults_subject_to_title(monkeypatch):
         to_email="paciente@email.com",
         title="Menopausa: mitos e verdades",
         excerpt="Resumo do post.",
-        post_url="https://mulherviva.com.br/blog/12",
+        post_url="https://mulherviva.org/blog/12",
     )
     assert captured["json"]["subject"] == "Menopausa: mitos e verdades"
 
@@ -457,7 +457,7 @@ def test_internal_booking_html_includes_reason_and_notes():
 def test_send_internal_new_booking_returns_false_without_api_key(monkeypatch):
     monkeypatch.setattr(email_service, "get_settings", lambda: _settings(api_key=""))
     ok = send_internal_new_booking(
-        to_email="equipe@mulherviva.com.br",
+        to_email="equipe@mulherviva.org",
         client_name="Maria",
         client_email="maria@email.com",
         client_phone="",
@@ -480,7 +480,7 @@ def test_send_internal_new_booking_posts_to_resend(monkeypatch):
 
     monkeypatch.setattr(httpx, "post", fake_post)
     ok = send_internal_new_booking(
-        to_email="equipe@mulherviva.com.br",
+        to_email="equipe@mulherviva.org",
         client_name="Maria Souza",
         client_email="maria@email.com",
         client_phone="(11) 99999-0000",
@@ -491,7 +491,7 @@ def test_send_internal_new_booking_posts_to_resend(monkeypatch):
         modality="presencial",
     )
     assert ok is True
-    assert captured["json"]["to"] == ["equipe@mulherviva.com.br"]
+    assert captured["json"]["to"] == ["equipe@mulherviva.org"]
     assert "Maria Souza" in captured["json"]["subject"]
     assert "Ginecologia" in captured["json"]["html"]
 

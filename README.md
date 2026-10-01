@@ -181,7 +181,7 @@ SMTP_PORT=587
 SMTP_USER=
 SMTP_PASSWORD=
 SMTP_USE_TLS=true
-EMAIL_FROM=Mulher Viva <no-reply@mulherviva.com.br>
+EMAIL_FROM=Mulher Viva <no-reply@mail.mulherviva.org>
 PUBLIC_BASE_URL=http://localhost:5173
 
 # Instagram (opcional)

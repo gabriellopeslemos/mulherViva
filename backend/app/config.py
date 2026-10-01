@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     # Confirmation and 24h-reminder e-mails are sent via Resend.
     resend_api_key: str = ""
-    email_from: str = "Mulher Viva <no-reply@mulherviva.com.br>"
+    email_from: str = "Mulher Viva <no-reply@mail.mulherviva.org>"
     public_base_url: str = "http://localhost:5173"
     # Used to resolve relative /uploads/... image URLs into absolute ones for e-mails.
     api_base_url: str = "http://localhost:8000"
