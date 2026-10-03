@@ -688,7 +688,7 @@ test('lista de espera: entrar gera 201 e repetir o mesmo e-mail devolve 200 sem 
   const join = async () => {
     await openWizard(page)
     await page.getByRole('button', { name: /Entre na lista de espera/ }).click()
-    const form = page.locator('.bk-waitlist__form')
+    const form = page.locator('form.bk-morph')
     await expect(form.getByText(RETENTION_NOTICE)).toBeVisible()
     await form.getByLabel('Especialidade').selectOption({ label: spec.name })
     await form.getByLabel('Nome completo').fill('Lívia Espera')
@@ -698,7 +698,7 @@ test('lista de espera: entrar gera 201 e repetir o mesmo e-mail devolve 200 sem 
     )
     await form.getByRole('button', { name: 'Entrar na lista' }).click()
     const response = await responsePromise
-    await expect(page.locator('.bk-waitlist__done')).toContainText(email)
+    await expect(page.locator('.bk-morph__done')).toContainText(email)
     return response
   }
 

@@ -922,24 +922,13 @@
   text-decoration: underline;
 }
 
-.bk-waitlist__form {
-  max-width: 640px;
-  margin: 0 auto;
+.bk-waitlist__hint {
+  margin-top: 12px;
 }
 
-.bk-waitlist__title {
-  font-family: var(--serif);
-  font-size: 1.1rem;
-  font-weight: 500;
-  margin: 0 0 16px;
-  color: var(--text-strong);
-}
+/* ---- panels the card morphs into ("Quero reagendar", lista de espera) ---- */
 
-.bk-waitlist__form .bk-form__grid {
-  margin-bottom: 4px;
-}
-
-.bk-waitlist__form select {
+.bk-morph select {
   font: inherit;
   padding: 12px 14px;
   min-height: 44px;
@@ -949,29 +938,16 @@
   color: var(--text);
 }
 
-.bk-waitlist__hint {
-  margin-top: 12px;
-}
-
-.bk-waitlist__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.bk-waitlist__done {
+.bk-morph__done {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   margin: 0;
   font-weight: 600;
   color: var(--text-strong);
-  text-align: center;
 }
 
-.bk-waitlist__done svg {
+.bk-morph__done svg {
   width: 20px;
   height: 20px;
   flex: none;
@@ -1904,8 +1880,7 @@ fieldset.bk-group > legend em {
     max-height: 250px;
   }
 
-  .bk-form__actions,
-  .bk-waitlist__actions {
+  .bk-form__actions {
     flex-direction: column-reverse;
   }
 
@@ -1961,69 +1936,3 @@ fieldset.bk-group > legend em {
   text-decoration: underline;
 }
 
-.bk-recover--open {
-  text-align: left;
-  padding: clamp(18px, 3vw, 28px);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.bk-recover__title {
-  font-family: var(--serif);
-  font-size: 1.15rem;
-  font-weight: 500;
-  color: var(--text-strong);
-  margin: 0 0 6px;
-}
-
-.bk-recover__lead {
-  margin: 0 0 16px;
-  font-size: 0.95rem;
-  color: var(--text-soft);
-}
-
-.bk-recover__row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-}
-
-.bk-recover__row .bk-field {
-  flex: 1;
-}
-
-.bk-recover__row .bk-btn {
-  min-height: 46px;
-  white-space: nowrap;
-}
-
-.bk-recover__done {
-  margin: 0;
-  font-size: 0.98rem;
-  color: var(--text-strong);
-}
-
-.bk-recover__close {
-  margin-top: 14px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.bk-recover__close:hover {
-  color: var(--accent);
-}
-
-@media (max-width: 560px) {
-  .bk-recover__row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
