@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { motion } from 'framer-motion'
 import { api } from '../lib/api'
 import { RETENTION_NOTICE } from '../lib/privacy'
 
@@ -7,13 +8,20 @@ import { RETENTION_NOTICE } from '../lib/privacy'
  * re-send the personal manage link(s) of their upcoming appointments.
  * The API always answers the same message, so we never reveal whether the
  * address is known.
+ *
+ * Rendered by BookingSection as a panel inside the booking card (the card
+ * morphs into this form), so it takes the step's motion props and an
+ * `onBack` that morphs it back into the calendar.
  */
-export default function RecoverBooking() {
-  const [open, setOpen] = useState(false)
+export default function RecoverBooking({ onBack, backIcon, className = '', ...motionProps }) {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
+
+  // Focus the e-mail field on mount without the browser's scroll-into-view,
+  // which would cut BookingSection's smooth scroll to the card short.
+  const focusOnMount = useCallback((node) => node?.focus({ preventScroll: true }), [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -29,58 +37,54 @@ export default function RecoverBooking() {
     }
   }
 
-  if (!open) {
-    return (
-      <div className="bk-recover">
-        <button type="button" className="bk-recover__toggle" onClick={() => setOpen(true)}>
-          Já tem consulta marcada? <strong>Quero reagendar</strong>
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="bk-recover bk-recover--open">
+    <motion.form className={`bk-step bk-form ${className}`} onSubmit={handleSubmit} {...motionProps}>
+      <div className="bk-form__head">
+        <h3 className="bk-step__title">Reagendar ou cancelar uma consulta</h3>
+        <p className="bk-step__lead">
+          Informe o e-mail usado no agendamento. Enviamos o link pessoal da sua consulta, por onde
+          você reagenda ou cancela sem precisar ligar.
+        </p>
+      </div>
       {message ? (
-        <p className="bk-recover__done" role="status">
+        <p className="bk-morph__done" role="status">
           {message}
         </p>
       ) : (
-        <form className="bk-recover__form" onSubmit={handleSubmit}>
-          <p className="bk-recover__title">Reagendar ou cancelar uma consulta</p>
-          <p className="bk-recover__lead">
-            Informe o e-mail usado no agendamento. Enviamos o link pessoal da sua consulta, por onde
-            você reagenda ou cancela sem precisar ligar.
-          </p>
-          <div className="bk-recover__row">
-            <label className="bk-field bk-field--full" htmlFor="rc-email">
-              <span>E-mail</span>
-              <input
-                id="rc-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="voce@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </label>
-            <button type="submit" className="bk-btn bk-btn--primary" disabled={submitting}>
-              {submitting ? 'Enviando…' : 'Enviar link'}
-            </button>
-          </div>
-          <p className="bk-privacy">{RETENTION_NOTICE}</p>
-          {error && (
-            <p className="bk-error" role="alert">
-              {error}
-            </p>
-          )}
-        </form>
+        <div className="bk-form__grid">
+          <label className="bk-field bk-field--full" htmlFor="rc-email">
+            <span>E-mail</span>
+            <input
+              id="rc-email"
+              ref={focusOnMount}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="voce@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+        </div>
       )}
-      <button type="button" className="bk-recover__close" onClick={() => setOpen(false)}>
-        Fechar
-      </button>
-    </div>
+      {!message && <p className="bk-privacy">{RETENTION_NOTICE}</p>}
+      {error && (
+        <p className="bk-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="bk-form__actions">
+        <button type="button" className="bk-btn bk-btn--ghost" onClick={onBack}>
+          {backIcon}
+          Voltar ao agendamento
+        </button>
+        {!message && (
+          <button type="submit" className="bk-btn bk-btn--primary" disabled={submitting}>
+            {submitting ? 'Enviando…' : 'Enviar link'}
+          </button>
+        )}
+      </div>
+    </motion.form>
   )
 }

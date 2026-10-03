@@ -272,7 +272,7 @@ test.describe('autogestão pelo link', () => {
         await page.getByRole('button', { name: /Quero reagendar/ }).click()
         await page.locator('#rc-email').fill(email)
         await page.getByRole('button', { name: 'Enviar link' }).click()
-        const done = page.locator('.bk-recover__done')
+        const done = page.locator('.bk-morph__done')
         await expect(done).toBeVisible()
         messages.push((await done.textContent()).trim())
       }

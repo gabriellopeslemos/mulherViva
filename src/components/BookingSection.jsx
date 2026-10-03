@@ -517,6 +517,10 @@ export default function BookingSection({ presetSpecialty } = {}) {
   const [step, setStep] = useState(1)
   // +1 forward, -1 back, 0 before any navigation (no entrance on page load).
   const [direction, setDirection] = useState(0)
+  // "Quero reagendar" / waitlist: the card morphs from the booking steps into
+  // a short e-mail form (null | 'recover' | 'waitlist'); the step and its
+  // selections are kept underneath, so "Voltar" lands where the patient was.
+  const [panel, setPanel] = useState(null)
   const cardRef = useRef(null)
   const [form, setForm] = useState({
     name: '',
@@ -532,8 +536,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
   // calendar and the slot list only show slots of the chosen modality.
   const [modality, setModality] = useState(MODALITIES[0].id)
 
-  // "Join the waitlist" mini-form, shown as an opt-in below the calendar.
-  const [waitlistOpen, setWaitlistOpen] = useState(false)
+  // "Join the waitlist" form, opened from a link below the calendar as a panel.
   const [waitlistSpecialtyId, setWaitlistSpecialtyId] = useState(null)
   const [waitlistForm, setWaitlistForm] = useState({
     name: '',
@@ -836,16 +839,32 @@ export default function BookingSection({ presetSpecialty } = {}) {
   // Switches step with a direction for the transition and, if the patient
   // scrolled down the tall schedule grid, glides the card top back into view
   // while the old step fades out.
-  const changeStep = (target) => {
-    if (target === step) return
-    setDirection(target > step ? 1 : -1)
-    setStep(target)
+  const glideCardIntoView = () => {
     const node = cardRef.current
     if (!node) return
     const top = node.getBoundingClientRect().top
     if (top < 80) {
       window.scrollBy({ top: top - 110, behavior: reducedMotion ? 'auto' : 'smooth' })
     }
+  }
+
+  const changeStep = (target) => {
+    if (target === step) return
+    setDirection(target > step ? 1 : -1)
+    setStep(target)
+    glideCardIntoView()
+  }
+
+  const openPanel = (name) => {
+    setDirection(1)
+    setPanel(name)
+    glideCardIntoView()
+  }
+
+  const closePanel = () => {
+    setDirection(-1)
+    setPanel(null)
+    glideCardIntoView()
   }
 
   // Step 2's first field takes focus on mount without the browser's own
@@ -924,7 +943,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
   }
 
   const openWaitlist = () => {
-    setWaitlistOpen(true)
+    openPanel('waitlist')
     setWaitlistDone(false)
     setWaitlistError(null)
     setWaitlistSpecialtyId(specialtyId || dateSpecialties[0]?.id || specialties[0]?.id || null)
@@ -983,15 +1002,23 @@ export default function BookingSection({ presetSpecialty } = {}) {
           </p>
         </motion.div>
 
-        <Collapse show={!confirmation} reduced={reducedMotion}>
-          <RecoverBooking />
+        <Collapse show={!confirmation && !panel} reduced={reducedMotion}>
+          <div className="bk-recover">
+            <button
+              type="button"
+              className="bk-recover__toggle"
+              onClick={() => openPanel('recover')}
+            >
+              Já tem consulta marcada? <strong>Quero reagendar</strong>
+            </button>
+          </div>
         </Collapse>
 
         {/* The review step morphs into the confirmation in place: the card and
             the ticket persist, only the chrome around them (stepper, heading,
             actions) collapses or crossfades. */}
         <div className="bk-card bk-main" ref={cardRef}>
-          <Collapse show={!confirmation} reduced={reducedMotion}>
+          <Collapse show={!confirmation && !panel} reduced={reducedMotion}>
             <ol className="bk-stepper" aria-label="Etapas do agendamento">
               {STEPS.map((s) => {
                 const state = s.id === step ? 'current' : s.id < step ? 'done' : 'upcoming'
@@ -1023,8 +1050,141 @@ export default function BookingSection({ presetSpecialty } = {}) {
             </p>
           </Collapse>
 
-          <StepViewport stepKey={step} direction={direction} reduced={reducedMotion}>
-            {step === 1 && (
+          <StepViewport stepKey={panel ?? step} direction={direction} reduced={reducedMotion}>
+            {panel === 'recover' && (
+              <RecoverBooking
+                key="recover"
+                className={`bk-morph${enterCls}`}
+                onBack={closePanel}
+                backIcon={<ArrowIcon dir="left" />}
+                {...motionProps}
+              />
+            )}
+
+            {panel === 'waitlist' && (
+              <motion.form
+                key="waitlist"
+                className={`bk-step bk-form bk-morph${enterCls}`}
+                onSubmit={handleWaitlistSubmit}
+                {...motionProps}
+              >
+                <div className="bk-form__head">
+                  <h3 className="bk-step__title">Entrar na lista de espera</h3>
+                  <p className="bk-step__lead">
+                    Avisamos por e-mail assim que um horário abrir na especialidade escolhida.
+                  </p>
+                </div>
+                {waitlistDone ? (
+                  <p className="bk-morph__done" role="status">
+                    <CheckIcon /> Pronto! Avisaremos <strong>{waitlistForm.email}</strong> assim
+                    que um horário abrir.
+                  </p>
+                ) : (
+                  <div className="bk-form__grid">
+                    <label className="bk-field bk-field--full" htmlFor="wl-email">
+                      <span>E-mail</span>
+                      <input
+                        id="wl-email"
+                        ref={focusOnMount}
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        placeholder="voce@email.com"
+                        value={waitlistForm.email}
+                        onChange={(e) =>
+                          setWaitlistForm((f) => ({
+                            ...f,
+                            email: e.target.value,
+                          }))
+                        }
+                        required
+                      />
+                    </label>
+                    <label className="bk-field bk-field--full" htmlFor="wl-name">
+                      <span>Nome completo</span>
+                      <input
+                        id="wl-name"
+                        type="text"
+                        autoComplete="name"
+                        value={waitlistForm.name}
+                        onChange={(e) =>
+                          setWaitlistForm((f) => ({
+                            ...f,
+                            name: e.target.value,
+                          }))
+                        }
+                        required
+                        minLength={2}
+                      />
+                    </label>
+                    <label className="bk-field" htmlFor="wl-specialty">
+                      <span>Especialidade</span>
+                      <select
+                        id="wl-specialty"
+                        value={waitlistSpecialtyId || ''}
+                        onChange={(e) => setWaitlistSpecialtyId(Number(e.target.value))}
+                        required
+                      >
+                        <option value="" disabled>
+                          Selecione…
+                        </option>
+                        {specialties.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="bk-field" htmlFor="wl-phone">
+                      <span>
+                        Telefone <em>(opcional)</em>
+                      </span>
+                      <input
+                        id="wl-phone"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        value={waitlistForm.phone}
+                        onChange={(e) =>
+                          setWaitlistForm((f) => ({
+                            ...f,
+                            phone: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                )}
+                {!waitlistDone && <p className="bk-privacy">{RETENTION_NOTICE}</p>}
+                {!waitlistDone && selectedDate && (
+                  <p className="bk-hint bk-waitlist__hint">
+                    Vamos priorizar horários em {fmtLongDate(selectedDate)}.
+                  </p>
+                )}
+                {waitlistError && (
+                  <p className="bk-error" role="alert">
+                    {waitlistError}
+                  </p>
+                )}
+                <div className="bk-form__actions">
+                  <button type="button" className="bk-btn bk-btn--ghost" onClick={closePanel}>
+                    <ArrowIcon dir="left" />
+                    Voltar ao agendamento
+                  </button>
+                  {!waitlistDone && (
+                    <button
+                      type="submit"
+                      className="bk-btn bk-btn--primary"
+                      disabled={waitlistSubmitting || !waitlistSpecialtyId}
+                    >
+                      {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
+                    </button>
+                  )}
+                </div>
+              </motion.form>
+            )}
+
+            {!panel && step === 1 && (
               <motion.div key="step1" className={`bk-step bk-schedule${enterCls}`} {...motionProps}>
                 {/* ---- column 1: intro + modality ---- */}
                 <div className="bk-schedule__intro">
@@ -1241,124 +1401,15 @@ export default function BookingSection({ presetSpecialty } = {}) {
 
                 {/* ---- waitlist opt-in (spans all columns) ---- */}
                 <div className="bk-waitlist">
-                  {!waitlistOpen ? (
-                    <button type="button" className="bk-waitlist__toggle" onClick={openWaitlist}>
-                      Não achou o horário que queria? Entre na lista de espera para ser avisada
-                      quando novos horários aparecerem.
-                    </button>
-                  ) : waitlistDone ? (
-                    <p className="bk-waitlist__done">
-                      <CheckIcon /> Pronto! Avisaremos <strong>{waitlistForm.email}</strong> assim
-                      que um horário abrir.
-                    </p>
-                  ) : (
-                    <form className="bk-waitlist__form" onSubmit={handleWaitlistSubmit}>
-                      <h4 className="bk-waitlist__title">Entrar na lista de espera</h4>
-                      <div className="bk-form__grid">
-                        <label className="bk-field bk-field--full" htmlFor="wl-specialty">
-                          <span>Especialidade</span>
-                          <select
-                            id="wl-specialty"
-                            value={waitlistSpecialtyId || ''}
-                            onChange={(e) => setWaitlistSpecialtyId(Number(e.target.value))}
-                            required
-                          >
-                            <option value="" disabled>
-                              Selecione…
-                            </option>
-                            {specialties.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="bk-field bk-field--full" htmlFor="wl-name">
-                          <span>Nome completo</span>
-                          <input
-                            id="wl-name"
-                            type="text"
-                            autoComplete="name"
-                            value={waitlistForm.name}
-                            onChange={(e) =>
-                              setWaitlistForm((f) => ({
-                                ...f,
-                                name: e.target.value,
-                              }))
-                            }
-                            required
-                            minLength={2}
-                          />
-                        </label>
-                        <label className="bk-field" htmlFor="wl-email">
-                          <span>E-mail</span>
-                          <input
-                            id="wl-email"
-                            type="email"
-                            autoComplete="email"
-                            value={waitlistForm.email}
-                            onChange={(e) =>
-                              setWaitlistForm((f) => ({
-                                ...f,
-                                email: e.target.value,
-                              }))
-                            }
-                            required
-                          />
-                        </label>
-                        <label className="bk-field" htmlFor="wl-phone">
-                          <span>
-                            Telefone <em>(opcional)</em>
-                          </span>
-                          <input
-                            id="wl-phone"
-                            type="tel"
-                            inputMode="tel"
-                            autoComplete="tel"
-                            value={waitlistForm.phone}
-                            onChange={(e) =>
-                              setWaitlistForm((f) => ({
-                                ...f,
-                                phone: e.target.value,
-                              }))
-                            }
-                          />
-                        </label>
-                      </div>
-                      <p className="bk-privacy">{RETENTION_NOTICE}</p>
-                      {selectedDate && (
-                        <p className="bk-hint bk-waitlist__hint">
-                          Vamos priorizar horários em {fmtLongDate(selectedDate)}.
-                        </p>
-                      )}
-                      {waitlistError && (
-                        <p className="bk-error" role="alert">
-                          {waitlistError}
-                        </p>
-                      )}
-                      <div className="bk-waitlist__actions">
-                        <button
-                          type="button"
-                          className="bk-btn bk-btn--ghost"
-                          onClick={() => setWaitlistOpen(false)}
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="submit"
-                          className="bk-btn bk-btn--primary"
-                          disabled={waitlistSubmitting || !waitlistSpecialtyId}
-                        >
-                          {waitlistSubmitting ? 'Enviando…' : 'Entrar na lista'}
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                  <button type="button" className="bk-waitlist__toggle" onClick={openWaitlist}>
+                    Não achou o horário que queria? Entre na lista de espera para ser avisada
+                    quando novos horários aparecerem.
+                  </button>
                 </div>
               </motion.div>
             )}
 
-            {step === 2 && (
+            {!panel && step === 2 && (
               <motion.form
                 key="step2"
                 className={`bk-step bk-form${enterCls}`}
@@ -1435,7 +1486,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
               </motion.form>
             )}
 
-            {step === 3 && (
+            {!panel && step === 3 && (
               <motion.form
                 key="step3"
                 className={`bk-step bk-form${enterCls}`}
@@ -1577,7 +1628,7 @@ export default function BookingSection({ presetSpecialty } = {}) {
               </motion.form>
             )}
 
-            {step === 4 && (
+            {!panel && step === 4 && (
               <motion.div
                 key="step4"
                 className={`bk-step bk-form bk-review${enterCls}${confirmation ? ' is-confirmed' : ''}`}
